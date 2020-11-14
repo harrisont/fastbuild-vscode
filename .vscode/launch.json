@@ -32,7 +32,14 @@
 				"--extensionTestsPath=${workspaceRoot}/client/out/test/index",
 				"${workspaceRoot}/client/testFixture"
 			],
-			"outFiles": ["${workspaceRoot}/client/out/test/**/*.js"]
+			"outFiles": ["${workspaceRoot}/server/out/test/**/*.js"]
+		},
+		{
+			"name": "Run Tests",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/server/src/test/runTest.ts",
+			"preLaunchTask": "build"
 		}
 	],
 	"compounds": [

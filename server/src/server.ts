@@ -16,79 +16,7 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-interface ParsedRange
-{
-	line: number,
-	characterStart: number,
-	characterEnd: number
-}
-
-interface ParsedString
-{
-	range: ParsedRange
-
-	// The raw string value without evaluating variables.
-	raw: string
-
-	// The value of the string after evaluating variables.
-	evaluated: string
-}
-
-interface ParsedData {
-	strings: ParsedString[]
-}
-
-function parse(textDocument: TextDocument): ParsedData {
-	let strings: ParsedString[] = [];
-
-	const text = textDocument.getText();
-	const chars = [...text];
-	let line = 0;
-	let lineCharIndex = 0;
-	let isInString = false;
-	let valueIndexStart = 0;
-	let value = "";
-	chars.forEach(char => {
-		if (char == "\n") {
-			++line;
-			// -1 because we always add 1 at the end of the loop.
-			lineCharIndex = -1;
-		} else if (char == "'") {
-			if (isInString) {
-				// Ending a string
-				const raw = value;
-				const evaluated = "TODO:" + raw;
-				const valueIndexEnd = lineCharIndex;
-				const parsedString: ParsedString = {
-					raw: raw,
-					evaluated: evaluated,
-					range: {
-						line: line,
-						characterStart: valueIndexStart,
-						characterEnd: valueIndexEnd
-					}
-				};
-				strings.push(parsedString);
-
-				//connection.console.log(JSON.stringify(parsedString));
-				value = "";
-			} else {
-				// Starting a string
-				valueIndexStart = lineCharIndex + 1;
-			}
-			
-			isInString = !isInString;
-		} else if (isInString) {
-			value += char;
-		}
-
-		++lineCharIndex;
-	});
-
-	return {
-		strings: strings
-	};
-}
+import * as parser from './parser'
 
 const SOURCE_NAME = 'FASTBuild';
 
@@ -100,7 +28,7 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 
-let parsedData: ParsedData | null = null;
+let parsedData: parser.ParsedData | null = null;
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -123,7 +51,8 @@ connection.onInitialize((params: InitializeParams) => {
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	parsedData = parse(change.document);
+	const text = change.document.getText();
+	parsedData = parser.parse(text);
 
 	validateFile(change.document);
 });
@@ -139,7 +68,7 @@ async function validateFile(textDocument: TextDocument): Promise<void> {
 	while ((m = pattern.exec(text))) {
 		problems++;
 		let diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Error,
+			severity: DiagnosticSeverity.Warning,
 			range: {
 				start: textDocument.positionAt(m.index),
 				end: textDocument.positionAt(m.index + m[0].length)
