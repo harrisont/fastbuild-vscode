@@ -1,13 +1,12 @@
 {
-	"name": "lsp-sample-client",
-	"description": "VSCode part of a language server",
-	"author": "Microsoft Corporation",
+	"name": "fastbuild-lsp-client",
+	"description": "FASTBuild VSCode language client",
+	"author": "harrisont",
 	"license": "MIT",
 	"version": "0.0.1",
-	"publisher": "vscode",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
+		"url": "https://github.com/harrisont/fbuild-vscode-lsp"
 	},
 	"engines": {
 		"vscode": "^1.43.0"
