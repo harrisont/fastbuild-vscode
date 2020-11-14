@@ -35,6 +35,50 @@ interface ParsedData {
 	strings: ParsedString[]
 }
 
+function parse(textDocument: TextDocument): ParsedData {
+	let strings: ParsedString[] = [];
+
+	const text = textDocument.getText();
+	const chars = [...text];
+	let line = 0;
+	let lineCharIndex = 0;
+	let isInString = false;
+	let valueIndexStart = 0;
+	chars.forEach(char => {
+		if (char == "\n") {
+			++line;
+			// -1 because we always add 1 at the end of the loop.
+			lineCharIndex = -1;
+		} else if (char == "'") {
+			if (isInString) {
+				// Ending a string
+				const valueIndexEnd = lineCharIndex;
+				const parsedString: ParsedString = {
+					evaluated: "TODO-evaluated",
+					range: {
+						line: line,
+						characterStart: valueIndexStart,
+						characterEnd: valueIndexEnd
+					}
+				};
+				strings.push(parsedString);
+				connection.console.log(JSON.stringify(parsedString));
+			} else {
+				// Starting a string
+				valueIndexStart = lineCharIndex + 1;
+			}
+			
+			isInString = !isInString;
+		}
+
+		++lineCharIndex;
+	});
+
+	return {
+		strings: strings
+	};
+}
+
 const SOURCE_NAME = 'FASTBuild';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -68,6 +112,8 @@ connection.onInitialize((params: InitializeParams) => {
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 documents.onDidChangeContent(change => {
+	parsedData = parse(change.document);
+
 	validateFile(change.document);
 });
 
@@ -127,6 +173,16 @@ connection.onHover((params: HoverParams) => {
 				contents: {
 					kind: MarkupKind.PlainText,
 					value: hoverText
+				},
+				range: {
+					start: {
+						line: range.line,
+						character: range.characterStart,
+					},
+					end: {
+						line: range.line,
+						character: range.characterEnd
+					}
 				}
 			}
 			return hover;
