@@ -40,7 +40,8 @@
 			"group": {
 				"kind": "test",
 				"isDefault": true
-			}
+			},
+			"dependsOn": "build"
 		}
 	]
 }
