@@ -27,7 +27,10 @@ interface ParsedString
 {
 	range: ParsedRange
 
-	// The value of the string after evaluation variables.
+	// The raw string value without evaluating variables.
+	raw: string
+
+	// The value of the string after evaluating variables.
 	evaluated: string
 }
 
@@ -44,6 +47,7 @@ function parse(textDocument: TextDocument): ParsedData {
 	let lineCharIndex = 0;
 	let isInString = false;
 	let valueIndexStart = 0;
+	let value = "";
 	chars.forEach(char => {
 		if (char == "\n") {
 			++line;
@@ -52,9 +56,12 @@ function parse(textDocument: TextDocument): ParsedData {
 		} else if (char == "'") {
 			if (isInString) {
 				// Ending a string
+				const raw = value;
+				const evaluated = "TODO:" + raw;
 				const valueIndexEnd = lineCharIndex;
 				const parsedString: ParsedString = {
-					evaluated: "TODO-evaluated",
+					raw: raw,
+					evaluated: evaluated,
 					range: {
 						line: line,
 						characterStart: valueIndexStart,
@@ -62,13 +69,17 @@ function parse(textDocument: TextDocument): ParsedData {
 					}
 				};
 				strings.push(parsedString);
-				connection.console.log(JSON.stringify(parsedString));
+
+				//connection.console.log(JSON.stringify(parsedString));
+				value = "";
 			} else {
 				// Starting a string
 				valueIndexStart = lineCharIndex + 1;
 			}
 			
 			isInString = !isInString;
+		} else if (isInString) {
+			value += char;
 		}
 
 		++lineCharIndex;
