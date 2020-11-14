@@ -1,17 +1,41 @@
 import {
 	createConnection,
-	TextDocuments,
 	Diagnostic,
 	DiagnosticSeverity,
-	ProposedFeatures,
+	Hover,
+	HoverParams,
 	InitializeParams,
-	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	MarkupKind,
+	ProposedFeatures,
+	TextDocuments,
+	TextDocumentSyncKind
 } from 'vscode-languageserver';
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
+
+interface ParsedRange
+{
+	line: number,
+	characterStart: number,
+	characterEnd: number
+}
+
+interface ParsedString
+{
+	range: ParsedRange
+
+	// The value of the string after evaluation variables.
+	evaluated: string
+}
+
+interface ParsedData {
+	strings: ParsedString[]
+}
+
+const SOURCE_NAME = 'FASTBuild';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -20,6 +44,8 @@ let connection = createConnection(ProposedFeatures.all);
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasDiagnosticRelatedInformationCapability: boolean = false;
+
+let parsedData: ParsedData | null = null;
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -32,15 +58,13 @@ connection.onInitialize((params: InitializeParams) => {
 
 	const result: InitializeResult = {
 		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Incremental
+			textDocumentSync: TextDocumentSyncKind.Incremental,
+			hoverProvider: true
 		}
 	};
 
 	return result;
 });
-
-//connection.onInitialized(() => {
-//});
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 documents.onDidChangeContent(change => {
@@ -64,7 +88,7 @@ async function validateFile(textDocument: TextDocument): Promise<void> {
 				end: textDocument.positionAt(m.index + m[0].length)
 			},
 			message: `${m[0]} is all uppercase.`,
-			source: 'FASTBuild'
+			source: SOURCE_NAME
 		};
 		if (hasDiagnosticRelatedInformationCapability) {
 			diagnostic.relatedInformation = [
@@ -85,6 +109,29 @@ async function validateFile(textDocument: TextDocument): Promise<void> {
 
 connection.onDidChangeWatchedFiles(_change => {
 	connection.console.log('We received an file change event');
+});
+
+connection.onHover((params: HoverParams) => {
+	const position = params.position;
+	const strings = parsedData?.strings ?? [];
+
+	for (let i = 0; i < strings.length; i++)
+    {
+		const range = strings[i].range;
+        if (range.line == position.line
+           && (range.characterStart <= position.character && range.characterEnd >= position.character))
+        {
+			const hoverText = strings[i].evaluated;
+
+			const hover: Hover = {
+				contents: {
+					kind: MarkupKind.PlainText,
+					value: hoverText
+				}
+			}
+			return hover;
+        }
+    }
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events
