@@ -1,19 +1,24 @@
 @preprocessor typescript
 
-main ->
-    newlines  {% function(d) { return []; } %}
-  | newlines statementAndOrComments newlines  {% function(d) { return d[1]; } %}
-  
-statementAndOrComments -> statementAndOrComment (newline statementAndOrComment):*  {% function(d) { return d.flat(); } %}
+main -> lines  {% function(d) { return d[0]; } %}
 
-#.filter((v,i) => i%2 === 0)
+lines ->
+    null  {% function(d) { return []; } %}
+  | [\s] lines  {% function(d) { return d[1]; } %}
+  | statementAndOrComment
+  | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]); } %}
+
+newlineBeforeStatementAndOrComment ->
+    [ \t]:+
+  | "\n" lines  {% function(d) { return d[1]; } %}
+
 statementAndOrComment ->
-    _ statement _  {% function(d) { return d[1]; } %}
-  | _ comment  {% function(d) { return null; } %}
-  | _ statement _ comment  {% function(d) { return d[1]; } %}
+    statement _  {% function(d) { return d[0]; } %}
+  | comment  {% function(d) { return null; } %}
+  | statement _ comment  {% function(d) { return d[0]; } %}
 
 statement ->
-    variableDefinition
+    variableDefinition  {% function(d) { return d[0]; } %}
 
 comment ->
     "//" [^\n]:*
@@ -51,14 +56,10 @@ doubleQuotedStringContentsLiteral -> [^"$]:*  {% function(d) { return d[0].join(
 evaluatedVariable -> "$" identifier "$"  {% function(d) { return { type: "evaluatedVariable", variable: d[1] }; } %}
   
 variable ->
-    "." identifier  {% function(d) { return { type: "variable", name: d[1], scope: "current" }; } %}
-  | "^" identifier  {% function(d) { return { type: "variable", name: d[1], scope: "parent" }; } %}
+    "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
+  | "^" identifier  {% function(d) { return { name: d[1], scope: "parent" }; } %}
 
 identifier -> [a-zA-Z0-9]:+  {% function(d) { return d[0].join(""); } %}
 
 # Whitespace
-_ -> [\s]:*     {% function(d) { return null; } %}
-
-# Newlines
-newline -> "\n"  {% function(d) { return { type: "newline" }; } %}
-newlines -> newline:*  {% function(d) { return { type: "newlines" }; } %}
+_ -> [ \t]:*  {% function(d) { return null; } %}
