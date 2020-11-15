@@ -49,10 +49,10 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: 123
 				}
@@ -67,10 +67,10 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: true
 				}
@@ -85,10 +85,10 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: false
 				}
@@ -103,12 +103,12 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
-					rhs: "hi"
+					rhs: 'hi'
 				}
 			]);
 		});
@@ -121,12 +121,12 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
-					rhs: "hi"
+					rhs: 'hi'
 				}
 			]);
 		});
@@ -139,12 +139,12 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
-					rhs: "h\"i"
+					rhs: 'h"i'
 				}
 			]);
 		});
@@ -157,12 +157,12 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
-					rhs: "h'i"
+					rhs: 'h\'i'
 				}
 			]);
 		});
@@ -175,20 +175,20 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: {
-						type: "stringTemplate",
+						type: 'stringTemplate',
 						parts: [
-							"pre-",
+							'pre-',
 							{
-								type: "evaluatedVariable",
-								name: "OtherVar"
+								type: 'evaluatedVariable',
+								name: 'OtherVar'
 							},
-							"-post"
+							'-post'
 						]
 					}
 				}
@@ -197,26 +197,26 @@ describe('parser', () => {
 
 		it('should work on assigning a double quoted string with a variable', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
-			const input = `.MyVar = "pre-$OtherVar$-post"`;
+			const input = `.MyVar = 'pre-$OtherVar$-post'`;
 			parser.feed(input);
 			assert.strictEqual(parser.results.length, 1);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: {
-						type: "stringTemplate",
+						type: 'stringTemplate',
 						parts: [
-							"pre-",
+							'pre-',
 							{
-								type: "evaluatedVariable",
-								name: "OtherVar"
+								type: 'evaluatedVariable',
+								name: 'OtherVar'
 							},
-							"-post"
+							'-post'
 						]
 					}
 				}
@@ -231,25 +231,25 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: {
-						type: "stringTemplate",
+						type: 'stringTemplate',
 						parts: [
-							"pre-",
+							'pre-',
 							{
-								type: "evaluatedVariable",
-								name: "OtherVar1"
+								type: 'evaluatedVariable',
+								name: 'OtherVar1'
 							},
-							"-",
+							'-',
 							{
-								type: "evaluatedVariable",
-								name: "OtherVar2"
+								type: 'evaluatedVariable',
+								name: 'OtherVar2'
 							},
-							"-post"
+							'-post'
 						]
 					}
 				}
@@ -264,13 +264,13 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: {
-						name: "OtherVar",
+						name: 'OtherVar',
 					}
 				}
 			]);
@@ -284,10 +284,10 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "parent"
+						name: 'MyVar',
+						scope: 'parent'
 					},
 					rhs: 123
 				}
@@ -304,10 +304,10 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar",
-						scope: "current"
+						name: 'MyVar',
+						scope: 'current'
 					},
 					rhs: 123
 				}
@@ -328,18 +328,18 @@ describe('parser', () => {
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar1",
-						scope: "current"
+						name: 'MyVar1',
+						scope: 'current'
 					},
 					rhs: 1
 				},
 				{
-					type: "variableDefinition",
+					type: 'variableDefinition',
 					lhs: {
-						name: "MyVar2",
-						scope: "current"
+						name: 'MyVar2',
+						scope: 'current'
 					},
 					rhs: 2
 				}
@@ -347,8 +347,7 @@ describe('parser', () => {
 		});
 	}),
 	describe('strings', () => {	
-		/*
-		it('should work on strings with a variable', () => {
+		it('should work on string with a variable', () => {
 			const input = `
 				.MyVar = "MyValue"
 				.Evaluated = 'pre-$MyVar$-post'
@@ -356,27 +355,17 @@ describe('parser', () => {
 			const result: ParsedData = parse(input);
 			const expectedStrings: ParsedString[] = [
 				{
-					raw: "MyValue",
-					evaluated: "TODO:MyValue",
+					evaluated: 'pre-TodoEvaluate[MyVar]-post',
 					range: {
-						line: 1,
-						characterStart: 13,
-						characterEnd: 20
-					}
-				},
-				{
-					raw: "pre-$MyVar$-post",
-					evaluated: "pre-MyValue-post",
-					range: {
-						line: 2,
-						characterStart: 17,
-						characterEnd: 33
+						line: 0,
+						characterStart: 0,
+						characterEnd: 0
 					}
 				}
 			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
+			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
 		});
-	
+		/*
 		it('should work on strings with multiple variables', () => {
 			const input = `
 				.MyVar1 = "MyValue1"
