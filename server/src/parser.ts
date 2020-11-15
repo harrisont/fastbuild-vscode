@@ -21,7 +21,10 @@ export interface ParsedData {
 	stringTemplates: ParsedString[]
 }
 
-export type QuoteChar = '\'' | '"'
+interface VariableDefinitionLhs {
+	name: string,
+	scope: 'current' | 'parent'
+}
 
 export function parse(text: string): ParsedData {
 	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
@@ -33,30 +36,43 @@ export function parse(text: string): ParsedData {
 
 	let stringTemplates: ParsedString[] = [];
 
+	let variables = new Map<string, boolean | number | string>();
+
 	for (const statement of statements) {
 		switch (statement.type) {
 			case 'variableDefinition':
 				const rhs = statement.rhs;
+
+				let evaluatedRhs: number | boolean | string = 0;
 				if (rhs.type && rhs.type == 'stringTemplate') {
-					let evaluated = '';
+					evaluatedRhs = ""
 					for (const part of rhs.parts) {
 						if (part.type && part.type == 'evaluatedVariable') {
-							evaluated += `TodoEvaluate[${part.name}]`
+							const variableName: string = part.name;
+							const variableValue = variables.get(variableName);
+							assert(variableValue !== undefined, `Referencing undefined variable "${variableName}"`)
+							evaluatedRhs += `${variableValue}`;
 						} else {
 							// Literal
-							evaluated += part;
+							evaluatedRhs += part;
 						}
 					}
 
 					stringTemplates.push({
-						evaluated: evaluated,
+						evaluated: evaluatedRhs,
 						range: {
 							line: 0,
 							characterStart: 0,
 							characterEnd: 0
 						}
 					})
+				} else {
+					evaluatedRhs = rhs;
 				}
+
+				const lhs: VariableDefinitionLhs = statement.lhs;
+				// TODO: handle lhs.scope (current or parent)
+				variables.set(lhs.name, evaluatedRhs);
 				break;
 		}
 	}

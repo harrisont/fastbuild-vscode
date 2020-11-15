@@ -355,7 +355,7 @@ describe('parser', () => {
 			const result: ParsedData = parse(input);
 			const expectedStrings: ParsedString[] = [
 				{
-					evaluated: 'pre-TodoEvaluate[MyVar]-post',
+					evaluated: 'pre-MyValue-post',
 					range: {
 						line: 0,
 						characterStart: 0,
