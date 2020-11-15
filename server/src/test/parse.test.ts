@@ -41,6 +41,33 @@ describe('parser', () => {
 			assert.deepStrictEqual(result, []);
 		});
 
+		it('should work on "//" comment', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `// My comment`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
+		it('should work on ";" comment', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `; My comment`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
+		it('should work on empty comment', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `//`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
 		it('should work on assigning an integer', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 123`;

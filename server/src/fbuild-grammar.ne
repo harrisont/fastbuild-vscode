@@ -5,8 +5,8 @@ main -> lines  {% function(d) { return d[0]; } %}
 lines ->
     null  {% function(d) { return []; } %}
   | [\s] lines  {% function(d) { return d[1]; } %}
-  | statementAndOrComment
-  | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]); } %}
+  | statementAndOrComment  {% function(d) { return d.flat(); } %}
+  | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]).flat(); } %}
 
 newlineBeforeStatementAndOrComment ->
     [ \t]:+
@@ -14,7 +14,7 @@ newlineBeforeStatementAndOrComment ->
 
 statementAndOrComment ->
     statement _  {% function(d) { return d[0]; } %}
-  | comment  {% function(d) { return null; } %}
+  | comment  {% function(d) { return []; } %}
   | statement _ comment  {% function(d) { return d[0]; } %}
 
 statement ->
