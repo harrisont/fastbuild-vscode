@@ -95,7 +95,7 @@ describe('parser', () => {
 			]);
 		});
 
-		it('should work on assigning a string literal', () => {
+		it('should work on assigning a string literal with single quotes', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'hi'`;
 			parser.feed(input);
@@ -109,6 +109,149 @@ describe('parser', () => {
 						scope: "current"
 					},
 					rhs: "hi"
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with double quotes', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = "hi"`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: "hi"
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with single quotes with a double quote inside', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = 'h"i'`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: "h\"i"
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with double quotes with a single quote inside', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = "h'i"`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: "h'i"
+				}
+			]);
+		});
+
+		it('should work on assigning a single quoted string with a variable', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = 'pre-$OtherVar$-post'`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: {
+						type: "stringTemplate",
+						parts: [
+							"pre-",
+							{
+								type: "evaluatedVariable",
+								name: "OtherVar"
+							},
+							"-post"
+						]
+					}
+				}
+			]);
+		});
+
+		it('should work on assigning a double quoted string with a variable', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = "pre-$OtherVar$-post"`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: {
+						type: "stringTemplate",
+						parts: [
+							"pre-",
+							{
+								type: "evaluatedVariable",
+								name: "OtherVar"
+							},
+							"-post"
+						]
+					}
+				}
+			]);
+		});
+
+		it('should work on assigning a string with multiple variables', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = 'pre-$OtherVar1$-$OtherVar2$-post'`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: {
+						type: "stringTemplate",
+						parts: [
+							"pre-",
+							{
+								type: "evaluatedVariable",
+								name: "OtherVar1"
+							},
+							"-",
+							{
+								type: "evaluatedVariable",
+								name: "OtherVar2"
+							},
+							"-post"
+						]
+					}
 				}
 			]);
 		});
@@ -203,82 +346,8 @@ describe('parser', () => {
 			]);
 		});
 	}),
-	describe('strings', () => {
-		it('should work on empty input', () => {
-			const input = '';
-			const result: ParsedData = parse(input);
-			assert.deepStrictEqual(result.strings, []);
-		});
-	
+	describe('strings', () => {	
 		/*
-		it('should work on strings with single quotes', () => {
-			const input = `.MyVar = 'MyString'`;
-			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
-				{
-					raw: "MyString",
-					evaluated: "TODO:MyString",
-					range: {
-						line: 0,
-						characterStart: 10,
-						characterEnd: 18
-					}
-				}
-			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
-		});
-	
-		it('should work on strings with double quotes', () => {
-			const input = `.MyVar = "MyString"`;
-			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
-				{
-					raw: "MyString",
-					evaluated: "TODO:MyString",
-					range: {
-						line: 0,
-						characterStart: 10,
-						characterEnd: 18
-					}
-				}
-			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
-		});
-	
-		it('should work on strings with single quotes with a double quote inside', () => {
-			const input = `.MyVar = 'My"String'`;
-			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
-				{
-					raw: "My\"String",
-					evaluated: "TODO:My\"String",
-					range: {
-						line: 0,
-						characterStart: 10,
-						characterEnd: 19
-					}
-				}
-			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
-		});
-	
-		it('should work on strings with double quotes with a single quote inside', () => {
-			const input = `.MyVar = "My'String"`;
-			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
-				{
-					raw: "My'String",
-					evaluated: "TODO:My'String",
-					range: {
-						line: 0,
-						characterStart: 10,
-						characterEnd: 19
-					}
-				}
-			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
-		});
-	
 		it('should work on strings with a variable', () => {
 			const input = `
 				.MyVar = "MyValue"
