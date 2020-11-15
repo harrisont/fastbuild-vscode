@@ -39,7 +39,7 @@
 			"type": "node",
 			"request": "launch",
 			"program": "${workspaceFolder}/server/src/test/runTest.ts",
-			"preLaunchTask": "build"
+			"preLaunchTask": "npm compile"
 		}
 	],
 	"compounds": [
