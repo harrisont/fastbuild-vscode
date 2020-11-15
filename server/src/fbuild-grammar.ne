@@ -49,16 +49,16 @@ string ->
   
 singleQuotedStringContents ->
     singleQuotedStringContentsLiteral  {% function(d) { return d[0]; } %}
-  | singleQuotedStringContentsLiteral (evaluatedVariable singleQuotedStringContentsLiteral):+
+  | singleQuotedStringContentsLiteral (evaluatedVariable singleQuotedStringContentsLiteral):+  {% function(d) { return { type: "stringTemplate", parts: [d[0]].concat(d[1].flat()) }; } %}
   
 doubleQuotedStringContents ->
     doubleQuotedStringContentsLiteral  {% function(d) { return d[0]; } %}
-  | (doubleQuotedStringContentsLiteral evaluatedVariable doubleQuotedStringContentsLiteral):+
+  | doubleQuotedStringContentsLiteral (evaluatedVariable doubleQuotedStringContentsLiteral):+  {% function(d) { return { type: "stringTemplate", parts: [d[0]].concat(d[1].flat()) }; } %}
 
 singleQuotedStringContentsLiteral -> [^'$]:*  {% function(d) { return d[0].join(""); } %}
 doubleQuotedStringContentsLiteral -> [^"$]:*  {% function(d) { return d[0].join(""); } %}
 
-evaluatedVariable -> "$" identifier "$"  {% function(d) { return { type: "evaluatedVariable", variable: d[1] }; } %}
+evaluatedVariable -> "$" identifier "$"  {% function(d) { return { type: "evaluatedVariable", name: d[1] }; } %}
 
 identifier -> [a-zA-Z0-9]:+  {% function(d) { return d[0].join(""); } %}
 
