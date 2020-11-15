@@ -11,12 +11,122 @@ import {
 
 describe('parser', () => {
 	describe('parse', () => {
-		const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
-
 		it('should work on empty input', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = ``;
 			parser.feed(input);
-			assert.deepStrictEqual(parser.results, []);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
+		it('should work on space', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = ` `;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
+		it('should work on empty lines', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+			
+
+			`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, []);
+		});
+
+		it('should work on assignment to current scope', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = 123`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on assignment to parent scope', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `^MyVar = 123`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "parent"
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on statements with whitespace', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				.MyVar = 123
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on multiple statements with whitespace', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				.MyVar1 = 1
+
+
+
+				.MyVar2 = 2
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar1",
+						scope: "current"
+					},
+					rhs: 1
+				},
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar2",
+						scope: "current"
+					},
+					rhs: 2
+				}
+			]);
 		});
 	}),
 	describe('strings', () => {
