@@ -24,13 +24,18 @@ comment ->
     "//" [^\n]:*
   | ";" [^\n]:*
 
-variableDefinition -> variable _ "=" _ rvalue  {% function(d) { return { type: "variableDefinition", lhs: d[0], rhs: d[4] }; } %}
+variableDefinition -> lvalue _ "=" _ rvalue  {% function(d) { return { type: "variableDefinition", lhs: d[0], rhs: d[4] }; } %}
+
+lvalue ->
+    "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
+  | "^" identifier  {% function(d) { return { name: d[1], scope: "parent" }; } %}
+    
 
 rvalue ->
     int  {% function(d) { return d[0]; } %}
   | bool  {% function(d) { return d[0]; } %}
   | string  {% function(d) { return d[0]; } %}
-  | variable  {% function(d) { return d[0]; } %}
+  |  "." identifier  {% function(d) { return { name: d[1] }; } %}
   
 int -> [0-9]:+  {% function(d) { return parseInt(d[0].join("")); } %}
 
@@ -54,10 +59,6 @@ singleQuotedStringContentsLiteral -> [^'$]:*  {% function(d) { return d[0].join(
 doubleQuotedStringContentsLiteral -> [^"$]:*  {% function(d) { return d[0].join(""); } %}
 
 evaluatedVariable -> "$" identifier "$"  {% function(d) { return { type: "evaluatedVariable", variable: d[1] }; } %}
-  
-variable ->
-    "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
-  | "^" identifier  {% function(d) { return { name: d[1], scope: "parent" }; } %}
 
 identifier -> [a-zA-Z0-9]:+  {% function(d) { return d[0].join(""); } %}
 

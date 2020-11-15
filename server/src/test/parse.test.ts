@@ -41,7 +41,7 @@ describe('parser', () => {
 			assert.deepStrictEqual(result, []);
 		});
 
-		it('should work on assignment to current scope', () => {
+		it('should work on assigning an integer', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 123`;
 			parser.feed(input);
@@ -55,6 +55,80 @@ describe('parser', () => {
 						scope: "current"
 					},
 					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on assigning true', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = true`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: true
+				}
+			]);
+		});
+
+		it('should work on assigning false', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = false`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: false
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = 'hi'`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: "hi"
+				}
+			]);
+		});
+
+		it('should work on assigning the value of another variable', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `.MyVar = .OtherVar`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: "variableDefinition",
+					lhs: {
+						name: "MyVar",
+						scope: "current"
+					},
+					rhs: {
+						name: "OtherVar",
+					}
 				}
 			]);
 		});
