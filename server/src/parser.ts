@@ -1,3 +1,6 @@
+import * as nearley from 'nearley'
+import fbuildGrammar from './fbuild-grammar'
+
 export interface ParsedRange
 {
 	line: number,
@@ -23,17 +26,36 @@ export interface ParsedData {
 export type QuoteChar = '\'' | '"'
 
 export function parse(text: string): ParsedData {
+	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+	parser.feed(`
+//
+// Root FASTBuild file for the KeystoneFoundation depot.
+//
+`);
+
+	//======================================================================
+
 	let strings: ParsedString[] = [];
 
 	const chars = [...text];
 	let line = 0;
 	let lineCharIndex = 0;
+
 	let isInString = false;
+	
+	let isInVariableDefinition = false;
+	let isInVariableNameDefinition = false;
+	let variableName = "";
+	
 	let valueIndexStart = 0;
 	let value = "";
+	
 	let stringBoundaryChar: QuoteChar | null = null; 
+
 	chars.forEach(char => {
 		if (char == "\n") {
+			isInVariableDefinition = false;
+			isInVariableNameDefinition = false;
 			++line;
 			// -1 because we always add 1 at the end of the loop.
 			lineCharIndex = -1;
@@ -43,6 +65,7 @@ export function parse(text: string): ParsedData {
 			if (!isInString) {
 				// Starting a string
 				isInString = true;
+				value = "";
 				valueIndexStart = lineCharIndex + 1;
 				stringBoundaryChar = char;
 			} else if (char == stringBoundaryChar) {
@@ -65,7 +88,16 @@ export function parse(text: string): ParsedData {
 				value = "";
 				stringBoundaryChar = null;
 			}
-		} else if (isInString) {
+		} else if (char == ".") {
+			// Starting a variable
+			isInVariableDefinition = true;
+			isInVariableNameDefinition = true;
+			valueIndexStart = lineCharIndex + 1;
+			// TODO: handle "\n" to terminate
+		} else if (isInVariableNameDefinition && (char == " " || char == "\n")) {
+			isInVariableNameDefinition = false;
+			variableName = value;
+		} else if (isInString || isInVariableNameDefinition) {
 			value += char;
 		}
 
