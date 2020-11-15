@@ -37,8 +37,8 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
+		"compile": "tsc --build",
+		"watch": "tsc --build --watch",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
 		"test": "node server/out/test/runTest"
 	},
