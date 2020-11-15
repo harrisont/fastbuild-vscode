@@ -1,17 +1,22 @@
 import * as assert from 'assert';
-import * as parser from '../parser'
+
+import {
+	parse,
+	ParsedData,
+	ParsedString,
+} from '../parser'
 
 describe('parse', () => {
 	it('should work on empty input', () => {
 		const input = '';
-		const result: parser.ParsedData = parser.parse(input);
+		const result: ParsedData = parse(input);
 		assert.deepStrictEqual(result.strings, []);
 	});
 
 	it('should work on strings with single quotes', () => {
 		const input = `.MyVar = 'MyString'`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "MyString",
 				evaluated: "TODO:MyString",
@@ -27,8 +32,8 @@ describe('parse', () => {
 
 	it('should work on strings with double quotes', () => {
 		const input = `.MyVar = "MyString"`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "MyString",
 				evaluated: "TODO:MyString",
@@ -44,8 +49,8 @@ describe('parse', () => {
 
 	it('should work on strings with single quotes with a double quote inside', () => {
 		const input = `.MyVar = 'My"String'`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "My\"String",
 				evaluated: "TODO:My\"String",
@@ -61,8 +66,8 @@ describe('parse', () => {
 
 	it('should work on strings with double quotes with a single quote inside', () => {
 		const input = `.MyVar = "My'String"`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "My'String",
 				evaluated: "TODO:My'String",
@@ -81,8 +86,8 @@ describe('parse', () => {
 			.MyVar = "MyValue"
 			.Evaluated = 'pre-$MyVar$-post'
 		`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "MyValue",
 				evaluated: "TODO:MyValue",
@@ -111,8 +116,8 @@ describe('parse', () => {
 			.MyVar2 = "MyValue2"
 			.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 		`;
-		const result: parser.ParsedData = parser.parse(input);
-		const expectedStrings: parser.ParsedString[] = [
+		const result: ParsedData = parse(input);
+		const expectedStrings: ParsedString[] = [
 			{
 				raw: "MyValue1",
 				evaluated: "TODO:MyValue1",
