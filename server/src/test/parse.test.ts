@@ -411,9 +411,5 @@ describe('parser', () => {
 			];
 			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
 		});
-	
-		/*
-		.Copy = .MyVar
-		*/
 	});
 });
