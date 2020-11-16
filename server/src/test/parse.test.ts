@@ -15,7 +15,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = ``;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -24,7 +24,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = ` `;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -36,7 +36,7 @@ describe('parser', () => {
 
 			`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -45,7 +45,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `// My comment`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -54,7 +54,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `; My comment`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -63,7 +63,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `//`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, []);
 		});
@@ -72,7 +72,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 123`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -90,7 +90,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = true`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -108,7 +108,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = false`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -126,7 +126,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'hi'`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -144,7 +144,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = "hi"`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -162,7 +162,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'h"i'`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -180,7 +180,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = "h'i"`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -198,7 +198,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'pre-$OtherVar$-post'`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -226,7 +226,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'pre-$OtherVar$-post'`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -254,7 +254,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = 'pre-$OtherVar1$-$OtherVar2$-post'`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -287,7 +287,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `.MyVar = .OtherVar`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -307,7 +307,7 @@ describe('parser', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 			const input = `^MyVar = 123`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -327,7 +327,7 @@ describe('parser', () => {
 				.MyVar = 123
 				`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
@@ -351,7 +351,7 @@ describe('parser', () => {
 				.MyVar2 = 2
 				`;
 			parser.feed(input);
-			assert.strictEqual(parser.results.length, 1);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
 			assert.deepStrictEqual(result, [
 				{
