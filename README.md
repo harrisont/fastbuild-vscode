@@ -1,6 +1,9 @@
 # FASTBuild Language Server and VS Code Client
 
-Based on the sample code for https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+Contains a language server and Visual Studio Code client for the [FASTBuild](https://www.fastbuild.org/) language.
+
+This provides the following functionality:
+* Hover over an evaluated variable (e.g. `.Message = 'Hello $Location$`, `.MyVarCopy = .MyVar`).
 
 ## Running
 
@@ -27,4 +30,5 @@ Run `npm test` or run the `Run Tests` task.
 
 ## TODO
 
-* Use the position information from the lexer to show hovers in the correct location.
+* Add evaluated variable when assigning the value of another variable (e.g. `.A = .B`).
+* Add variable scope.
