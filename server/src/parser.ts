@@ -78,6 +78,10 @@ export function parse(text: string): ParsedData {
 				// TODO: handle lhs.scope (current or parent)
 				variables.set(lhs.name, evaluatedRhs);
 				break;
+			case 'scopeStart':
+				break;
+			case 'scopeEnd':
+				break;
 		}
 	}
 	
