@@ -7,7 +7,15 @@ import {
 	parse,
 	ParsedData,
 	EvaluatedVariable,
+	Value,
 } from '../parser'
+
+// Compares the parsed evaluatedVariables, but only the value, not the range.
+function assertEvaluatedVariablesValueEqual(input: string, expectedValues: Value[]): void {
+	const result: ParsedData = parse(input);
+	const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+	assert.deepStrictEqual(actualValues, expectedValues);
+}
 
 describe('parser', () => {
 	describe('parse', () => {
@@ -305,7 +313,7 @@ describe('parser', () => {
 							name: 'OtherVar',
 							line: 0,
 							characterStart: 9,
-							characterEnd: 10000,  // TODO
+							characterEnd: 10000,  // TODO: see known issue in README.md
 						},
 					]
 				}
@@ -382,25 +390,35 @@ describe('parser', () => {
 			]);
 		});
 	}),
-	describe('evaluatedVariables', () => {
+
+	describe('evaluatedVariables value', () => {
 		it('should be detected in a string with a variable', () => {
 			const input = `
 				.MyVar = 'MyValue'
 				.Evaluated = 'pre-$MyVar$-post'
 			`;
-			const result: ParsedData = parse(input);
-			const expectedEvaluatedVariables: EvaluatedVariable[] = [
-				{
-					value: 'MyValue',
-					range: {
-						line: 2,
-						characterStart: 22,
-						characterEnd: 29,
-					}
-				}
-			];
-			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
+			assertEvaluatedVariablesValueEqual(input, ['MyValue']);
 		});
+
+		it('should be detected in a string with multiple variables', () => {
+			const input = `
+				.MyVar1 = 'MyValue1'
+				.MyVar2 = 'MyValue2'
+				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['MyValue1', 'MyValue2']);
+		});
+
+		it('should be detected in the RHS when assigning the value of another variable', () => {
+			const input = `
+				.MyVar = 'MyValue'
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['MyValue']);
+		});
+	});
+
+	describe('evaluatedVariables range', () => {
 		it('should be detected in a string with multiple variables', () => {
 			const input = `
 				.MyVar1 = 'MyValue1'
@@ -428,7 +446,8 @@ describe('parser', () => {
 			];
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
-		it('should be detected in the RHS when assigning the value of another variable', () => {
+
+		it('should work on assigning the value of another variable', () => {
 			const input = `
 				.MyVar = 'MyValue'
 				.Copy = .MyVar
@@ -440,7 +459,7 @@ describe('parser', () => {
 					range: {
 						line: 2,
 						characterStart: 12,
-						characterEnd: 10000,  // TODO
+						characterEnd: 10000,  // TODO: see known issue in README.md
 					}
 				}
 			];
