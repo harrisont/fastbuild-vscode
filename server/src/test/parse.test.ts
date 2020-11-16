@@ -373,7 +373,7 @@ describe('parser', () => {
 			]);
 		});
 	}),
-	describe('strings', () => {	
+	describe('stringTemplates', () => {	
 		it('should work on string with a variable', () => {
 			const input = `
 				.MyVar = "MyValue"
