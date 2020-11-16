@@ -25,15 +25,16 @@ export function onParsedDataChanged(newParsedData: parser.ParsedData): void {
 
 function onHover(params: HoverParams) {
 	const position = params.position;
-	const stringTemplates = state.parsedData?.evaluatedVariables ?? [];
+	const evaluatedVariables = state.parsedData?.evaluatedVariables ?? [];
 
-	for (let i = 0; i < stringTemplates.length; i++)
+	for (let i = 0; i < evaluatedVariables.length; i++)
     {
-		const range = stringTemplates[i].range;
+		const range = evaluatedVariables[i].range;
         if (range.line == position.line
            && (range.characterStart <= position.character && range.characterEnd >= position.character))
         {
-			const hoverText = stringTemplates[i].evaluated;
+			const value = evaluatedVariables[i].value;
+			const hoverText = String(value);
 
 			const hover: Hover = {
 				contents: {

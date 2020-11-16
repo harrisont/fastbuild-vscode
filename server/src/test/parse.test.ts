@@ -6,7 +6,7 @@ import fbuildGrammar from '../fbuild-grammar'
 import {
 	parse,
 	ParsedData,
-	ParsedString,
+	EvaluatedVariable,
 } from '../parser'
 
 describe('parser', () => {
@@ -305,7 +305,7 @@ describe('parser', () => {
 							name: 'OtherVar',
 							line: 0,
 							characterStart: 9,
-							characterEnd: 10000,  // TODO: should be 18
+							characterEnd: 10000,  // TODO
 						},
 					]
 				}
@@ -389,9 +389,9 @@ describe('parser', () => {
 				.Evaluated = 'pre-$MyVar$-post'
 			`;
 			const result: ParsedData = parse(input);
-			const expectedEvaluatedVariables: ParsedString[] = [
+			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
-					evaluated: 'MyValue',
+					value: 'MyValue',
 					range: {
 						line: 2,
 						characterStart: 22,
@@ -408,9 +408,9 @@ describe('parser', () => {
 				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 			`;
 			const result: ParsedData = parse(input);
-			const expectedEvaluatedVariables: ParsedString[] = [
+			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
-					evaluated: 'MyValue1',
+					value: 'MyValue1',
 					range: {
 						line: 3,
 						characterStart: 22,
@@ -418,7 +418,7 @@ describe('parser', () => {
 					}
 				},
 				{
-					evaluated: 'MyValue2',
+					value: 'MyValue2',
 					range: {
 						line: 3,
 						characterStart: 31,
@@ -434,13 +434,13 @@ describe('parser', () => {
 				.Copy = .MyVar
 			`;
 			const result: ParsedData = parse(input);
-			const expectedEvaluatedVariables: ParsedString[] = [
+			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
-					evaluated: 'MyValue',
+					value: 'MyValue',
 					range: {
 						line: 2,
 						characterStart: 12,
-						characterEnd: 10000,  // TODO: should be 19
+						characterEnd: 10000,  // TODO
 					}
 				}
 			];

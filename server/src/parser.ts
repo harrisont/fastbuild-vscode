@@ -2,23 +2,21 @@ import { assert } from 'console';
 import * as nearley from 'nearley'
 import fbuildGrammar from './fbuild-grammar'
 
-export interface ParsedRange
+export interface SourceRange
 {
 	line: number,
 	characterStart: number,
 	characterEnd: number
 }
 
-export interface ParsedString
+export interface EvaluatedVariable
 {
-	range: ParsedRange
-
-	// The value of the string after evaluating variables.
-	evaluated: string
+	range: SourceRange
+	value: boolean | number | string
 }
 
 export interface ParsedData {
-	evaluatedVariables: ParsedString[]
+	evaluatedVariables: EvaluatedVariable[]
 }
 
 interface VariableDefinitionLhs {
@@ -34,7 +32,7 @@ export function parse(text: string): ParsedData {
 	assert(numResults == 1, `Should parse to exactly 1 result, but parsed to ${numResults}`);
 	const statements = parser.results[0];
 
-	let evaluatedVariables: ParsedString[] = [];
+	let evaluatedVariables: EvaluatedVariable[] = [];
 
 	let variables = new Map<string, boolean | number | string>();
 
@@ -50,18 +48,21 @@ export function parse(text: string): ParsedData {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
 							const variableValue = variables.get(variableName);
-							assert(variableValue !== undefined, `Referencing undefined variable "${variableName}"`)
-							const variableValueString = String(variableValue);
-							evaluatedRhs += variableValueString;
-
-							evaluatedVariables.push({
-								evaluated: variableValueString,
-								range: {
-									line: part.line,
-									characterStart: part.characterStart,
-									characterEnd: part.characterEnd,
-								}
-							});
+							if (variableValue === undefined) {
+								assert(false, `Referencing undefined variable "${variableName}"`);
+							} else {
+								const variableValueString = String(variableValue);
+								evaluatedRhs += variableValueString;
+	
+								evaluatedVariables.push({
+									value: variableValue,
+									range: {
+										line: part.line,
+										characterStart: part.characterStart,
+										characterEnd: part.characterEnd,
+									}
+								});
+							}
 						} else {
 							// Literal
 							evaluatedRhs += part;
