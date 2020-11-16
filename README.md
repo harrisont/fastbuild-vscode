@@ -31,6 +31,7 @@ Run `npm test` or run the `Run Tests` task.
 
 ## TODO
 
+* Have the parser leverage the lexer more heavily.
 * Support statements that span multiple lines. For example:
     ```
     .Var
