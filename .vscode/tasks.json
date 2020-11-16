@@ -60,6 +60,9 @@
 				"server/src/fbuild-grammar.ts"
 			],
 			"group": "build",
+			"presentation": {
+				"clear": true
+			},
 			"problemMatcher": []
 		}
 	]
