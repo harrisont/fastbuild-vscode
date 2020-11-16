@@ -9,10 +9,12 @@ export interface SourceRange
 	characterEnd: number
 }
 
+export type Value = boolean | number | string;
+
 export interface EvaluatedVariable
 {
 	range: SourceRange
-	value: boolean | number | string
+	value: Value
 }
 
 export interface ParsedData {
@@ -34,7 +36,7 @@ export function parse(text: string): ParsedData {
 
 	let evaluatedVariables: EvaluatedVariable[] = [];
 
-	let variables = new Map<string, boolean | number | string>();
+	let variables = new Map<string, Value>();
 
 	for (const statement of statements) {
 		switch (statement.type) {
