@@ -519,11 +519,16 @@ describe('parser', () => {
 				}
 				.Var2 = .Var1
 			`;
-			// TODO: detect assert
-			assertEvaluatedVariablesValueEqual(input, []);
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing undefined variable "Var1"'
+				}
+			);
 		});
 
-		it('should be able to write a variable in a direct parent scope', () => {
+		it('should be able to write an existing variable in a direct parent scope', () => {
 			const input = `
 				.Var1 = 1
 				{
@@ -532,6 +537,21 @@ describe('parser', () => {
 				.Var2 = .Var1
 			`;
 			assertEvaluatedVariablesValueEqual(input, [2]);
+		});
+
+		it('should not be able to write a non-existant variable in a parent scope', () => {
+			const input = `
+				{
+					^Var1 = 1
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+				}
+			);
 		});
 
 		it('should not be able to write a variable in a grandparent scope', () => {
@@ -543,8 +563,13 @@ describe('parser', () => {
 					}
 				}
 			`;
-			// TODO: detect assert
-			assertEvaluatedVariablesValueEqual(input, []);
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+				}
+			);
 		});
 	});
 

@@ -82,7 +82,7 @@ rvalue ->
 				line: varName.line - 1,
 				// Include the "." character.
 				characterStart: varName.col - 2,
-				// TODO: determine the end
+				// TODO: determine the end. See the known issue in README.md.
 				characterEnd: 10000,
 			}
 		];
