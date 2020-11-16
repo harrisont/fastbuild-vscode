@@ -17,3 +17,7 @@ Based on the sample code for https://code.visualstudio.com/api/language-extensio
 Parses using [Nearley](https://nearley.js.org/).
 
 [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
+
+## TODO
+
+* Use the position information from the lexer to show hovers in the correct location.
