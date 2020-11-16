@@ -389,6 +389,53 @@ describe('parser', () => {
 				}
 			]);
 		});
+		
+		it('should work on an empty scope', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				{
+				}
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: 'scopeStart'
+				},
+				{
+					type: 'scopeEnd'
+				}
+			]);
+		});
+
+		it('should work on a scope with a statement', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				{
+					.MyVar = 123;
+				}
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: 'scopeStart'
+				},
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 123
+				},
+				{
+					type: 'scopeEnd'
+				}
+			]);
+		});
 	}),
 
 	describe('evaluatedVariables value', () => {
