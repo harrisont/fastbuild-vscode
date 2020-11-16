@@ -45,7 +45,7 @@ lines ->
   | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]).flat(); } %}
 
 newlineBeforeStatementAndOrComment ->
-    [ \t]:+
+    %whitespace
   | "\n" lines  {% function(d) { return d[1]; } %}
 
 statementAndOrComment ->
