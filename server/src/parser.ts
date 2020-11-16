@@ -26,6 +26,74 @@ interface VariableDefinitionLhs {
 	scope: 'current' | 'parent'
 }
 
+interface Scope {
+	variables: Map<string, Value>
+}
+
+class ScopeStack {
+	private stack: Array<Scope> = []
+
+	constructor() {
+		this.push();
+	}
+
+	push() {
+		let scope: Scope = {
+			variables: new Map<string, Value>()
+		}
+
+		this.stack.push(scope);
+	}
+
+	pop() {
+		if (this.stack.length < 2) {
+			throw new ParseError('Cannot pop scope because there is no parent scope.');
+		}
+		this.stack.pop();
+	}
+
+	// Get a variable value, searching from the current scope to its parents.
+	// Return null if the variable is not defined.
+	getVariableValue(variableName: string): Value | null {
+		for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
+			const scope = this.stack[scopeIndex];
+			const maybeValue = scope.variables.get(variableName);
+			if (maybeValue !== undefined) {
+				return maybeValue;
+			}
+		}
+		return null;
+	}
+
+	setVariableInCurrentScope(name: string, value: Value): void {
+		const currentScope = this.getCurrentScope();
+		currentScope.variables.set(name, value);
+	}
+
+	updateExistingVariableInParentScope(name: string, value: Value): void {
+		if (this.stack.length < 2) {
+			throw new ParseError(`Cannot update variable "${name}" in parent scope because there is no parent scope.`);
+		}
+		const parentScope = this.stack[this.stack.length - 2];
+		if (parentScope.variables.get(name) === undefined) {
+			throw new ParseError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
+		}
+		parentScope.variables.set(name, value);
+	}
+
+	private getCurrentScope(): Scope {
+		return this.stack[this.stack.length - 1];
+	}
+}
+
+export class ParseError extends Error {
+	constructor(message?: string) {
+		super(message);
+		Object.setPrototypeOf(this, new.target.prototype);
+		this.name = ParseError.name;
+	}
+}
+
 export function parse(text: string): ParsedData {
 	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
 	parser.feed(text);
@@ -36,7 +104,7 @@ export function parse(text: string): ParsedData {
 
 	let evaluatedVariables: EvaluatedVariable[] = [];
 
-	let variables = new Map<string, Value>();
+	let scopeStack = new ScopeStack();
 
 	for (const statement of statements) {
 		switch (statement.type) {
@@ -49,9 +117,9 @@ export function parse(text: string): ParsedData {
 					for (const part of rhs) {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
-							const variableValue = variables.get(variableName);
-							if (variableValue === undefined) {
-								assert(false, `Referencing undefined variable "${variableName}"`);
+							const variableValue = scopeStack.getVariableValue(variableName);
+							if (variableValue === null) {
+								throw new ParseError(`Referencing undefined variable "${variableName}"`);
 							} else {
 								const variableValueString = String(variableValue);
 								evaluatedRhs += variableValueString;
@@ -75,8 +143,17 @@ export function parse(text: string): ParsedData {
 				}
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
-				// TODO: handle lhs.scope (current or parent)
-				variables.set(lhs.name, evaluatedRhs);
+				if (lhs.scope == 'current') {
+					scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs);
+				} else {
+					scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
+				}
+				break;
+			case 'scopeStart':
+				scopeStack.push();
+				break;
+			case 'scopeEnd':
+				scopeStack.pop();
 				break;
 		}
 	}

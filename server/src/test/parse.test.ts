@@ -389,6 +389,53 @@ describe('parser', () => {
 				}
 			]);
 		});
+		
+		it('should work on an empty scope', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				{
+				}
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: 'scopeStart'
+				},
+				{
+					type: 'scopeEnd'
+				}
+			]);
+		});
+
+		it('should work on a scope with a statement', () => {
+			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
+			const input = `
+				{
+					.MyVar = 123;
+				}
+				`;
+			parser.feed(input);
+			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
+			const result = parser.results[0];
+			assert.deepStrictEqual(result, [
+				{
+					type: 'scopeStart'
+				},
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 123
+				},
+				{
+					type: 'scopeEnd'
+				}
+			]);
+		});
 	}),
 
 	describe('evaluatedVariables value', () => {
@@ -411,10 +458,118 @@ describe('parser', () => {
 
 		it('should be detected in the RHS when assigning the value of another variable', () => {
 			const input = `
-				.MyVar = 'MyValue'
+				.MyVar = 1
 				.Copy = .MyVar
 			`;
-			assertEvaluatedVariablesValueEqual(input, ['MyValue']);
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+
+		it('should be able to read a variable in a direct parent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					.Var2 = .Var1
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+		
+		it('should be able to read a variable in a grandparent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					{
+						.Var2 = .Var1
+					}
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+
+		it('should allow variables with the same name in different scopes', () => {
+			const input = `
+				{
+					.Var1 = 1
+					.Var2 = .Var1
+				}
+				{
+					.Var1 = 2
+					.Var2 = .Var1
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1, 2]);
+		});
+
+		it('should allow a variable to shadow a variable with the same name in a parent scope', () => {
+			const input = `
+				.Var = 1
+				{
+					.Var = 2
+					.Inner = .Var
+				}
+				.Outer = .Var
+			`;
+			assertEvaluatedVariablesValueEqual(input, [2, 1]);
+		});
+
+		it('should not be able to read a variable in a child scope', () => {
+			const input = `
+				{
+					.Var1 = 1
+				}
+				.Var2 = .Var1
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing undefined variable "Var1"'
+				}
+			);
+		});
+
+		it('should be able to write an existing variable in a direct parent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					^Var1 = 2
+				}
+				.Var2 = .Var1
+			`;
+			assertEvaluatedVariablesValueEqual(input, [2]);
+		});
+
+		it('should not be able to write a non-existant variable in a parent scope', () => {
+			const input = `
+				{
+					^Var1 = 1
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+				}
+			);
+		});
+
+		it('should not be able to write a variable in a grandparent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					{
+						^Var1 = 2
+					}
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+				}
+			);
 		});
 	});
 
@@ -447,7 +602,7 @@ describe('parser', () => {
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
 
-		it('should work on assigning the value of another variable', () => {
+		it('should be detected when assigning the value of another variable', () => {
 			const input = `
 				.MyVar = 'MyValue'
 				.Copy = .MyVar

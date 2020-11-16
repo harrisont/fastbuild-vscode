@@ -6,6 +6,8 @@ const lexer = moo.states({
 		whitespace: /[ \t]+/,
 		newline: { match: '\n', lineBreaks: true },
 		comment: /(?:;|\/\/).*/,
+		scopeStart: '{',
+		scopeEnd: '}',
 		integer: /0|[1-9][0-9]*/,
 		singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
 		doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
@@ -54,13 +56,15 @@ statementAndOrComment ->
   | statement _ comment  {% function(d) { return d[0]; } %}
 
 statement ->
-    variableDefinition  {% function(d) { return d[0]; } %}
+    %scopeStart  {% function(d) { return { type: "scopeStart" }; } %}
+  | %scopeEnd  {% function(d) { return { type: "scopeEnd" }; } %}
+  | variableDefinition  {% function(d) { return d[0]; } %}
 
 comment ->
     "//" [^\n]:*
   | ";" [^\n]:*
 
-variableDefinition -> lvalue _ "=" _ rvalue  {% function(d) { return { type: "variableDefinition", lhs: d[0], rhs: d[4] }; } %}
+variableDefinition -> lvalue _ "=" _ rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 lvalue ->
     "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
@@ -78,7 +82,7 @@ rvalue ->
 				line: varName.line - 1,
 				// Include the "." character.
 				characterStart: varName.col - 2,
-				// TODO: determine the end
+				// TODO: determine the end. See the known issue in README.md.
 				characterEnd: 10000,
 			}
 		];

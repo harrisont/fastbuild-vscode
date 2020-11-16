@@ -32,4 +32,3 @@ Run `npm test` or run the `Run Tests` task.
 ## TODO
 
 * Fix the hover extending to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
-* Add variable scope.
