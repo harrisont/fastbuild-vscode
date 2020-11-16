@@ -4,19 +4,26 @@ Based on the sample code for https://code.visualstudio.com/api/language-extensio
 
 ## Running
 
-- Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder
-- Open VS Code on this folder.
-- Press Ctrl+Shift+B to compile the client and server.
-- Switch to the Debug viewlet.
-- Select `Launch Client` from the drop down.
-- Run the launch config.
-- If you want to debug the server as well use the launch configuration `Attach to Server`
+1. Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder.
+2. Open VS Code on this folder.
+3. Press Ctrl+Shift+B to run the `npm compile` task, which compiles the client and server. You can also run the `npm watch` task to watch for changes and automatically compile.
+4. Run the `Launch Client` launch config. If you want to debug the server as well use the launch configuration `Client + Server`.
+
+## Testing
+
+Run `npm test` or run the `Run Tests` task.
 
 ## Notes
 
-Parses using [Nearley](https://nearley.js.org/).
-
-[Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
+* Parses using [Nearley](https://nearley.js.org/), which lexes using [moo](https://github.com/no-context/moo).
+    * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
+	* Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
+* VS Code language server extension resources:
+    * [VS Code Language Server Extension Guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
+	* [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
+	* [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
+* Other resources:
+    * [RegExr](https://regexr.com/) regex playgound
 
 ## TODO
 
