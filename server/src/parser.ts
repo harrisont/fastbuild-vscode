@@ -18,7 +18,7 @@ export interface ParsedString
 }
 
 export interface ParsedData {
-	stringTemplates: ParsedString[]
+	evaluatedVariables: ParsedString[]
 }
 
 interface VariableDefinitionLhs {
@@ -34,7 +34,7 @@ export function parse(text: string): ParsedData {
 	assert(numResults == 1, `Should parse to exactly 1 result, but parsed to ${numResults}`);
 	const statements = parser.results[0];
 
-	let stringTemplates: ParsedString[] = [];
+	let evaluatedVariables: ParsedString[] = [];
 
 	let variables = new Map<string, boolean | number | string>();
 
@@ -44,28 +44,29 @@ export function parse(text: string): ParsedData {
 				const rhs = statement.rhs;
 
 				let evaluatedRhs: number | boolean | string = 0;
-				if (rhs.type && rhs.type == 'stringTemplate') {
+				if (rhs instanceof Array) {
 					evaluatedRhs = ""
-					for (const part of rhs.parts) {
+					for (const part of rhs) {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
 							const variableValue = variables.get(variableName);
 							assert(variableValue !== undefined, `Referencing undefined variable "${variableName}"`)
-							evaluatedRhs += `${variableValue}`;
+							const variableValueString = String(variableValue);
+							evaluatedRhs += variableValueString;
+
+							evaluatedVariables.push({
+								evaluated: variableValueString,
+								range: {
+									line: part.line,
+									characterStart: part.characterStart,
+									characterEnd: part.characterEnd,
+								}
+							});
 						} else {
 							// Literal
 							evaluatedRhs += part;
 						}
 					}
-
-					stringTemplates.push({
-						evaluated: evaluatedRhs,
-						range: {
-							line: 0,
-							characterStart: 0,
-							characterEnd: 0
-						}
-					})
 				} else {
 					evaluatedRhs = rhs;
 				}
@@ -78,6 +79,6 @@ export function parse(text: string): ParsedData {
 	}
 	
 	return {
-		stringTemplates: stringTemplates
+		evaluatedVariables: evaluatedVariables
 	};
 }

@@ -79,21 +79,29 @@ bool ->
   | "false"  {% function(d) { return false; } %}
 
 string ->
-    "'" singleQuotedStringContents "'"  {% function(d) { return d[1]; } %}
-  | "\"" doubleQuotedStringContents "\""  {% function(d) { return d[1]; } %}
-  
-singleQuotedStringContents ->
-    singleQuotedStringContentsLiteral  {% function(d) { return d[0]; } %}
-  | singleQuotedStringContentsLiteral (evaluatedVariable singleQuotedStringContentsLiteral):+  {% function(d) { return { type: "stringTemplate", parts: [d[0]].concat(d[1].flat()) }; } %}
-  
-doubleQuotedStringContents ->
-    doubleQuotedStringContentsLiteral  {% function(d) { return d[0]; } %}
-  | doubleQuotedStringContentsLiteral (evaluatedVariable doubleQuotedStringContentsLiteral):+  {% function(d) { return { type: "stringTemplate", parts: [d[0]].concat(d[1].flat()) }; } %}
+    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => (content.length == 1) ? content[0] : content %}
+  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => (content.length == 1) ? content[0] : content %}
 
-singleQuotedStringContentsLiteral -> [^'$]:*  {% function(d) { return d[0].join(""); } %}
-doubleQuotedStringContentsLiteral -> [^"$]:*  {% function(d) { return d[0].join(""); } %}
-
-evaluatedVariable -> "$" identifier "$"  {% function(d) { return { type: "evaluatedVariable", name: d[1] }; } %}
+stringContents ->
+    null
+    # String literal
+  | %stringLiteral stringContents  {% ([literal, rest]) => (rest.length > 0) ? [literal.value, ...rest] : [literal.value] %}
+    # Templated string
+  | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
+	  	const evaluatedVariable = {
+			type: "evaluatedVariable",
+			name: varName.value,
+			line: varName.line - 1,
+			// Include the start and end "$" characters.
+			characterStart: startVarIndicator.col - 1,
+			characterEnd: endVarIndicator.col,
+		};
+		if (rest.length > 0) {
+			return [evaluatedVariable, ...rest];
+		} else {
+			return [evaluatedVariable];
+		}
+	} %}
 
 identifier -> [a-zA-Z0-9]:+  {% function(d) { return d[0].join(""); } %}
 

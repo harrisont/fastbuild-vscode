@@ -25,7 +25,7 @@ export function onParsedDataChanged(newParsedData: parser.ParsedData): void {
 
 function onHover(params: HoverParams) {
 	const position = params.position;
-	const stringTemplates = state.parsedData?.stringTemplates ?? [];
+	const stringTemplates = state.parsedData?.evaluatedVariables ?? [];
 
 	for (let i = 0; i < stringTemplates.length; i++)
     {

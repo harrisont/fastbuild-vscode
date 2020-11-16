@@ -207,17 +207,17 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: {
-						type: 'stringTemplate',
-						parts: [
-							'pre-',
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar'
-							},
-							'-post'
-						]
-					}
+					rhs: [
+						'pre-',
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar',
+							line: 0,
+							characterStart: 14,
+							characterEnd: 24,
+						},
+						'-post'
+					]
 				}
 			]);
 		});
@@ -235,17 +235,17 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: {
-						type: 'stringTemplate',
-						parts: [
-							'pre-',
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar'
-							},
-							'-post'
-						]
-					}
+					rhs: [
+						'pre-',
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar',
+							line: 0,
+							characterStart: 14,
+							characterEnd: 24,
+						},
+						'-post'
+					]
 				}
 			]);
 		});
@@ -263,22 +263,25 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: {
-						type: 'stringTemplate',
-						parts: [
-							'pre-',
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar1'
-							},
-							'-',
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar2'
-							},
-							'-post'
-						]
-					}
+					rhs: [
+						'pre-',
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar1',
+							line: 0,
+							characterStart: 14,
+							characterEnd: 25,
+						},
+						'-',
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar2',
+							line: 0,
+							characterStart: 26,
+							characterEnd: 37,
+						},
+						'-post'
+					]
 				}
 			]);
 		});
@@ -373,24 +376,24 @@ describe('parser', () => {
 			]);
 		});
 	}),
-	describe('stringTemplates', () => {	
+	describe('evaluatedVariables', () => {	
 		it('should work on string with a variable', () => {
 			const input = `
 				.MyVar = "MyValue"
 				.Evaluated = 'pre-$MyVar$-post'
 			`;
 			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
+			const expectedEvaluatedVariables: ParsedString[] = [
 				{
-					evaluated: 'pre-MyValue-post',
+					evaluated: 'MyValue',
 					range: {
-						line: 0,
-						characterStart: 0,
-						characterEnd: 0
+						line: 2,
+						characterStart: 22,
+						characterEnd: 29,
 					}
 				}
 			];
-			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
+			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
 		it('should work on string with multiple variables', () => {
 			const input = `
@@ -399,17 +402,25 @@ describe('parser', () => {
 				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 			`;
 			const result: ParsedData = parse(input);
-			const expectedStrings: ParsedString[] = [
+			const expectedEvaluatedVariables: ParsedString[] = [
 				{
-					evaluated: 'pre-MyValue1-MyValue2-post',
+					evaluated: 'MyValue1',
 					range: {
-						line: 0,
-						characterStart: 0,
-						characterEnd: 0
+						line: 3,
+						characterStart: 22,
+						characterEnd: 30,
+					}
+				},
+				{
+					evaluated: 'MyValue2',
+					range: {
+						line: 3,
+						characterStart: 31,
+						characterEnd: 39,
 					}
 				}
 			];
-			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
+			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
 	});
 });
