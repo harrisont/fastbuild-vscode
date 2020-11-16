@@ -4,6 +4,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 
 This provides the following functionality:
 * Hover over an evaluated variable (e.g. `.Message = 'Hello $Location$`, `.MyVarCopy = .MyVar`).
+    * Known issue: when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar`), the hover extends to the end of the line instead of ending at the end of the RHS. For example, in the case of `.MyVarCopy = .MyVar  // Comment`, the hover includes the comment. The hover stil shows the correct value.
 
 ## Running
 
@@ -30,5 +31,5 @@ Run `npm test` or run the `Run Tests` task.
 
 ## TODO
 
-* Add evaluated variable when assigning the value of another variable (e.g. `.A = .B`).
+* Fix the hover extending to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
 * Add variable scope.

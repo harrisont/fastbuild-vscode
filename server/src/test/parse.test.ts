@@ -299,9 +299,15 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: {
-						name: 'OtherVar',
-					}
+					rhs: [
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar',
+							line: 0,
+							characterStart: 9,
+							characterEnd: 10000,  // TODO: should be 18
+						},
+					]
 				}
 			]);
 		});
@@ -376,10 +382,10 @@ describe('parser', () => {
 			]);
 		});
 	}),
-	describe('evaluatedVariables', () => {	
-		it('should work on string with a variable', () => {
+	describe('evaluatedVariables', () => {
+		it('should be detected in a string with a variable', () => {
 			const input = `
-				.MyVar = "MyValue"
+				.MyVar = 'MyValue'
 				.Evaluated = 'pre-$MyVar$-post'
 			`;
 			const result: ParsedData = parse(input);
@@ -395,10 +401,10 @@ describe('parser', () => {
 			];
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
-		it('should work on string with multiple variables', () => {
+		it('should be detected in a string with multiple variables', () => {
 			const input = `
-				.MyVar1 = "MyValue1"
-				.MyVar2 = "MyValue2"
+				.MyVar1 = 'MyValue1'
+				.MyVar2 = 'MyValue2'
 				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 			`;
 			const result: ParsedData = parse(input);
@@ -417,6 +423,24 @@ describe('parser', () => {
 						line: 3,
 						characterStart: 31,
 						characterEnd: 39,
+					}
+				}
+			];
+			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
+		});
+		it('should be detected in the RHS when assigning the value of another variable', () => {
+			const input = `
+				.MyVar = 'MyValue'
+				.Copy = .MyVar
+			`;
+			const result: ParsedData = parse(input);
+			const expectedEvaluatedVariables: ParsedString[] = [
+				{
+					evaluated: 'MyValue',
+					range: {
+						line: 2,
+						characterStart: 12,
+						characterEnd: 10000,  // TODO: should be 19
 					}
 				}
 			];

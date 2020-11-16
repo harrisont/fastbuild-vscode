@@ -70,7 +70,19 @@ rvalue ->
     int  {% function(d) { return d[0]; } %}
   | bool  {% function(d) { return d[0]; } %}
   | string  {% function(d) { return d[0]; } %}
-  |  "." identifier  {% function(d) { return { name: d[1] }; } %}
+  | "." %variableName  {% ([_, varName]) => {
+	    return [
+			{
+				type: "evaluatedVariable",
+				name: varName.value,
+				line: varName.line - 1,
+				// Include the "." character.
+				characterStart: varName.col - 2,
+				// TODO: determine the end
+				characterEnd: 10000,
+			}
+		];
+	} %}
   
 int -> [0-9]:+  {% function(d) { return parseInt(d[0].join("")); } %}
 
