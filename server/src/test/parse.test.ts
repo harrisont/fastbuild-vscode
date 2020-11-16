@@ -411,10 +411,93 @@ describe('parser', () => {
 
 		it('should be detected in the RHS when assigning the value of another variable', () => {
 			const input = `
-				.MyVar = 'MyValue'
+				.MyVar = 1
 				.Copy = .MyVar
 			`;
-			assertEvaluatedVariablesValueEqual(input, ['MyValue']);
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+
+		it('should be able to read a variable in a direct parent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					.Var2 = .Var1
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+		
+		it('should be able to read a variable in a grandparent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					{
+						.Var2 = .Var1
+					}
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+
+		it('should allow variables with the same name in different scopes', () => {
+			const input = `
+				{
+					.Var1 = 1
+					.Var2 = .Var1
+				}
+				{
+					.Var1 = 2
+					.Var2 = .Var1
+				}
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1, 2]);
+		});
+
+		it('should allow a variable to shadow a variable with the same name in a parent scope', () => {
+			const input = `
+				.Var = 1
+				{
+					.Var = 2
+					.Inner = .Var
+				}
+				.Outer = .Var
+			`;
+			assertEvaluatedVariablesValueEqual(input, [2, 1]);
+		});
+
+		it('should not be able to read a variable in a child scope', () => {
+			const input = `
+				{
+					.Var1 = 1
+				}
+				.Var2 = .Var1
+			`;
+			// TODO: detect assert
+			assertEvaluatedVariablesValueEqual(input, []);
+		});
+
+		it('should be able to write a variable in a direct parent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					^Var1 = 2
+				}
+				.Var2 = .Var1
+			`;
+			assertEvaluatedVariablesValueEqual(input, [2]);
+		});
+
+		it('should not be able to write a variable in a grandparent scope', () => {
+			const input = `
+				.Var1 = 1
+				{
+					{
+						^Var1 = 2
+					}
+				}
+			`;
+			// TODO: detect assert
+			assertEvaluatedVariablesValueEqual(input, []);
 		});
 	});
 
@@ -447,7 +530,7 @@ describe('parser', () => {
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
 
-		it('should work on assigning the value of another variable', () => {
+		it('should be detected when assigning the value of another variable', () => {
 			const input = `
 				.MyVar = 'MyValue'
 				.Copy = .MyVar
