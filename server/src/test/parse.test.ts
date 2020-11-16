@@ -392,8 +392,7 @@ describe('parser', () => {
 			];
 			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
 		});
-		/*
-		it('should work on strings with multiple variables', () => {
+		it('should work on string with multiple variables', () => {
 			const input = `
 				.MyVar1 = "MyValue1"
 				.MyVar2 = "MyValue2"
@@ -402,41 +401,18 @@ describe('parser', () => {
 			const result: ParsedData = parse(input);
 			const expectedStrings: ParsedString[] = [
 				{
-					raw: "MyValue1",
-					evaluated: "TODO:MyValue1",
+					evaluated: 'pre-MyValue1-MyValue2-post',
 					range: {
-						line: 1,
-						characterStart: 14,
-						characterEnd: 22
-					}
-				},
-				{
-					raw: "MyValue2",
-					evaluated: "TODO:MyValue2",
-					range: {
-						line: 2,
-						characterStart: 14,
-						characterEnd: 22
-					}
-				},
-				{
-					raw: "pre-$MyVar1$-$MyVar2$-post",
-					evaluated: "pre-MyValue1-MyValue2-post",
-					range: {
-						line: 3,
-						characterStart: 17,
-						characterEnd: 43
+						line: 0,
+						characterStart: 0,
+						characterEnd: 0
 					}
 				}
 			];
-			assert.deepStrictEqual(result.strings, expectedStrings);
+			assert.deepStrictEqual(result.stringTemplates, expectedStrings);
 		});
-		*/
 	
 		/*
-		.MyVar = "MyValue"
-		.Evaluated = 'pre-$MyVar$-post'
-		.MultipleEvaluated = 'pre-$MyVar$-$MyVar$-post'
 		.Copy = .MyVar
 		*/
 	});
