@@ -78,7 +78,7 @@ describe('parser', () => {
 
 		it('should work on assigning an integer', () => {
 			const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
-			const input = `.MyVar = 123`;
+			const input = `.My_Var = 123`;
 			parser.feed(input);
 			assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
 			const result = parser.results[0];
@@ -86,7 +86,7 @@ describe('parser', () => {
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'MyVar',
+						name: 'My_Var',
 						scope: 'current'
 					},
 					rhs: 123
@@ -458,8 +458,8 @@ describe('parser', () => {
 
 		it('should be detected in the RHS when assigning the value of another variable', () => {
 			const input = `
-				.MyVar = 1
-				.Copy = .MyVar
+				.My_Var = 1
+				.Copy = .My_Var
 			`;
 			assertEvaluatedVariablesValueEqual(input, [1]);
 		});

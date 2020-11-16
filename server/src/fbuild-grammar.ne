@@ -11,7 +11,7 @@ const lexer = moo.states({
 		integer: /0|[1-9][0-9]*/,
 		singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
 		doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
-		variableName: /[a-zA-Z][a-zA-Z0-9]*/,
+		variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
 		variableReferenceCurrentScope: '.',
 		variableReferenceParentScope: '^',
 		assignment: '=',
@@ -28,7 +28,7 @@ const lexer = moo.states({
 	},
 	templatedVariable: {
 		endTemplatedVariable: { match: '$', pop: 1 },
-		variableName: /[a-zA-Z][a-zA-Z0-9]*/,
+		variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
 	}
 });
 %}
@@ -119,7 +119,7 @@ stringContents ->
 		}
 	} %}
 
-identifier -> [a-zA-Z0-9]:+  {% function(d) { return d[0].join(""); } %}
+identifier -> [a-zA-Z0-9_]:+  {% function(d) { return d[0].join(""); } %}
 
 # Whitespace
 _ -> [ \t]:*  {% function(d) { return null; } %}
