@@ -15,7 +15,8 @@
 		"vscode-languageserver": "^6.1.1",
 		"vscode-languageserver-textdocument": "^1.0.1",
 		"nearley": "*",
-		"@types/nearley": "*"
+		"@types/nearley": "*",
+		"moo": "*"
 	},
 	"devDependencies": {
 		"@types/glob": "*"

@@ -1,3 +1,39 @@
+@{%
+const moo = require('moo');
+
+const lexer = moo.states({
+	main: {
+		whitespace: /[ \t]+/,
+		newline: { match: '\n', lineBreaks: true },
+		comment: /(?:;|\/\/).*/,
+		integer: /0|[1-9][0-9]*/,
+		singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
+		doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
+		variableName: /[a-zA-Z][a-zA-Z0-9]*/,
+		variableReferenceCurrentScope: '.',
+		variableReferenceParentScope: '^',
+		assignment: '=',
+	},
+	singleQuotedStringBody: {
+		startTemplatedVariable: { match: '$', push: 'templatedVariable' },
+		stringEnd: { match: "'", pop: 1 },
+		stringLiteral: /[^'\$\n]+/,
+	},
+	doubleQuotedStringBody: {
+		startTemplatedVariable: { match: '$', push: 'templatedVariable' },
+		stringEnd: { match: '"', pop: 1 },
+		stringLiteral: /[^"\$\n]+/,
+	},
+	templatedVariable: {
+		endTemplatedVariable: { match: '$', pop: 1 },
+		variableName: /[a-zA-Z][a-zA-Z0-9]*/,
+	}
+});
+%}
+
+# Pass your lexer object using the @lexer option:
+@lexer lexer
+
 @preprocessor typescript
 
 main -> lines  {% function(d) { return d[0]; } %}
@@ -29,7 +65,6 @@ variableDefinition -> lvalue _ "=" _ rvalue  {% function(d) { return { type: "va
 lvalue ->
     "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
   | "^" identifier  {% function(d) { return { name: d[1], scope: "parent" }; } %}
-    
 
 rvalue ->
     int  {% function(d) { return d[0]; } %}
