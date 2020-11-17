@@ -78,7 +78,7 @@ describe('parser', () => {
 					=
 					
 					123
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -284,7 +284,7 @@ describe('parser', () => {
 					=
 
 					.OtherVar
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -322,7 +322,7 @@ describe('parser', () => {
 		it('should work on statements with whitespace', () => {
 			const input = `
 				.MyVar = 123
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -340,7 +340,7 @@ describe('parser', () => {
 					// Comment 1
 					.My_Var = 123
 					// Comment 2
-					`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -388,7 +388,7 @@ describe('parser', () => {
 
 
 				.MyVar2 = 2
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -413,7 +413,7 @@ describe('parser', () => {
 			const input = `
 				{
 				}
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'scopeStart'
@@ -429,7 +429,7 @@ describe('parser', () => {
 				{
 					.MyVar = 123;
 				}
-				`;
+			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'scopeStart'
