@@ -35,7 +35,8 @@
 		},
 		{
 			"type": "npm",
-			"script": "install"
+			"script": "install",
+			"problemMatcher": []
 		},
 		{
 			"type": "npm",
