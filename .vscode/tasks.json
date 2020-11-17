@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "npm compile",
+			"label": "compile",
 			"type": "npm",
 			"script": "compile",
 			"group": {
@@ -21,24 +21,27 @@
 			]
 		},
 		{
+			"label": "watch-compile",
 			"type": "npm",
-			"script": "watch",
+			"script": "watch-compile",
 			"isBackground": true,
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",
-				"reveal": "never"
+				"reveal": "silent"
 			},
 			"problemMatcher": [
 				"$tsc-watch"
 			]
 		},
 		{
+			"label": "install",
 			"type": "npm",
 			"script": "install",
 			"problemMatcher": []
 		},
 		{
+			"label": "test",
 			"type": "npm",
 			"script": "test",
 			"group": {
@@ -48,7 +51,19 @@
 			"presentation": {
 				"clear": true
 			},
-			"dependsOn": "npm compile"
+			"dependsOn": "compile"
+		},
+		{
+			"label": "watch-test",
+			"type": "npm",
+			"script": "watch-test",
+			"group": "test",
+			"isBackground": true,
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "silent"
+			},
+			"dependsOn": "watch-compile"
 		},
 		{
 			"label": "build grammar",

@@ -10,14 +10,15 @@ This provides the following functionality:
 
 1. Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder.
 2. Open VS Code on this folder.
-3. Press Ctrl+Shift+B to run the `npm compile` task, which compiles the client and server. You can also run the `npm watch` task to watch for changes and automatically compile.
-4. Run the `Launch Client` launch config. If you want to debug the server as well use the launch configuration `Client + Server`.
+3. Run the `compile` task, which compiles the client and server. Alternatively, run the `watch-compile` task to watch for changes and automatically compile.
+4. Run the `Launch Client` launch configuration. If you want to debug the server as well, use `Launch Client + Server` instead.
 
 ## Testing
 
-Run `npm test` or run the `Run Tests` task.
+* Run the `test` task. Alternatively, run the `watch-test` task to watch for changes and automatically run tests.
+* Debug the tests by running the `Run Tests` launch configuration.
 
-## Notes
+## Implementation Notes
 
 * Parses using [Nearley](https://nearley.js.org/), which lexes using [moo](https://github.com/no-context/moo).
     * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
