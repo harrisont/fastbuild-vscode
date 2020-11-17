@@ -52,8 +52,8 @@ class ScopeStack {
 	}
 
 	// Get a variable value, searching from the current scope to its parents.
-	// Return null if the variable is not defined.
-	getVariableValue(variableName: string): Value | null {
+	// Throw ParseError if the variable is not defined.
+	getVariableValueStartingFromCurrentScope(variableName: string): Value {
 		for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
 			const scope = this.stack[scopeIndex];
 			const maybeValue = scope.variables.get(variableName);
@@ -61,7 +61,29 @@ class ScopeStack {
 				return maybeValue;
 			}
 		}
-		return null;
+		throw new ParseError(`Referencing undefined variable "${variableName}"`);
+	}
+
+	// Throw ParseError if the variable is not defined.
+	getVariableValueInCurrentScope(variableName: string): Value {
+		const currentScope = this.getCurrentScope();
+		const maybeValue = currentScope.variables.get(variableName);
+		if (maybeValue === undefined) {
+			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
+		} else {
+			return maybeValue;
+		}
+	}
+
+	// Throw ParseError if the variable is not defined.
+	getVariableValueInParentScope(variableName: string): Value {
+		const parentScope = this.getParentScope();
+		const maybeValue = parentScope.variables.get(variableName);
+		if (maybeValue === undefined) {
+			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
+		} else {
+			return maybeValue;
+		}
 	}
 
 	setVariableInCurrentScope(name: string, value: Value): void {
@@ -70,10 +92,7 @@ class ScopeStack {
 	}
 
 	updateExistingVariableInParentScope(name: string, value: Value): void {
-		if (this.stack.length < 2) {
-			throw new ParseError(`Cannot update variable "${name}" in parent scope because there is no parent scope.`);
-		}
-		const parentScope = this.stack[this.stack.length - 2];
+		const parentScope = this.getParentScope();
 		if (parentScope.variables.get(name) === undefined) {
 			throw new ParseError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
 		}
@@ -82,6 +101,13 @@ class ScopeStack {
 
 	private getCurrentScope(): Scope {
 		return this.stack[this.stack.length - 1];
+	}
+
+	private getParentScope(): Scope {
+		if (this.stack.length < 2) {
+			throw new ParseError(`Cannot access parent scope because there is no parent scope.`);
+		}
+		return this.stack[this.stack.length - 2];
 	}
 }
 
@@ -119,31 +145,26 @@ export function parse(input: string): ParsedData {
 
 	for (const statement of statements) {
 		switch (statement.type) {
-			case 'variableDefinition':
+			case 'variableDefinition': {
 				const rhs = statement.rhs;
-
-				let evaluatedRhs: number | boolean | string = 0;
+				let evaluatedRhs: Value = 0;
 				if (rhs instanceof Array) {
-					evaluatedRhs = ""
+					evaluatedRhs = ''
 					for (const part of rhs) {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
-							const variableValue = scopeStack.getVariableValue(variableName);
-							if (variableValue === null) {
-								throw new ParseError(`Referencing undefined variable "${variableName}"`);
-							} else {
-								const variableValueString = String(variableValue);
-								evaluatedRhs += variableValueString;
-	
-								evaluatedVariables.push({
-									value: variableValue,
-									range: {
-										line: part.line,
-										characterStart: part.characterStart,
-										characterEnd: part.characterEnd,
-									}
-								});
-							}
+							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
+							const variableValueString = String(variableValue);
+							evaluatedRhs += variableValueString;
+
+							evaluatedVariables.push({
+								value: variableValue,
+								range: {
+									line: part.line,
+									characterStart: part.characterStart,
+									characterEnd: part.characterEnd,
+								}
+							});
 						} else {
 							// Literal
 							evaluatedRhs += part;
@@ -160,6 +181,47 @@ export function parse(input: string): ParsedData {
 					scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
 				}
 				break;
+			}
+			case 'variableAddition': {
+				const rhs = statement.rhs;
+				let evaluatedRhs: string = '';
+				if (rhs instanceof Array) {
+					for (const part of rhs) {
+						if (part.type && part.type == 'evaluatedVariable') {
+							const variableName: string = part.name;
+							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
+							const variableValueString = String(variableValue);
+							evaluatedRhs += variableValueString;
+
+							evaluatedVariables.push({
+								value: variableValue,
+								range: {
+									line: part.line,
+									characterStart: part.characterStart,
+									characterEnd: part.characterEnd,
+								}
+							});
+						} else {
+							// Literal
+							evaluatedRhs += part;
+						}
+					}
+				} else {
+					evaluatedRhs = rhs;
+				}
+
+				const lhs: VariableDefinitionLhs = statement.lhs;
+				if (lhs.scope == 'current') {
+					const existingValue = scopeStack.getVariableValueInCurrentScope(lhs.name);
+					const sum = existingValue + evaluatedRhs;
+					scopeStack.setVariableInCurrentScope(lhs.name, sum);
+				} else {
+					const existingValue = scopeStack.getVariableValueInParentScope(lhs.name);
+					const sum = existingValue + evaluatedRhs;
+					scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
+				}
+				break;
+			}
 			case 'scopeStart':
 				scopeStack.push();
 				break;

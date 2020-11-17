@@ -14,7 +14,8 @@ const lexer = moo.states({
 		variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
 		variableReferenceCurrentScope: '.',
 		variableReferenceParentScope: '^',
-		assignment: '=',
+		operatorAssignment: '=',
+		operatorAddition: '+',
 	},
 	singleQuotedStringBody: {
 		startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -56,26 +57,46 @@ statement ->
     %scopeStart  {% function(d) { return { type: "scopeStart" }; } %}
   | %scopeEnd  {% function(d) { return { type: "scopeEnd" }; } %}
   | variableDefinition  {% function(d) { return d[0]; } %}
+  | variableAddition  {% function(d) { return d[0]; } %}
 
 variableDefinition ->
-    lvalue "=" rvalue  {% ([lhs, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace "=" rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline "=" rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+    # No whitespace/newlines.
+    lhs %operatorAssignment rhs                                                                                {% ([lhs, operator, rhs]) =>                 { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines left of the operator.
+  | lhs %whitespace %operatorAssignment rhs                                                                    {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment rhs                                         {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines right of the operator.
+  | lhs %operatorAssignment %whitespace rhs                                                                    {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines left and right of the operator.
+  | lhs %whitespace %operatorAssignment %whitespace rhs                                                        {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %whitespace rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
-lvalue ->
+variableAddition ->
+    # No whitespace/newlines.
+    lhs %operatorAddition rhs                                                                                {% ([lhs, operator, rhs]) =>                 { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines left of the operator.
+  | lhs %whitespace %operatorAddition rhs                                                                    {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition rhs                                         {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines right of the operator.
+  | lhs %operatorAddition %whitespace rhs                                                                    {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+	# Whitespace/newlines left and right of the operator.
+  | lhs %whitespace %operatorAddition %whitespace rhs                                                        {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+
+lhs ->
     "." %variableName  {% function(d) { return { name: d[1].value, scope: "current" }; } %}
   | "^" %variableName  {% function(d) { return { name: d[1].value, scope: "parent" }; } %}
 
-rvalue ->
+rhs ->
     %integer  {% function(d) { return d[0].value; } %}
   | bool  {% function(d) { return d[0]; } %}
-  | string  {% function(d) { return d[0]; } %}
+  | stringExpression  {% function(d) { return d[0]; } %}
   | "." %variableName  {% ([_, varName]) => {
 	    return [
 			{
@@ -93,6 +114,23 @@ rvalue ->
 bool ->
     "true"  {% function(d) { return true; } %}
   | "false"  {% function(d) { return false; } %}
+
+stringExpression ->
+	# Single string
+	string                                                                                                                   {% function(d) { return d[0]; } %}
+	# Multiple strings added together. No whitespace/newlines.
+  | string %operatorAddition stringExpression                                                                                {% ([lhs, operator, rhs]) =>                 { return lhs + rhs; } %}
+	# Multiple strings added together. Whitespace/newlines left of the operator.
+  | string %whitespace %operatorAddition stringExpression                                                                    {% ([lhs, space1, operator, rhs]) =>         { return lhs + rhs; } %}
+  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition stringExpression                                         {% ([lhs, space1, operator, rhs]) =>         { return lhs + rhs; } %}
+	# Multiple strings added together. Whitespace/newlines right of the operator.
+  | string %operatorAddition %whitespace stringExpression                                                                    {% ([lhs, operator, space2, rhs]) =>         { return lhs + rhs; } %}
+  | string %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression                                         {% ([lhs, operator, space2, rhs]) =>         { return lhs + rhs; } %}
+	# Multiple strings added together. Whitespace/newlines left and right of the operator.
+  | string  %whitespace %operatorAddition  %whitespace stringExpression                                                      {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
+  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition  %whitespace stringExpression                            {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
+  | string  %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression                            {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
+  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression  {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
 
 string ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => (content.length == 1) ? content[0] : content %}

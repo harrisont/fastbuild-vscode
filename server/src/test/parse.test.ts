@@ -447,6 +447,171 @@ describe('parser', () => {
 				}
 			]);
 		});
+
+		it('should work on adding a string literal', () => {
+			const input = `
+				.MyMessage = 'hello'
+				.MyMessage + ' world'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello'
+				},
+				{
+					type: 'variableAddition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: ' world'
+				}
+			]);
+		});
+
+		it('should work on adding a string literal to a variable in the parent scope', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					^MyMessage + ' world'
+				}
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello'
+				},
+				{
+					type: 'scopeStart'
+				},
+				{
+					type: 'variableAddition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'parent'
+					},
+					rhs: ' world'
+				},
+				{
+					type: 'scopeEnd'
+				}
+			]);
+		});
+
+		it('should work on adding a string with a variable', () => {
+			const input = `
+				.MyName = 'Bobo'
+				.MyMessage = 'hello'
+				.MyMessage + ' $MyName$'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyName',
+						scope: 'current'
+					},
+					rhs: 'Bobo'
+				},
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello'
+				},
+				{
+					type: 'variableAddition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: [
+						' ',
+						{
+							type: 'evaluatedVariable',
+							name: 'MyName',
+							line: 3,
+							characterStart: 19,
+							characterEnd: 27,
+						}
+					]
+				}
+			]);
+		});
+
+		it('adding a string literal should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+					       + ' world'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello world'
+				}
+			]);
+		});
+
+		it('adding a string literal on the same line should use the last referenced variable', () => {
+			const input = `.MyMessage = 'hello' + ' world'`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello world'
+				}
+			]);
+		});
+
+		it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+					       + ' world'
+					       + '!'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: 'hello world!'
+				}
+			]);
+		});
+
+		it('adding mulitple string literals on the same line should use the last referenced variable', () => {
+			const input = `.MyVar = 'hello' + ' world'+'!'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 'hello world!'
+				}
+			]);
+		});
 	}),
 
 	describe('evaluatedVariables value', () => {
@@ -579,6 +744,108 @@ describe('parser', () => {
 				{
 					name: 'ParseError',
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+				}
+			);
+		});
+
+		it('should work on adding a string literal', () => {
+			const input = `
+				.MyMessage = 'hello'
+				.MyMessage + ' world'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('should work on adding a string literal to a variable in the parent scope', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					^MyMessage + ' world'
+				}
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('should work on adding a string with a variable', () => {
+			const input = `
+				.MyName = 'Bobo'
+				.MyMessage = 'hello'
+				.MyMessage + .MyName
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['Bobo', 'helloBobo']);
+		});
+
+		it('should work on adding a string with a string template', () => {
+			const input = `
+				.MyName = 'Bobo'
+				.MyMessage = 'hello'
+				.MyMessage + ' $MyName$'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['Bobo', 'hello Bobo']);
+		});
+
+		it('adding a string literal should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+							+ ' world'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+					       + ' world'
+					       + '!'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world!']);
+		});
+
+		it('should work on adding a string literal to a variable in the parent scope', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					^MyMessage + ' world'
+					.Evaluated1 = .MyMessage
+				}
+				.Evaluated2 = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world', 'hello world']);
+		});
+
+		it('should fail when adding a string to a variable not in scope (current scope)', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					.MyMessage + ' world'
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
+				}
+			);
+		});
+
+		it('should fail when adding a string to a variable not in scope (parent scope)', () => {
+			const input = `
+				{
+					^MyMessage + ' world'
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
 				}
 			);
 		});
