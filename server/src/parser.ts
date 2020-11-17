@@ -1,4 +1,3 @@
-import { assert } from 'console';
 import * as nearley from 'nearley'
 import fbuildGrammar from './fbuild-grammar'
 
@@ -99,7 +98,9 @@ export function parse(text: string): ParsedData {
 	parser.feed(text);
 
 	const numResults = parser.results.length;
-	assert(numResults == 1, `Should parse to exactly 1 result, but parsed to ${numResults}`);
+	if (numResults != 1) {
+		throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
+	}
 	const statements = parser.results[0];
 
 	let evaluatedVariables: EvaluatedVariable[] = [];
