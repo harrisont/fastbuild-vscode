@@ -1,5 +1,6 @@
+.vscode-test
+.npmrc
 out
 node_modules
 client/server
-.vscode-test
 server/src/fbuild-grammar.ts
