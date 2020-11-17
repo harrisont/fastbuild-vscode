@@ -52,8 +52,8 @@ class ScopeStack {
 	}
 
 	// Get a variable value, searching from the current scope to its parents.
-	// Return undefined if the variable is not defined.
-	getVariableValueStartingFromCurrentScope(variableName: string): Value | undefined {
+	// Throw ParseError if the variable is not defined.
+	getVariableValueStartingFromCurrentScope(variableName: string): Value {
 		for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
 			const scope = this.stack[scopeIndex];
 			const maybeValue = scope.variables.get(variableName);
@@ -61,19 +61,29 @@ class ScopeStack {
 				return maybeValue;
 			}
 		}
-		return undefined;
+		throw new ParseError(`Referencing undefined variable "${variableName}"`);
 	}
 
-	// Return undefined if the variable is not defined.
-	getVariableValueInCurrentScope(variableName: string): Value | undefined {
+	// Throw ParseError if the variable is not defined.
+	getVariableValueInCurrentScope(variableName: string): Value {
 		const currentScope = this.getCurrentScope();
-		return currentScope.variables.get(variableName);
+		const maybeValue = currentScope.variables.get(variableName);
+		if (maybeValue === undefined) {
+			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
+		} else {
+			return maybeValue;
+		}
 	}
 
-	// Return undefined if the variable is not defined.
-	getVariableValueInParentScope(variableName: string): Value | undefined {
+	// Throw ParseError if the variable is not defined.
+	getVariableValueInParentScope(variableName: string): Value {
 		const parentScope = this.getParentScope();
-		return parentScope.variables.get(variableName);
+		const maybeValue = parentScope.variables.get(variableName);
+		if (maybeValue === undefined) {
+			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
+		} else {
+			return maybeValue;
+		}
 	}
 
 	setVariableInCurrentScope(name: string, value: Value): void {
@@ -144,21 +154,17 @@ export function parse(input: string): ParsedData {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
 							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
-							if (variableValue === undefined) {
-								throw new ParseError(`Referencing undefined variable "${variableName}"`);
-							} else {
-								const variableValueString = String(variableValue);
-								evaluatedRhs += variableValueString;
-	
-								evaluatedVariables.push({
-									value: variableValue,
-									range: {
-										line: part.line,
-										characterStart: part.characterStart,
-										characterEnd: part.characterEnd,
-									}
-								});
-							}
+							const variableValueString = String(variableValue);
+							evaluatedRhs += variableValueString;
+
+							evaluatedVariables.push({
+								value: variableValue,
+								range: {
+									line: part.line,
+									characterStart: part.characterStart,
+									characterEnd: part.characterEnd,
+								}
+							});
 						} else {
 							// Literal
 							evaluatedRhs += part;
@@ -184,21 +190,17 @@ export function parse(input: string): ParsedData {
 						if (part.type && part.type == 'evaluatedVariable') {
 							const variableName: string = part.name;
 							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
-							if (variableValue === undefined) {
-								throw new ParseError(`Referencing undefined variable "${variableName}"`);
-							} else {
-								const variableValueString = String(variableValue);
-								evaluatedRhs += variableValueString;
-	
-								evaluatedVariables.push({
-									value: variableValue,
-									range: {
-										line: part.line,
-										characterStart: part.characterStart,
-										characterEnd: part.characterEnd,
-									}
-								});
-							}
+							const variableValueString = String(variableValue);
+							evaluatedRhs += variableValueString;
+
+							evaluatedVariables.push({
+								value: variableValue,
+								range: {
+									line: part.line,
+									characterStart: part.characterStart,
+									characterEnd: part.characterEnd,
+								}
+							});
 						} else {
 							// Literal
 							evaluatedRhs += part;

@@ -806,6 +806,49 @@ describe('parser', () => {
 			`;
 			assertEvaluatedVariablesValueEqual(input, ['hello world!']);
 		});
+
+		it('should work on adding a string literal to a variable in the parent scope', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					^MyMessage + ' world'
+					.Evaluated1 = .MyMessage
+				}
+				.Evaluated2 = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world', 'hello world']);
+		});
+
+		it('should fail when adding a string to a variable not in scope (current scope)', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					.MyMessage + ' world'
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
+				}
+			);
+		});
+
+		it('should fail when adding a string to a variable not in scope (parent scope)', () => {
+			const input = `
+				{
+					^MyMessage + ' world'
+				}
+			`;
+			assert.throws(
+				() => parse(input),
+				{
+					name: 'ParseError',
+					message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
+				}
+			);
+		});
 	});
 
 	describe('evaluatedVariables range', () => {
