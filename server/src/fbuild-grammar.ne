@@ -67,8 +67,8 @@ comment ->
 variableDefinition -> lvalue _ "=" _ rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 lvalue ->
-    "." identifier  {% function(d) { return { name: d[1], scope: "current" }; } %}
-  | "^" identifier  {% function(d) { return { name: d[1], scope: "parent" }; } %}
+    "." %variableName  {% function(d) { return { name: d[1].value, scope: "current" }; } %}
+  | "^" %variableName  {% function(d) { return { name: d[1].value, scope: "parent" }; } %}
 
 rvalue ->
     int  {% function(d) { return d[0]; } %}
@@ -118,8 +118,6 @@ stringContents ->
 			return [evaluatedVariable];
 		}
 	} %}
-
-identifier -> [a-zA-Z0-9_]:+  {% function(d) { return d[0].join(""); } %}
 
 # Whitespace
 _ -> [ \t]:*  {% function(d) { return null; } %}
