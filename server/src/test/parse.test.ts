@@ -508,7 +508,7 @@ describe('parser', () => {
 
 		it('should work on adding a string with a variable', () => {
 			const input = `
-				.MyName = 'bobo'
+				.MyName = 'Bobo'
 				.MyMessage = 'hello'
 				.MyMessage + ' $MyName$'
 			`;
@@ -519,7 +519,7 @@ describe('parser', () => {
 						name: 'MyName',
 						scope: 'current'
 					},
-					rhs: 'bobo'
+					rhs: 'Bobo'
 				},
 				{
 					type: 'variableDefinition',
@@ -770,12 +770,22 @@ describe('parser', () => {
 
 		it('should work on adding a string with a variable', () => {
 			const input = `
-				.MyName = 'bobo'
+				.MyName = 'Bobo'
+				.MyMessage = 'hello'
+				.MyMessage + .MyName
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['Bobo', 'helloBobo']);
+		});
+
+		it('should work on adding a string with a string template', () => {
+			const input = `
+				.MyName = 'Bobo'
 				.MyMessage = 'hello'
 				.MyMessage + ' $MyName$'
 				.Evaluated = .MyMessage
 			`;
-			assertEvaluatedVariablesValueEqual(input, ['hello bobo']);
+			assertEvaluatedVariablesValueEqual(input, ['Bobo', 'hello Bobo']);
 		});
 
 		it('adding a string literal should use the last referenced variable if none is specified', () => {
