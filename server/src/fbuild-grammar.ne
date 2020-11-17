@@ -8,7 +8,7 @@ const lexer = moo.states({
 		comment: /(?:;|\/\/).*/,
 		scopeStart: '{',
 		scopeEnd: '}',
-		integer: /0|[1-9][0-9]*/,
+		integer: { match: /0|[1-9][0-9]*/, value: (s: string) => parseInt(s) },
 		singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
 		doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
 		variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
@@ -71,7 +71,7 @@ lvalue ->
   | "^" %variableName  {% function(d) { return { name: d[1].value, scope: "parent" }; } %}
 
 rvalue ->
-    int  {% function(d) { return d[0]; } %}
+    %integer  {% function(d) { return d[0].value; } %}
   | bool  {% function(d) { return d[0]; } %}
   | string  {% function(d) { return d[0]; } %}
   | "." %variableName  {% ([_, varName]) => {
@@ -87,8 +87,6 @@ rvalue ->
 			}
 		];
 	} %}
-  
-int -> [0-9]:+  {% function(d) { return parseInt(d[0].join("")); } %}
 
 bool ->
     "true"  {% function(d) { return true; } %}
