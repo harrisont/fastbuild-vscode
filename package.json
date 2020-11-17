@@ -40,7 +40,7 @@
 		"compile": "tsc --build",
 		"watch": "tsc --build --watch",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-		"test": "node ./node_modules/mocha/bin/_mocha --timeout 100000 --colors server/out/test --require source-map-support/register"
+		"test": "node ./node_modules/mocha/bin/_mocha --timeout 100000 --colors --require source-map-support/register server/out/test"
 	},
 	"devDependencies": {
 		"@types/mocha": "8.0.4",
