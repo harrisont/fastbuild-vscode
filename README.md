@@ -38,7 +38,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
-* Make the `watch-compile` task not re-compile in a loop if there's a compiler error.
 * Use the lexer for comments.
 * Support statements that span multiple lines. For example:
     ```
