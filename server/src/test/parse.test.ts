@@ -183,7 +183,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning a double quoted string with a variable', () => {
-			const input = `.MyVar = 'pre-$OtherVar$-post'`;
+			const input = `.MyVar = "pre-$OtherVar$-post"`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
