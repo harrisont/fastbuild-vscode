@@ -490,12 +490,18 @@ describe('parser', () => {
 					rhs: 'hello'
 				},
 				{
+					type: 'scopeStart'
+				},
+				{
 					type: 'variableAddition',
 					lhs: {
 						name: 'MyMessage',
 						scope: 'parent'
 					},
 					rhs: ' world'
+				},
+				{
+					type: 'scopeEnd'
 				}
 			]);
 		});
