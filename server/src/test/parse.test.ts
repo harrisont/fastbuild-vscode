@@ -771,6 +771,55 @@ describe('parser', () => {
 				}
 			);
 		});
+
+		it('should work on adding a string literal', () => {
+			const input = `
+				.MyMessage = 'hello'
+				.MyMessage + ' world'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('should work on adding a string literal to a variable in the parent scope', () => {
+			const input = `
+				.MyMessage = 'hello'
+				{
+					^MyMessage + ' world'
+				}
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('should work on adding a string with a variable', () => {
+			const input = `
+				.MyName = 'bobo'
+				.MyMessage = 'hello'
+				.MyMessage + ' $MyName$'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello bobo']);
+		});
+
+		it('adding a string literal should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+							+ ' world'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world']);
+		});
+
+		it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyMessage = 'hello'
+					       + ' world'
+					       + '!'
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['hello world!']);
+		});
 	});
 
 	describe('evaluatedVariables range', () => {
