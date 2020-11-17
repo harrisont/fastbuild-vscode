@@ -93,15 +93,25 @@ export class ParseError extends Error {
 	}
 }
 
-export function parse(text: string): ParsedData {
+// Parse the input and return the statements.
+export function nearleyParse(input: string): any[] {
+	// Make the input always end in a newline in order to make parsing easier.
+	// This lets the grammar assume that statements always end in a newline.
+	const modifiedInput = input + '\n';
+
 	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
-	parser.feed(text);
+	parser.feed(modifiedInput);
 
 	const numResults = parser.results.length;
 	if (numResults != 1) {
 		throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
 	}
 	const statements = parser.results[0];
+	return statements;
+}
+
+export function parse(input: string): ParsedData {
+	const statements = nearleyParse(input);
 
 	let evaluatedVariables: EvaluatedVariable[] = [];
 

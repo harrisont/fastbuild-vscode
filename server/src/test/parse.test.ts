@@ -1,20 +1,17 @@
 import * as assert from 'assert';
 
-import * as nearley from 'nearley'
 import fbuildGrammar from '../fbuild-grammar'
 
 import {
 	parse,
+	nearleyParse,
 	ParsedData,
 	EvaluatedVariable,
 	Value,
 } from '../parser'
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
-	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(fbuildGrammar));
-	parser.feed(input);
-	assert.strictEqual(parser.results.length, 1, `Should parse to exactly 1 result, but parsed to ${parser.results.length} results.`);
-	const result = parser.results[0];
+	const result = nearleyParse(input);
 	assert.deepStrictEqual(result, expectedResult);
 }
 
@@ -62,6 +59,26 @@ describe('parser', () => {
 
 		it('should work on assigning an integer', () => {
 			const input = `.My_Var = 123`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'My_Var',
+						scope: 'current'
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on assigning an integer across multiple lines', () => {
+			const input = `
+				.My_Var
+
+					=
+					
+					123
+				`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -260,6 +277,34 @@ describe('parser', () => {
 			]);
 		});
 
+		it('should work on assigning the value of another variable across multiple lines', () => {
+			const input = `
+				.MyVar
+
+					=
+
+					.OtherVar
+				`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [
+						{
+							type: 'evaluatedVariable',
+							name: 'OtherVar',
+							line: 5,
+							characterStart: 5,
+							characterEnd: 10000,  // TODO: see known issue in README.md
+						},
+					]
+				}
+			]);
+		});
+
 		it('should work on assignment to parent scope', () => {
 			const input = `^MyVar = 123`;
 			assertParseResultsEqual(input, [
@@ -283,6 +328,52 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on statements with comments on different lines', () => {
+			const input = `
+					// Comment 1
+					.My_Var = 123
+					// Comment 2
+					`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'My_Var',
+						scope: 'current'
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on statements with comments on the same line', () => {
+			const input = `.My_Var = 123  // Comment`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'My_Var',
+						scope: 'current'
+					},
+					rhs: 123
+				}
+			]);
+		});
+
+		it('should work on statements with comments on the same with no spaces between', () => {
+			const input = `.My_Var = 123// Comment`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'My_Var',
 						scope: 'current'
 					},
 					rhs: 123

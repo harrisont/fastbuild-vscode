@@ -38,11 +38,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
-* Support statements that span multiple lines. For example:
-    ```
-    .Var
-        = 1
-    ```
 * Support string appending with the `+` operator ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)).
 * Support array values ([docs](https://www.fastbuild.org/docs/syntaxguide.html#declaration)).
 * Support array appending with the `+` operator.

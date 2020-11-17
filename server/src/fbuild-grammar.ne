@@ -4,7 +4,7 @@ const moo = require('moo');
 const lexer = moo.states({
 	main: {
 		whitespace: /[ \t]+/,
-		newline: { match: '\n', lineBreaks: true },
+		optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
 		comment: /(?:;|\/\/).*/,
 		scopeStart: '{',
 		scopeEnd: '}',
@@ -42,26 +42,31 @@ main -> lines  {% function(d) { return d[0]; } %}
 
 lines ->
     null  {% function(d) { return []; } %}
-  | %newline lines  {% function(d) { return d[1]; } %}
+  | %optionalWhitespaceAndMandatoryNewline lines  {% function(d) { return d[1]; } %}
   | %whitespace lines  {% function(d) { return d[1]; } %}
-  | statementAndOrComment  {% function(d) { return d.flat(); } %}
-  | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]).flat(); } %}
-
-newlineBeforeStatementAndOrComment ->
-    %whitespace
-  | "\n" lines  {% function(d) { return d[1]; } %}
+  | statementAndOrComment lines  {% function(d) { return d.flat(); } %}
 
 statementAndOrComment ->
-    statement _  {% function(d) { return d[0]; } %}
-  | %comment  {% function(d) { return []; } %}
-  | statement _ %comment  {% function(d) { return d[0]; } %}
+    statement %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
+  | statement %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
+  | statement %whitespace %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
+  | %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return []; } %}
 
 statement ->
     %scopeStart  {% function(d) { return { type: "scopeStart" }; } %}
   | %scopeEnd  {% function(d) { return { type: "scopeEnd" }; } %}
   | variableDefinition  {% function(d) { return d[0]; } %}
 
-variableDefinition -> lvalue _ "=" _ rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+variableDefinition ->
+    lvalue "=" rvalue  {% ([lhs, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %whitespace "=" rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %optionalWhitespaceAndMandatoryNewline "=" rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %whitespace "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %optionalWhitespaceAndMandatoryNewline "=" %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %whitespace "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lvalue %optionalWhitespaceAndMandatoryNewline "=" %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 lvalue ->
     "." %variableName  {% function(d) { return { name: d[1].value, scope: "current" }; } %}
@@ -113,6 +118,3 @@ stringContents ->
 			return [evaluatedVariable];
 		}
 	} %}
-
-# Whitespace
-_ -> [ \t]:*  {% function(d) { return null; } %}
