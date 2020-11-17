@@ -6,6 +6,12 @@ This provides the following functionality:
 * Hover over an evaluated variable (e.g. `.Message = 'Hello $Location$`, `.MyVarCopy = .MyVar`).
     * Known issue: when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar`), the hover extends to the end of the line instead of ending at the end of the RHS. For example, in the case of `.MyVarCopy = .MyVar  // Comment`, the hover includes the comment. The hover stil shows the correct value.
 
+## Compatibility
+
+Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.02.
+
+Note that much of the language is not yet implemented. See [TODO](#todo) for details.
+
 ## Running
 
 1. Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder.
@@ -32,14 +38,24 @@ This provides the following functionality:
 
 ## TODO
 
-* Have the parser leverage the lexer more heavily.
 * Support statements that span multiple lines. For example:
     ```
     .Var
         = 1
     ```
-* Support string appending with the `+` operator.
-* Support array values.
+* Support string appending with the `+` operator ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)).
+* Support array values ([docs](https://www.fastbuild.org/docs/syntaxguide.html#declaration)).
 * Support array appending with the `+` operator.
-* Support structs.
-* Fix the hover extending to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
+* Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).
+* Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
+* Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
+* Support using `^` to escape characters (`'`, `"`, `$`) ([docs](https://www.fastbuild.org/docs/syntaxguide.html#escaping)).
+* Support [functions](https://www.fastbuild.org/docs/functions.html):
+    * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html))
+    * `Using` ([docs](https://www.fastbuild.org/docs/functions/using.html))
+    * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
+* Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
+* Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
+* Support `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)).
+* Fix bug where the hover extends to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
