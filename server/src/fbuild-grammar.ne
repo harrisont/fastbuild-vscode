@@ -60,32 +60,32 @@ statement ->
   | variableAddition  {% function(d) { return d[0]; } %}
 
 variableDefinition ->
-    lvalue %operatorAssignment rvalue  {% ([lhs, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAssignment rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAssignment rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %operatorAssignment %whitespace rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %operatorAssignment %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAssignment %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAssignment %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAssignment %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAssignment %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+    lhs %operatorAssignment rhs  {% ([lhs, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAssignment rhs  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment rhs  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAssignment %whitespace rhs  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAssignment %whitespace rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %whitespace rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 variableAddition ->
-    lvalue %operatorAddition rvalue  {% ([lhs, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAddition rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAddition rvalue  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %operatorAddition %whitespace rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %operatorAddition %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAddition %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lvalue %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+    lhs %operatorAddition rhs  {% ([lhs, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAddition rhs  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition rhs  {% ([lhs, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAddition %whitespace rhs  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAddition %whitespace rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
+  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
 
-lvalue ->
+lhs ->
     "." %variableName  {% function(d) { return { name: d[1].value, scope: "current" }; } %}
   | "^" %variableName  {% function(d) { return { name: d[1].value, scope: "parent" }; } %}
 
-rvalue ->
+rhs ->
     %integer  {% function(d) { return d[0].value; } %}
   | bool  {% function(d) { return d[0]; } %}
   | string  {% function(d) { return d[0]; } %}
