@@ -42,7 +42,8 @@ main -> lines  {% function(d) { return d[0]; } %}
 
 lines ->
     null  {% function(d) { return []; } %}
-  | [\s] lines  {% function(d) { return d[1]; } %}
+  | %newline lines  {% function(d) { return d[1]; } %}
+  | %whitespace lines  {% function(d) { return d[1]; } %}
   | statementAndOrComment  {% function(d) { return d.flat(); } %}
   | statementAndOrComment newlineBeforeStatementAndOrComment  {% function(d) { return [d[0]].concat(d[1]).flat(); } %}
 
@@ -52,17 +53,13 @@ newlineBeforeStatementAndOrComment ->
 
 statementAndOrComment ->
     statement _  {% function(d) { return d[0]; } %}
-  | comment  {% function(d) { return []; } %}
-  | statement _ comment  {% function(d) { return d[0]; } %}
+  | %comment  {% function(d) { return []; } %}
+  | statement _ %comment  {% function(d) { return d[0]; } %}
 
 statement ->
     %scopeStart  {% function(d) { return { type: "scopeStart" }; } %}
   | %scopeEnd  {% function(d) { return { type: "scopeEnd" }; } %}
   | variableDefinition  {% function(d) { return d[0]; } %}
-
-comment ->
-    "//" [^\n]:*
-  | ";" [^\n]:*
 
 variableDefinition -> lvalue _ "=" _ rvalue  {% ([lhs, space1, equalsSign, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 

@@ -38,7 +38,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
-* Use the lexer for comments.
 * Support statements that span multiple lines. For example:
     ```
     .Var
