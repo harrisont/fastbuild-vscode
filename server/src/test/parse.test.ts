@@ -561,12 +561,7 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: 'hello'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: ' world'
+					rhs: 'hello world'
 				}
 			]);
 		});
@@ -580,12 +575,7 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: 'hello'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: ' world'
+					rhs: 'hello world'
 				}
 			]);
 		});
@@ -603,17 +593,7 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: 'hello'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: ' world'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: '!'
+					rhs: 'hello world!'
 				}
 			]);
 		});
@@ -628,17 +608,7 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: 'hello'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: ' world'
-				},
-				{
-					type: 'variableAddition',
-					lhs: null,
-					rhs: '!'
+					rhs: 'hello world!'
 				}
 			]);
 		});
