@@ -32,6 +32,9 @@
 			},
 			"problemMatcher": [
 				"$tsc-watch"
+			],
+			"dependsOn": [
+				"build grammar"
 			]
 		},
 		{
