@@ -699,7 +699,7 @@ describe('parser', () => {
 				() => parse(input),
 				{
 					name: 'ParseError',
-					message: 'Referencing undefined variable "Var1"'
+					message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
 				}
 			);
 		});

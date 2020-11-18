@@ -61,7 +61,7 @@ class ScopeStack {
 				return maybeValue;
 			}
 		}
-		throw new ParseError(`Referencing undefined variable "${variableName}"`);
+		throw new ParseError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
 	}
 
 	// Throw ParseError if the variable is not defined.
