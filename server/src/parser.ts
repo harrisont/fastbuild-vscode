@@ -136,6 +136,11 @@ export function nearleyParse(input: string): any[] {
 	return statements;
 }
 
+interface ParsedStringExpression {
+	evaluatedString: string,
+	evaluatedVariables: EvaluatedVariable[],
+}
+
 export function parse(input: string): ParsedData {
 	const statements = nearleyParse(input);
 
@@ -149,27 +154,9 @@ export function parse(input: string): ParsedData {
 				const rhs = statement.rhs;
 				let evaluatedRhs: Value = 0;
 				if (rhs instanceof Array) {
-					evaluatedRhs = ''
-					for (const part of rhs) {
-						if (part.type && part.type == 'evaluatedVariable') {
-							const variableName: string = part.name;
-							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
-							const variableValueString = String(variableValue);
-							evaluatedRhs += variableValueString;
-
-							evaluatedVariables.push({
-								value: variableValue,
-								range: {
-									line: part.line,
-									characterStart: part.characterStart,
-									characterEnd: part.characterEnd,
-								}
-							});
-						} else {
-							// Literal
-							evaluatedRhs += part;
-						}
-					}
+					const parsedStringExpression = parseStringExpression(rhs, scopeStack);
+					evaluatedRhs = parsedStringExpression.evaluatedString;
+					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
 				} else {
 					evaluatedRhs = rhs;
 				}
@@ -186,26 +173,9 @@ export function parse(input: string): ParsedData {
 				const rhs = statement.rhs;
 				let evaluatedRhs: string = '';
 				if (rhs instanceof Array) {
-					for (const part of rhs) {
-						if (part.type && part.type == 'evaluatedVariable') {
-							const variableName: string = part.name;
-							const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
-							const variableValueString = String(variableValue);
-							evaluatedRhs += variableValueString;
-
-							evaluatedVariables.push({
-								value: variableValue,
-								range: {
-									line: part.line,
-									characterStart: part.characterStart,
-									characterEnd: part.characterEnd,
-								}
-							});
-						} else {
-							// Literal
-							evaluatedRhs += part;
-						}
-					}
+					const parsedStringExpression = parseStringExpression(rhs, scopeStack);
+					evaluatedRhs = parsedStringExpression.evaluatedString;
+					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
 				} else {
 					evaluatedRhs = rhs;
 				}
@@ -234,4 +204,35 @@ export function parse(input: string): ParsedData {
 	return {
 		evaluatedVariables: evaluatedVariables
 	};
+}
+
+// `parts` is an array of either strings or `evaluatedVariable` parse-data.
+function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack): ParsedStringExpression {
+	let result: ParsedStringExpression = {
+		evaluatedString: '',
+		evaluatedVariables: [],
+	};
+	
+	for (const part of parts) {
+		if (part.type && part.type == 'evaluatedVariable') {
+			const variableName: string = part.name;
+			const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
+			const variableValueString = String(variableValue);
+			result.evaluatedString += variableValueString;
+
+			result.evaluatedVariables.push({
+				value: variableValue,
+				range: {
+					line: part.line,
+					characterStart: part.characterStart,
+					characterEnd: part.characterEnd,
+				}
+			});
+		} else {
+			// Literal
+			result.evaluatedString += part;
+		}
+	}
+
+	return result;
 }
