@@ -20,12 +20,14 @@ const lexer = moo.states({
     singleQuotedStringBody: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         stringEnd: { match: "'", pop: 1 },
-        stringLiteral: /[^'\$\n]+/,
+        // Handle escaping ', $, ^ with ^
+        stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
     },
     doubleQuotedStringBody: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         stringEnd: { match: '"', pop: 1 },
-        stringLiteral: /[^"\$\n]+/,
+        // Handle escaping ", $, ^ with ^
+        stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
     },
     templatedVariable: {
         endTemplatedVariable: { match: '$', pop: 1 },
@@ -139,7 +141,16 @@ string ->
 stringContents ->
     null
     # String literal
-  | %stringLiteral stringContents  {% ([literal, rest]) => (rest.length > 0) ? [literal.value, ...rest] : [literal.value] %}
+  | %stringLiteral stringContents  {% ([literal, rest]) => {
+        // Handle escaped characters.
+        const escapedValue = literal.value.replace(/\^(.)/g, '$1');
+
+        if (rest.length > 0) {
+            return [escapedValue, ...rest];
+        } else {
+            return [escapedValue];
+        }
+    } %}
     # Templated string
   | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
           const evaluatedVariable = {

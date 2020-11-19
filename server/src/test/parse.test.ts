@@ -175,6 +175,62 @@ describe('parser', () => {
 			]);
 		});
 
+		it('should work on assigning a string literal with single quotes with an escaped single quote inside', () => {
+			const input = `.MyVar = 'h^'i'`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: "h'i"
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with double quotes with an escaped double quote inside', () => {
+			const input = `.MyVar = "h^"i"`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 'h"i'
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with an escaped variable delimeter', () => {
+			const input = `.MyVar = 'h^$i'`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: "h$i"
+				}
+			]);
+		});
+
+		it('should work on assigning a string literal with an escaped escape character', () => {
+			const input = `.MyVar = 'h^^i'`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: "h^i"
+				}
+			]);
+		});
+
 		it('should work on assigning a single quoted string with a variable', () => {
 			const input = `.MyVar = 'pre-$OtherVar$-post'`;
 			assertParseResultsEqual(input, [
