@@ -98,46 +98,78 @@ lhs ->
 rhs ->
     %integer  {% function(d) { return d[0].value; } %}
   | bool  {% function(d) { return d[0]; } %}
+  # evaluatedVariable is in stringExpression and not rhs in order to remove ambiguity
   | stringExpression  {% function(d) { return d[0]; } %}
-  | "." %variableName  {% ([_, varName]) => {
-        return [
-            {
-                type: "evaluatedVariable",
-                name: varName.value,
-                line: varName.line - 1,
-                // Include the "." character.
-                characterStart: varName.col - 2,
-                // TODO: determine the end. See the known issue in README.md.
-                characterEnd: 10000,
-            }
-        ];
-    } %}
+
+evaluatedVariable -> "." %variableName  {% ([_, varName]) => {
+    return [
+        {
+            type: "evaluatedVariable",
+            name: varName.value,
+            line: varName.line - 1,
+            // Include the "." character.
+            characterStart: varName.col - 2,
+            // TODO: determine the end. See the known issue in README.md.
+            characterEnd: 10000,
+        }
+    ];
+} %}
 
 bool ->
     "true"  {% function(d) { return true; } %}
   | "false"  {% function(d) { return false; } %}
 
-stringExpression ->
+# Generates string | (string | evaluatedVariable)[]
+# Merges string literals.
+# e.g. ['hello', ' world'] becomes 'hello world'
+# e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
+stringExpression -> stringExpressionHelper  {% ([parts]) => {
+    let joinedParts: (string | object)[] = [];
+    let previousPartIsStringLiteral: boolean = false;
+    for (const part of parts) {
+        const isStringLiteral: boolean = (typeof part == "string");
+        if (isStringLiteral && previousPartIsStringLiteral) {
+          joinedParts[joinedParts.length - 1] += part;
+        } else {
+          joinedParts.push(part);
+        }
+        
+        previousPartIsStringLiteral = isStringLiteral;
+    }
+    if ((joinedParts.length == 1) && (typeof joinedParts[0] == "string")) {
+      return joinedParts[0];
+    } else {
+      return joinedParts;
+    }
+} %}
+
+# Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
+stringExpressionHelper ->
     # Single string
-    string                                                                                                                   {% function(d) { return d[0]; } %}
+    stringOrEvaluatedVariable                                                                                                                         {% function(d) { return d[0]; } %}
     # Multiple strings added together. No whitespace/newlines.
-  | string %operatorAddition stringExpression                                                                                {% ([lhs, operator, rhs]) =>                 { return lhs + rhs; } %}
+  | stringOrEvaluatedVariable %operatorAddition stringExpressionHelper                                                                                {% ([lhs, operator, rhs]) =>                 { return [...lhs, ...rhs]; } %}
     # Multiple strings added together. Whitespace/newlines left of the operator.
-  | string %whitespace %operatorAddition stringExpression                                                                    {% ([lhs, space1, operator, rhs]) =>         { return lhs + rhs; } %}
-  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition stringExpression                                         {% ([lhs, space1, operator, rhs]) =>         { return lhs + rhs; } %}
+  | stringOrEvaluatedVariable %whitespace %operatorAddition stringExpressionHelper                                                                    {% ([lhs, space1, operator, rhs]) =>         { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition stringExpressionHelper                                         {% ([lhs, space1, operator, rhs]) =>         { return [...lhs, ...rhs]; } %}
     # Multiple strings added together. Whitespace/newlines right of the operator.
-  | string %operatorAddition %whitespace stringExpression                                                                    {% ([lhs, operator, space2, rhs]) =>         { return lhs + rhs; } %}
-  | string %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression                                         {% ([lhs, operator, space2, rhs]) =>         { return lhs + rhs; } %}
+  | stringOrEvaluatedVariable %operatorAddition %whitespace stringExpressionHelper                                                                    {% ([lhs, operator, space2, rhs]) =>         { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper                                         {% ([lhs, operator, space2, rhs]) =>         { return [...lhs, ...rhs]; } %}
     # Multiple strings added together. Whitespace/newlines left and right of the operator.
-  | string  %whitespace %operatorAddition  %whitespace stringExpression                                                      {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
-  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition  %whitespace stringExpression                            {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
-  | string  %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression                            {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
-  | string %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpression  {% ([lhs, space1, operator, space2, rhs]) => { return lhs + rhs; } %}
+  | stringOrEvaluatedVariable %whitespace %operatorAddition %whitespace stringExpressionHelper                                                        {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace stringExpressionHelper                             {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper                             {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper  {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+
+stringOrEvaluatedVariable ->
+    string  {% function(d) { return d[0]; } %}
+  | evaluatedVariable  {% function(d) { return d[0]; } %}
 
 string ->
-    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => (content.length == 1) ? content[0] : content %}
-  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => (content.length == 1) ? content[0] : content %}
+    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
+  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
 
+# Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringContents ->
     null
     # String literal

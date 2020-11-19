@@ -668,6 +668,59 @@ describe('parser', () => {
 				}
 			]);
 		});
+
+		it('adding an evaluated variable should use the last referenced variable if none is specified', () => {
+			const input = `.MyMessage = 'hello ' + .MyVar`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: [
+						'hello ',
+						{
+							type: 'evaluatedVariable',
+							name: 'MyVar',
+							line: 0,
+							characterStart: 24,
+							characterEnd: 10000,  // TODO: see known issue in README.md
+						}
+					]
+				}
+			]);
+		});
+
+		it('adding multiple evaluated variables should use the last referenced variable if none is specified', () => {
+			const input = `.MyMessage = 'hello ' + .MyVar1 + .MyVar2`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyMessage',
+						scope: 'current'
+					},
+					rhs: [
+						'hello ',
+						{
+							type: 'evaluatedVariable',
+							name: 'MyVar1',
+							line: 0,
+							characterStart: 24,
+							characterEnd: 10000,  // TODO: see known issue in README.md
+						},
+						{
+							type: 'evaluatedVariable',
+							name: 'MyVar2',
+							line: 0,
+							characterStart: 34,
+							characterEnd: 10000,  // TODO: see known issue in README.md
+						}
+					]
+				}
+			]);
+		});
 	}),
 
 	describe('evaluatedVariables value', () => {
@@ -861,6 +914,28 @@ describe('parser', () => {
 				.Evaluated = .MyMessage
 			`;
 			assertEvaluatedVariablesValueEqual(input, ['hello world!']);
+		});
+
+		it('adding an evaluated variable should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyVar = 'world'
+				.MyMessage = 'hello '
+				           + .MyVar
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['world', 'hello world']);
+		});
+
+		it('adding mulitple evaluated variables should use the last referenced variable if none is specified', () => {
+			const input = `
+				.MyVar1 = 'world'
+				.MyVar2 = '!'
+				.MyMessage = 'hello '
+					       + .MyVar1
+					       + .MyVar2
+				.Evaluated = .MyMessage
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
 		});
 
 		it('should work on adding a string literal to a variable in the parent scope', () => {
