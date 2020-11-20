@@ -35,12 +35,7 @@ function onHover(params: HoverParams) {
         {
 			const value = evaluatedVariables[i].value;
 			
-			let hoverText = '';
-			if (value instanceof Array) {
-				hoverText = `[${value.toString()}]`
-			} else {
-				hoverText = String(value);
-			}
+			const hoverText = JSON.stringify(value);
 
 			const hover: Hover = {
 				contents: {

@@ -38,7 +38,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
-* Support arrays of arrays.
 * Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
