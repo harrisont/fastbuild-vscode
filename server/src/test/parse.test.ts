@@ -240,17 +240,20 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: [
-						'pre-',
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar',
-							line: 0,
-							characterStart: 14,
-							characterEnd: 24,
-						},
-						'-post'
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							'pre-',
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar',
+								line: 0,
+								characterStart: 14,
+								characterEnd: 24,
+							},
+							'-post'
+						]
+					}
 				}
 			]);
 		});
@@ -264,17 +267,20 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: [
-						'pre-',
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar',
-							line: 0,
-							characterStart: 14,
-							characterEnd: 24,
-						},
-						'-post'
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							'pre-',
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar',
+								line: 0,
+								characterStart: 14,
+								characterEnd: 24,
+							},
+							'-post'
+						]
+					}
 				}
 			]);
 		});
@@ -288,25 +294,28 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: [
-						'pre-',
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar1',
-							line: 0,
-							characterStart: 14,
-							characterEnd: 25,
-						},
-						'-',
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar2',
-							line: 0,
-							characterStart: 26,
-							characterEnd: 37,
-						},
-						'-post'
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							'pre-',
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar1',
+								line: 0,
+								characterStart: 14,
+								characterEnd: 25,
+							},
+							'-',
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar2',
+								line: 0,
+								characterStart: 26,
+								characterEnd: 37,
+							},
+							'-post'
+						]
+					}
 				}
 			]);
 		});
@@ -320,15 +329,18 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: [
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar',
-							line: 0,
-							characterStart: 9,
-							characterEnd: 10000,  // TODO: see known issue in README.md
-						},
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar',
+								line: 0,
+								characterStart: 9,
+								characterEnd: 10000,  // TODO: see known issue in README.md
+							},
+						]
+					}
 				}
 			]);
 		});
@@ -348,15 +360,18 @@ describe('parser', () => {
 						name: 'MyVar',
 						scope: 'current'
 					},
-					rhs: [
-						{
-							type: 'evaluatedVariable',
-							name: 'OtherVar',
-							line: 5,
-							characterStart: 5,
-							characterEnd: 10000,  // TODO: see known issue in README.md
-						},
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							{
+								type: 'evaluatedVariable',
+								name: 'OtherVar',
+								line: 5,
+								characterStart: 5,
+								characterEnd: 10000,  // TODO: see known issue in README.md
+							},
+						]
+					}
 				}
 			]);
 		});
@@ -591,16 +606,19 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: [
-						' ',
-						{
-							type: 'evaluatedVariable',
-							name: 'MyName',
-							line: 3,
-							characterStart: 19,
-							characterEnd: 27,
-						}
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							' ',
+							{
+								type: 'evaluatedVariable',
+								name: 'MyName',
+								line: 3,
+								characterStart: 19,
+								characterEnd: 27,
+							}
+						]
+					}
 				}
 			]);
 		});
@@ -678,16 +696,19 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: [
-						'hello ',
-						{
-							type: 'evaluatedVariable',
-							name: 'MyVar',
-							line: 0,
-							characterStart: 24,
-							characterEnd: 10000,  // TODO: see known issue in README.md
-						}
-					]
+					rhs: {
+						type: 'stringExpression',
+							parts: [
+							'hello ',
+							{
+								type: 'evaluatedVariable',
+								name: 'MyVar',
+								line: 0,
+								characterStart: 24,
+								characterEnd: 10000,  // TODO: see known issue in README.md
+							}
+						]
+					}
 				}
 			]);
 		});
@@ -701,23 +722,169 @@ describe('parser', () => {
 						name: 'MyMessage',
 						scope: 'current'
 					},
-					rhs: [
-						'hello ',
-						{
-							type: 'evaluatedVariable',
-							name: 'MyVar1',
-							line: 0,
-							characterStart: 24,
-							characterEnd: 10000,  // TODO: see known issue in README.md
-						},
-						{
-							type: 'evaluatedVariable',
-							name: 'MyVar2',
-							line: 0,
-							characterStart: 34,
-							characterEnd: 10000,  // TODO: see known issue in README.md
-						}
-					]
+					rhs: {
+						type: 'stringExpression',
+						parts: [
+							'hello ',
+							{
+								type: 'evaluatedVariable',
+								name: 'MyVar1',
+								line: 0,
+								characterStart: 24,
+								characterEnd: 10000,  // TODO: see known issue in README.md
+							},
+							{
+								type: 'evaluatedVariable',
+								name: 'MyVar2',
+								line: 0,
+								characterStart: 34,
+								characterEnd: 10000,  // TODO: see known issue in README.md
+							}
+						]
+					}
+				}
+			]);
+		});
+
+		it('should work on assigning an empty array', () => {
+			const input = `.MyVar = []`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: []
+				}
+			]);
+		});
+
+		it('should work on assigning an empty array with whitespace', () => {
+			const input = `.MyVar = [ ]`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: []
+				}
+			]);
+		});
+
+		it('should work on assigning an array of 1 integer', () => {
+			const input = `.MyVar = [1]`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [1]
+				}
+			]);
+		});
+
+		it('should work on assigning an array of 1 integer with whitespace', () => {
+			const input = `
+				.MyVar = [
+						   1 ]
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [1]
+				}
+			]);
+		});
+
+		it('should work on assigning an array of integers', () => {
+			const input = `.MyVar = [1,100]`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [1, 100]
+				}
+			]);
+		});
+
+		it('should work on assigning an array of integers with whitespace', () => {
+			const input = `
+				.MyVar = [1 , 2,
+						  3]
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [1, 2, 3]
+				}
+			]);
+		});
+
+		it('should work on assigning an array of strings', () => {
+			const input = `.MyVar = ['str1', 'str2']`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: ['str1', 'str2']
+				}
+			]);
+		});
+
+		it('should work on assigning an array of booleans', () => {
+			const input = `.MyVar = [true, false]`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: [true, false]
+				}
+			]);
+		});
+
+		it('should work on adding an item to an array', () => {
+			const input = `
+				.MyVar = []
+				.MyVar + 'cow'
+			`;
+			assertParseResultsEqual(input, [
+				{
+					type: 'variableDefinition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: []
+				},
+				{
+					type: 'variableAddition',
+					lhs: {
+						name: 'MyVar',
+						scope: 'current'
+					},
+					rhs: 'cow'
 				}
 			]);
 		});
@@ -979,6 +1146,15 @@ describe('parser', () => {
 					message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
 				}
 			);
+		});
+
+		it('should work on adding an item to an array', () => {
+			const input = `
+				.MyVar = []
+				.MyVar + 'cow'
+				.Result = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [['cow']]);
 		});
 	});
 

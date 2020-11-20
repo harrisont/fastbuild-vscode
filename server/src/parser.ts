@@ -8,7 +8,7 @@ export interface SourceRange
 	characterEnd: number
 }
 
-export type Value = boolean | number | string;
+export type Value = boolean | number | string | Value[];
 
 export interface EvaluatedVariable
 {
@@ -153,8 +153,9 @@ export function parse(input: string): ParsedData {
 			case 'variableDefinition': {
 				const rhs = statement.rhs;
 				let evaluatedRhs: Value = 0;
-				if (rhs instanceof Array) {
-					const parsedStringExpression = parseStringExpression(rhs, scopeStack);
+				if (rhs.type && rhs.type == 'stringExpression') {
+					const parts: (string | any)[] = rhs.parts;
+					const parsedStringExpression = parseStringExpression(parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
 					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
 				} else {
@@ -172,8 +173,9 @@ export function parse(input: string): ParsedData {
 			case 'variableAddition': {
 				const rhs = statement.rhs;
 				let evaluatedRhs: string = '';
-				if (rhs instanceof Array) {
-					const parsedStringExpression = parseStringExpression(rhs, scopeStack);
+				if (rhs.type && rhs.type == 'stringExpression') {
+					const parts: (string | any)[] = rhs.parts;
+					const parsedStringExpression = parseStringExpression(parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
 					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
 				} else {
@@ -183,12 +185,20 @@ export function parse(input: string): ParsedData {
 				const lhs: VariableDefinitionLhs = statement.lhs;
 				if (lhs.scope == 'current') {
 					const existingValue = scopeStack.getVariableValueInCurrentScope(lhs.name);
-					const sum = existingValue + evaluatedRhs;
-					scopeStack.setVariableInCurrentScope(lhs.name, sum);
+					if (existingValue instanceof Array) {
+						existingValue.push(evaluatedRhs);
+					} else {
+						const sum = existingValue + evaluatedRhs;
+						scopeStack.setVariableInCurrentScope(lhs.name, sum);
+					}
 				} else {
 					const existingValue = scopeStack.getVariableValueInParentScope(lhs.name);
-					const sum = existingValue + evaluatedRhs;
-					scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
+					if (existingValue instanceof Array) {
+						existingValue.push(evaluatedRhs);
+					} else {
+						const sum = existingValue + evaluatedRhs;
+						scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
+					}
 				}
 				break;
 			}

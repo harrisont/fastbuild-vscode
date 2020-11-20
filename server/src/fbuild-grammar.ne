@@ -16,6 +16,9 @@ const lexer = moo.states({
         variableReferenceParentScope: '^',
         operatorAssignment: '=',
         operatorAddition: '+',
+        arrayStart: '[',
+        arrayEnd: ']',
+        arrayItemSeparator: ',',
     },
     singleQuotedStringBody: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -100,6 +103,7 @@ rhs ->
   | bool  {% function(d) { return d[0]; } %}
   # evaluatedVariable is in stringExpression and not rhs in order to remove ambiguity
   | stringExpression  {% function(d) { return d[0]; } %}
+  | array  {% function(d) { return d[0]; } %}
 
 evaluatedVariable -> "." %variableName  {% ([_, varName]) => {
     return [
@@ -139,7 +143,10 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
     if ((joinedParts.length == 1) && (typeof joinedParts[0] == "string")) {
       return joinedParts[0];
     } else {
-      return joinedParts;
+      return {
+          type: 'stringExpression',
+          parts: joinedParts,
+      }
     }
 } %}
 
@@ -199,3 +206,40 @@ stringContents ->
             return [evaluatedVariable];
         }
     } %}
+
+array -> %arrayStart arrayContents %arrayEnd  {% ([braceOpen, contents, braceClose]) => contents %}
+
+arrayContents ->
+    # Empty
+    null                                    {% () => [] %}
+  | %whitespace                             {% () => [] %}
+  | %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
+  | nonEmptyArrayContents  {% ([contents]) => contents %}
+
+nonEmptyArrayContents ->
+    # Single item. No whitespace/newlines.
+                                           rhs                                         {% ([        content        ]) => [content] %}
+    # Single item. Whitespace/newlines left of the content.
+  | %whitespace                            rhs                                         {% ([space1, content        ]) => [content] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([space1, content        ]) => [content] %}
+    # Single item. Whitespace/newlines right of the content.
+  |                                        rhs %whitespace                             {% ([        content, space2]) => [content] %}
+  |                                        rhs %optionalWhitespaceAndMandatoryNewline  {% ([        content, space2]) => [content] %}
+    # Single item. Whitespace/newlines left and right of the content.
+  | %whitespace                            rhs %whitespace                             {% ([space1, content, space2]) => [content] %}
+  | %whitespace                            rhs %optionalWhitespaceAndMandatoryNewline  {% ([space1, content, space2]) => [content] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs %whitespace                             {% ([space1, content, space2]) => [content] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs %optionalWhitespaceAndMandatoryNewline  {% ([space1, content, space2]) => [content] %}
+    # Multiple items.  No whitespace/newlines.
+  |                                        rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([        first,         separator, rest]) => [first, ...rest] %}
+    # Multiple items.  Whitespace/newlines left of the content.
+  | %whitespace                            rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first,         separator, rest]) => [first, ...rest] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first,         separator, rest]) => [first, ...rest] %}
+    # Multiple items.  Whitespace/newlines right of the content.
+  |                                        rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([        first, space2, separator, rest]) => [first, ...rest] %}
+  |                                        rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([        first, space2, separator, rest]) => [first, ...rest] %}
+    # Multiple items.  Whitespace/newlines left and right of the content.
+  | %whitespace                            rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+  | %whitespace                            rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+  | %optionalWhitespaceAndMandatoryNewline rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}

@@ -34,7 +34,13 @@ function onHover(params: HoverParams) {
            && (range.characterStart <= position.character && range.characterEnd >= position.character))
         {
 			const value = evaluatedVariables[i].value;
-			const hoverText = String(value);
+			
+			let hoverText = '';
+			if (value instanceof Array) {
+				hoverText = `[${value.toString()}]`
+			} else {
+				hoverText = String(value);
+			}
 
 			const hover: Hover = {
 				contents: {
