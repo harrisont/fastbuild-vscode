@@ -105,30 +105,46 @@ rhs ->
   | stringExpression  {% function(d) { return d[0]; } %}
   | array  {% function(d) { return d[0]; } %}
 
-evaluatedVariable -> "." %variableName  {% ([_, varName]) => {
-    return [
-        {
-            type: "evaluatedVariable",
-            name: varName.value,
-            line: varName.line - 1,
-            // Include the "." character.
-            characterStart: varName.col - 2,
-            // TODO: determine the end. See the known issue in README.md.
-            characterEnd: 10000,
-        }
-    ];
-} %}
+@{%
+
+function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
+    return {
+        type: "evaluatedVariable",
+        scope: scope,
+        name: varName.value,
+        line: varName.line - 1,
+        // Include the "." character.
+        characterStart: varName.col - 2,
+        // TODO: determine the end. See the known issue in README.md.
+        characterEnd: 10000,
+    };
+}
+
+%}
+
+evaluatedVariable ->
+    "." %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "current") ] %}
+  | "^" %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "parent") ] %}
 
 bool ->
     "true"  {% function(d) { return true; } %}
   | "false"  {% function(d) { return false; } %}
 
-# Generates string | (string | evaluatedVariable)[]
+@{%
+
+interface TypedObject {
+    type: "evaluatedVariable"
+}
+
+%}
+
+# Generates string | evaluatedVariable | (string | evaluatedVariable)[]
 # Merges string literals.
 # e.g. ['hello', ' world'] becomes 'hello world'
+# e.g. [evaluatedVariable] becomes evaluatedVariable
 # e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
 stringExpression -> stringExpressionHelper  {% ([parts]) => {
-    let joinedParts: (string | object)[] = [];
+    let joinedParts: (string | TypedObject)[] = [];
     let previousPartIsStringLiteral: boolean = false;
     for (const part of parts) {
         const isStringLiteral: boolean = (typeof part == "string");
@@ -140,14 +156,20 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
         
         previousPartIsStringLiteral = isStringLiteral;
     }
-    if ((joinedParts.length == 1) && (typeof joinedParts[0] == "string")) {
-      return joinedParts[0];
-    } else {
-      return {
-          type: 'stringExpression',
-          parts: joinedParts,
-      }
+
+    if (joinedParts.length == 1) {
+
+        if ((typeof joinedParts[0] == "string") ||
+            (joinedParts[0].type == "evaluatedVariable"))
+        {
+            return joinedParts[0];
+        }
     }
+
+    return {
+        type: 'stringExpression',
+        parts: joinedParts,
+    };
 } %}
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
@@ -194,6 +216,7 @@ stringContents ->
   | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
           const evaluatedVariable = {
             type: "evaluatedVariable",
+            scope: "current",
             name: varName.value,
             line: varName.line - 1,
             // Include the start and end "$" characters.

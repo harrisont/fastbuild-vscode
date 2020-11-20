@@ -20,9 +20,30 @@ export interface ParsedData {
 	evaluatedVariables: EvaluatedVariable[]
 }
 
+type ScopeLocation = 'current' | 'parent';
+
 interface VariableDefinitionLhs {
 	name: string,
-	scope: 'current' | 'parent'
+	scope: ScopeLocation
+}
+
+interface GrammarEvaluatedVariable {
+	type: 'evaluatedVariable',
+	name: string,
+	scope: ScopeLocation,
+	line: number,
+	characterStart: number,
+	characterEnd: number,
+}
+
+interface ParsedStringExpression {
+	evaluatedString: string,
+	evaluatedVariables: EvaluatedVariable[],
+}
+
+interface ParsedEvaluatedVariable {
+	evaluatedValue: Value,
+	evaluatedVariable: EvaluatedVariable,
 }
 
 interface Scope {
@@ -136,11 +157,6 @@ export function nearleyParse(input: string): any[] {
 	return statements;
 }
 
-interface ParsedStringExpression {
-	evaluatedString: string,
-	evaluatedVariables: EvaluatedVariable[],
-}
-
 export function parse(input: string): ParsedData {
 	const statements = nearleyParse(input);
 
@@ -152,12 +168,15 @@ export function parse(input: string): ParsedData {
 		switch (statement.type) {
 			case 'variableDefinition': {
 				const rhs = statement.rhs;
-				let evaluatedRhs: Value = 0;
+				let evaluatedRhs: Value;
 				if (rhs.type && rhs.type == 'stringExpression') {
-					const parts: (string | any)[] = rhs.parts;
-					const parsedStringExpression = parseStringExpression(parts, scopeStack);
+					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
 					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
+					const parsed = parseEvaluatedVariable(rhs, scopeStack);
+					evaluatedRhs = parsed.evaluatedValue;
+					evaluatedVariables.push(parsed.evaluatedVariable);
 				} else {
 					evaluatedRhs = rhs;
 				}
@@ -172,12 +191,15 @@ export function parse(input: string): ParsedData {
 			}
 			case 'variableAddition': {
 				const rhs = statement.rhs;
-				let evaluatedRhs: string = '';
+				let evaluatedRhs: Value;
 				if (rhs.type && rhs.type == 'stringExpression') {
-					const parts: (string | any)[] = rhs.parts;
-					const parsedStringExpression = parseStringExpression(parts, scopeStack);
+					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
 					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
+					const parsed = parseEvaluatedVariable(rhs, scopeStack);
+					evaluatedRhs = parsed.evaluatedValue;
+					evaluatedVariables.push(parsed.evaluatedVariable);
 				} else {
 					evaluatedRhs = rhs;
 				}
@@ -185,19 +207,25 @@ export function parse(input: string): ParsedData {
 				const lhs: VariableDefinitionLhs = statement.lhs;
 				if (lhs.scope == 'current') {
 					const existingValue = scopeStack.getVariableValueInCurrentScope(lhs.name);
+					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
 						existingValue.push(evaluatedRhs);
-					} else {
+					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs == 'string')) {
 						const sum = existingValue + evaluatedRhs;
 						scopeStack.setVariableInCurrentScope(lhs.name, sum);
+					} else {
+						throw new ParseError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				} else {
 					const existingValue = scopeStack.getVariableValueInParentScope(lhs.name);
+					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
 						existingValue.push(evaluatedRhs);
-					} else {
+					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs == 'string')) {
 						const sum = existingValue + evaluatedRhs;
 						scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
+					} else {
+						throw new ParseError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				}
 				break;
@@ -216,6 +244,24 @@ export function parse(input: string): ParsedData {
 	};
 }
 
+function parseEvaluatedVariable(variable: GrammarEvaluatedVariable, scopeStack: ScopeStack): ParsedEvaluatedVariable {
+	const variableName: string = variable.name;
+	const variableValue = (variable.scope == 'current')
+							? scopeStack.getVariableValueStartingFromCurrentScope(variableName)
+							: scopeStack.getVariableValueInParentScope(variableName);
+	return {
+		evaluatedValue: variableValue,
+		evaluatedVariable: {
+			value: variableValue,
+			range: {
+				line: variable.line,
+				characterStart: variable.characterStart,
+				characterEnd: variable.characterEnd,
+			}
+		}
+	};
+}
+
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
 function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack): ParsedStringExpression {
 	let result: ParsedStringExpression = {
@@ -225,19 +271,9 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 	
 	for (const part of parts) {
 		if (part.type && part.type == 'evaluatedVariable') {
-			const variableName: string = part.name;
-			const variableValue = scopeStack.getVariableValueStartingFromCurrentScope(variableName);
-			const variableValueString = String(variableValue);
-			result.evaluatedString += variableValueString;
-
-			result.evaluatedVariables.push({
-				value: variableValue,
-				range: {
-					line: part.line,
-					characterStart: part.characterStart,
-					characterEnd: part.characterEnd,
-				}
-			});
+			const parsed = parseEvaluatedVariable(part, scopeStack);
+			result.evaluatedString += String(parsed.evaluatedValue);
+			result.evaluatedVariables.push(parsed.evaluatedVariable);
 		} else {
 			// Literal
 			result.evaluatedString += part;

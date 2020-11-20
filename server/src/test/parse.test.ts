@@ -247,6 +247,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'OtherVar',
+								scope: 'current',
 								line: 0,
 								characterStart: 14,
 								characterEnd: 24,
@@ -274,6 +275,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'OtherVar',
+								scope: 'current',
 								line: 0,
 								characterStart: 14,
 								characterEnd: 24,
@@ -301,6 +303,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'OtherVar1',
+								scope: 'current',
 								line: 0,
 								characterStart: 14,
 								characterEnd: 25,
@@ -309,6 +312,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'OtherVar2',
+								scope: 'current',
 								line: 0,
 								characterStart: 26,
 								characterEnd: 37,
@@ -330,16 +334,12 @@ describe('parser', () => {
 						scope: 'current'
 					},
 					rhs: {
-						type: 'stringExpression',
-						parts: [
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar',
-								line: 0,
-								characterStart: 9,
-								characterEnd: 10000,  // TODO: see known issue in README.md
-							},
-						]
+						type: 'evaluatedVariable',
+						name: 'OtherVar',
+						scope: 'current',
+						line: 0,
+						characterStart: 9,
+						characterEnd: 10000,  // TODO: see known issue in README.md
 					}
 				}
 			]);
@@ -361,16 +361,12 @@ describe('parser', () => {
 						scope: 'current'
 					},
 					rhs: {
-						type: 'stringExpression',
-						parts: [
-							{
-								type: 'evaluatedVariable',
-								name: 'OtherVar',
-								line: 5,
-								characterStart: 5,
-								characterEnd: 10000,  // TODO: see known issue in README.md
-							},
-						]
+						type: 'evaluatedVariable',
+						name: 'OtherVar',
+						scope: 'current',
+						line: 5,
+						characterStart: 5,
+						characterEnd: 10000,  // TODO: see known issue in README.md
 					}
 				}
 			]);
@@ -613,6 +609,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'MyName',
+								scope: 'current',
 								line: 3,
 								characterStart: 19,
 								characterEnd: 27,
@@ -703,6 +700,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'MyVar',
+								scope: 'current',
 								line: 0,
 								characterStart: 24,
 								characterEnd: 10000,  // TODO: see known issue in README.md
@@ -729,6 +727,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'MyVar1',
+								scope: 'current',
 								line: 0,
 								characterStart: 24,
 								characterEnd: 10000,  // TODO: see known issue in README.md
@@ -736,6 +735,7 @@ describe('parser', () => {
 							{
 								type: 'evaluatedVariable',
 								name: 'MyVar2',
+								scope: 'current',
 								line: 0,
 								characterStart: 34,
 								characterEnd: 10000,  // TODO: see known issue in README.md
@@ -912,6 +912,16 @@ describe('parser', () => {
 			const input = `
 				.My_Var = 1
 				.Copy = .My_Var
+			`;
+			assertEvaluatedVariablesValueEqual(input, [1]);
+		});
+
+		it('should be detected in the RHS when assigning the value of another variable in the parent scope', () => {
+			const input = `
+				.My_Var = 1
+				{
+					.Copy = ^My_Var
+				}
 			`;
 			assertEvaluatedVariablesValueEqual(input, [1]);
 		});
