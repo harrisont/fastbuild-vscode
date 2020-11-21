@@ -1,5 +1,4 @@
 import {
-	Connection,
 	Hover,
 	HoverParams,
 	MarkupKind,
@@ -14,7 +13,7 @@ export class HoverProvider {
 		this.parsedData = newParsedData;
 	}
 	
-	onHover(params: HoverParams) {
+	onHover(params: HoverParams): Hover | null {
 		const position = params.position;
 		const evaluatedVariables = this.parsedData?.evaluatedVariables ?? [];
 	
@@ -47,5 +46,7 @@ export class HoverProvider {
 				return hover;
 			}
 		}
+
+		return null;
 	}
 }
