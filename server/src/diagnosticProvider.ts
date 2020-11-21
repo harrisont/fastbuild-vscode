@@ -16,6 +16,8 @@ export class DiagnosticProvider {
 
 	// Sends diagnostics about the document through the connection.
 	async onContentChanged(textDocument: TextDocument, connection: Connection): Promise<void> {
+		// Placeholder diagnostic.
+
 		// The validator creates diagnostics for all uppercase words length 2 and more
 		let text = textDocument.getText();
 		let pattern = /\b[A-Z]{2,}\b/g;
@@ -31,7 +33,7 @@ export class DiagnosticProvider {
 					start: textDocument.positionAt(m.index),
 					end: textDocument.positionAt(m.index + m[0].length)
 				},
-				message: `${m[0]} is all uppercase.`,
+				message: `[Placeholder Diagnostic] ${m[0]} is all uppercase.`,
 				source: SOURCE_NAME
 			};
 			if (this.hasDiagnosticRelatedInformationCapability) {
