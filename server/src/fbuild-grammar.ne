@@ -6,8 +6,11 @@ const lexer = moo.states({
         whitespace: /[ \t]+/,
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
         comment: /(?:;|\/\/).*/,
-        scopeStart: '{',
-        scopeEnd: '}',
+        // The symbols for array/scope delimeters are the same.
+        // We could distinguish them by pushing state when we're on the RHS of an operator (assignment/addition), to know that the symbols are array delimeters.
+        // There doesn't seem to be a benefit to doing so though, so for now, use the same symbol for both.
+        scopeOrArrayStart: '{',
+        scopeOrArrayEnd: '}',
         integer: { match: /0|[1-9][0-9]*/, value: (s: string) => parseInt(s) },
         singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
@@ -16,8 +19,6 @@ const lexer = moo.states({
         variableReferenceParentScope: '^',
         operatorAssignment: '=',
         operatorAddition: '+',
-        arrayStart: '[',
-        arrayEnd: ']',
         arrayItemSeparator: ',',
     },
     singleQuotedStringBody: {
@@ -59,8 +60,8 @@ statementAndOrComment ->
   | %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return []; } %}
 
 statement ->
-    %scopeStart  {% function(d) { return { type: "scopeStart" }; } %}
-  | %scopeEnd  {% function(d) { return { type: "scopeEnd" }; } %}
+    %scopeOrArrayStart  {% function(d) { return { type: "scopeStart" }; } %}
+  | %scopeOrArrayEnd  {% function(d) { return { type: "scopeEnd" }; } %}
   | variableDefinition  {% function(d) { return d[0]; } %}
   | variableAddition  {% function(d) { return d[0]; } %}
 
@@ -230,7 +231,7 @@ stringContents ->
         }
     } %}
 
-array -> %arrayStart arrayContents %arrayEnd  {% ([braceOpen, contents, braceClose]) => contents %}
+array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, contents, braceClose]) => contents %}
 
 arrayContents ->
     # Empty

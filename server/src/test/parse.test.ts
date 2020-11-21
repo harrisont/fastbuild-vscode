@@ -747,7 +747,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an empty array', () => {
-			const input = `.MyVar = []`;
+			const input = `.MyVar = {}`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -761,7 +761,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an empty array with whitespace', () => {
-			const input = `.MyVar = [ ]`;
+			const input = `.MyVar = { }`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -775,7 +775,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an array of 1 integer', () => {
-			const input = `.MyVar = [1]`;
+			const input = `.MyVar = {1}`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -790,8 +790,8 @@ describe('parser', () => {
 
 		it('should work on assigning an array of 1 integer with whitespace', () => {
 			const input = `
-				.MyVar = [
-						   1 ]
+				.MyVar = {
+						   1 }
 			`;
 			assertParseResultsEqual(input, [
 				{
@@ -806,7 +806,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an array of integers', () => {
-			const input = `.MyVar = [1,100]`;
+			const input = `.MyVar = {1,100}`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -821,8 +821,8 @@ describe('parser', () => {
 
 		it('should work on assigning an array of integers with whitespace', () => {
 			const input = `
-				.MyVar = [1 , 2,
-						  3]
+				.MyVar = {1 , 2,
+						  3}
 			`;
 			assertParseResultsEqual(input, [
 				{
@@ -837,7 +837,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an array of strings', () => {
-			const input = `.MyVar = ['str1', 'str2']`;
+			const input = `.MyVar = {'str1', 'str2'}`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -851,7 +851,7 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an array of booleans', () => {
-			const input = `.MyVar = [true, false]`;
+			const input = `.MyVar = {true, false}`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
@@ -866,7 +866,7 @@ describe('parser', () => {
 
 		it('should work on adding an item to an array', () => {
 			const input = `
-				.MyVar = []
+				.MyVar = {}
 				.MyVar + 'cow'
 			`;
 			assertParseResultsEqual(input, [
@@ -1160,7 +1160,7 @@ describe('parser', () => {
 
 		it('should work on adding an item to an array', () => {
 			const input = `
-				.MyVar = []
+				.MyVar = {}
 				.MyVar + 'cow'
 				.Result = .MyVar
 			`;
