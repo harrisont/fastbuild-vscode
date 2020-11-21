@@ -14,16 +14,25 @@ import {
 } from 'vscode-languageserver-textdocument';
 
 import * as evaluator from './evaluator'
-import * as hovers from './hovers'
-import * as diagnostic from './diagnostic'
+import { HoverProvider } from './hoversProvider'
+import { DefinitionProvider } from './definitionProvider'
+import { DiagnosticProvider } from './diagnosticProvider'
 
-// Create a connection for the server, using Node's IPC as a transport.
-// Also include all preview / proposed LSP features.
-const connection = createConnection(ProposedFeatures.all);
+class State {
+	// Create a connection for the server, using Node's IPC as a transport.
+	// Also include all preview / proposed LSP features.
+	readonly connection = createConnection(ProposedFeatures.all);
 
-const documents = new TextDocuments(TextDocument);
+	readonly documents = new TextDocuments(TextDocument);
 
-connection.onInitialize((params: InitializeParams) => {
+	readonly hoverProvider = new HoverProvider();
+	readonly definitionProvider = new DefinitionProvider();
+	diagnosticProvider: DiagnosticProvider | null = null;
+}
+
+const state = new State();
+
+state.connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
 
 	const hasDiagnosticRelatedInformationCapability = !!(
@@ -32,29 +41,33 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
 
-	diagnostic.configure(connection, hasDiagnosticRelatedInformationCapability);
-
-	hovers.configure(connection);
+	state.diagnosticProvider = new DiagnosticProvider(hasDiagnosticRelatedInformationCapability);
 
 	const result: InitializeResult = {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
-			hoverProvider: true
+			hoverProvider: true,
+			definitionProvider: true,
 		}
 	};
 
 	return result;
 });
 
+state.connection.onHover(state.hoverProvider.onHover.bind(state.hoverProvider));
+state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.definitionProvider));
+
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
-documents.onDidChangeContent(change => {
+state.documents.onDidChangeContent(change => {
+	const uri = change.document.uri;
 	const text = change.document.getText();
 	const parsedData = evaluator.evaluate(text);
 
-	hovers.onParsedDataChanged(parsedData);
-	diagnostic.onDidChangeContent(change.document);
+	state.hoverProvider.onParsedDataChanged(parsedData);
+	state.definitionProvider.onParsedDataChanged(uri, parsedData);
+	state.diagnosticProvider?.onContentChanged(change.document, state.connection);
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events.
-documents.listen(connection);
-connection.listen();
+state.documents.listen(state.connection);
+state.connection.listen();
