@@ -1,7 +1,12 @@
-import {
-	parse,
-	ParseError,
-} from './parser'
+import * as parser from './parser'
+
+export class EvaluationError extends Error {
+	constructor(message?: string) {
+		super(message);
+		Object.setPrototypeOf(this, new.target.prototype);
+		this.name = EvaluationError.name;
+	}
+}
 
 export interface SourceRange
 {
@@ -69,7 +74,7 @@ class ScopeStack {
 
 	pop() {
 		if (this.stack.length < 2) {
-			throw new ParseError('Cannot pop scope because there is no parent scope.');
+			throw new EvaluationError('Cannot pop scope because there is no parent scope.');
 		}
 		this.stack.pop();
 	}
@@ -84,7 +89,7 @@ class ScopeStack {
 				return maybeValue;
 			}
 		}
-		throw new ParseError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
+		throw new EvaluationError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
 	}
 
 	// Throw ParseError if the variable is not defined.
@@ -92,7 +97,7 @@ class ScopeStack {
 		const currentScope = this.getCurrentScope();
 		const maybeValue = currentScope.variables.get(variableName);
 		if (maybeValue === undefined) {
-			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
+			throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
 		} else {
 			return maybeValue;
 		}
@@ -103,7 +108,7 @@ class ScopeStack {
 		const parentScope = this.getParentScope();
 		const maybeValue = parentScope.variables.get(variableName);
 		if (maybeValue === undefined) {
-			throw new ParseError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
+			throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
 		} else {
 			return maybeValue;
 		}
@@ -117,7 +122,7 @@ class ScopeStack {
 	updateExistingVariableInParentScope(name: string, value: Value): void {
 		const parentScope = this.getParentScope();
 		if (parentScope.variables.get(name) === undefined) {
-			throw new ParseError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
+			throw new EvaluationError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
 		}
 		parentScope.variables.set(name, value);
 	}
@@ -128,14 +133,14 @@ class ScopeStack {
 
 	private getParentScope(): Scope {
 		if (this.stack.length < 2) {
-			throw new ParseError(`Cannot access parent scope because there is no parent scope.`);
+			throw new EvaluationError(`Cannot access parent scope because there is no parent scope.`);
 		}
 		return this.stack[this.stack.length - 2];
 	}
 }
 
 export function evaluate(input: string): ParsedData {
-	const statements = parse(input);
+	const statements = parser.parse(input);
 
 	let evaluatedVariables: EvaluatedVariable[] = [];
 
@@ -191,7 +196,7 @@ export function evaluate(input: string): ParsedData {
 						const sum = existingValue + evaluatedRhs;
 						scopeStack.setVariableInCurrentScope(lhs.name, sum);
 					} else {
-						throw new ParseError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
+						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				} else {
 					const existingValue = scopeStack.getVariableValueInParentScope(lhs.name);
@@ -202,7 +207,7 @@ export function evaluate(input: string): ParsedData {
 						const sum = existingValue + evaluatedRhs;
 						scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
 					} else {
-						throw new ParseError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
+						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				}
 				break;

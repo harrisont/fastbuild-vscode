@@ -1,7 +1,5 @@
 import * as assert from 'assert';
 
-import fbuildGrammar from '../fbuild-grammar'
-
 import {
 	parse,
 } from '../parser'
@@ -987,7 +985,7 @@ describe('parser', () => {
 			assert.throws(
 				() => evaluate(input),
 				{
-					name: 'ParseError',
+					name: 'EvaluationError',
 					message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
 				}
 			);
@@ -1013,7 +1011,7 @@ describe('parser', () => {
 			assert.throws(
 				() => evaluate(input),
 				{
-					name: 'ParseError',
+					name: 'EvaluationError',
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
 				}
 			);
@@ -1031,7 +1029,7 @@ describe('parser', () => {
 			assert.throws(
 				() => evaluate(input),
 				{
-					name: 'ParseError',
+					name: 'EvaluationError',
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
 				}
 			);
@@ -1140,7 +1138,7 @@ describe('parser', () => {
 			assert.throws(
 				() => evaluate(input),
 				{
-					name: 'ParseError',
+					name: 'EvaluationError',
 					message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
 				}
 			);
@@ -1155,7 +1153,7 @@ describe('parser', () => {
 			assert.throws(
 				() => evaluate(input),
 				{
-					name: 'ParseError',
+					name: 'EvaluationError',
 					message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
 				}
 			);
