@@ -5,10 +5,10 @@ import {
 	MarkupKind,
 } from 'vscode-languageserver';
 
-import * as parser from './parser'
+import * as evaluator from './evaluator'
 
 interface State {
-	parsedData: parser.ParsedData | null
+	parsedData: evaluator.ParsedData | null
 }
 
 let state: State = {
@@ -19,7 +19,7 @@ export function configure(connection: Connection): void {
 	connection.onHover(onHover);
 }
 
-export function onParsedDataChanged(newParsedData: parser.ParsedData): void {
+export function onParsedDataChanged(newParsedData: evaluator.ParsedData): void {
 	state.parsedData = newParsedData;
 }
 
