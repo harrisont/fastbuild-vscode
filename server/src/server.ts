@@ -59,13 +59,14 @@ state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.d
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
+	state.diagnosticProvider?.onContentChanged(change.document, state.connection);
+
 	const uri = change.document.uri;
 	const text = change.document.getText();
 	const parsedData = evaluator.evaluate(text);
 
 	state.hoverProvider.onParsedDataChanged(parsedData);
 	state.definitionProvider.onParsedDataChanged(uri, parsedData);
-	state.diagnosticProvider?.onContentChanged(change.document, state.connection);
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events.
