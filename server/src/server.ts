@@ -13,7 +13,7 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import * as parser from './parser'
+import * as evaluator from './evaluator'
 import * as hovers from './hovers'
 import * as diagnostic from './diagnostic'
 
@@ -49,7 +49,7 @@ connection.onInitialize((params: InitializeParams) => {
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	const text = change.document.getText();
-	const parsedData = parser.parse(text);
+	const parsedData = evaluator.evaluate(text);
 
 	hovers.onParsedDataChanged(parsedData);
 	diagnostic.onDidChangeContent(change.document);

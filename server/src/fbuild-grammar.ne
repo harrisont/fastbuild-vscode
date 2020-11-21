@@ -20,6 +20,8 @@ const lexer = moo.states({
         operatorAssignment: '=',
         operatorAddition: '+',
         arrayItemSeparator: ',',
+        structStart: '[',
+        structEnd: ']',
     },
     singleQuotedStringBody: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },

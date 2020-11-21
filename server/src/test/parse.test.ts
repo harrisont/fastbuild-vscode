@@ -4,20 +4,23 @@ import fbuildGrammar from '../fbuild-grammar'
 
 import {
 	parse,
-	nearleyParse,
+} from '../parser'
+
+import {
+	evaluate,
 	ParsedData,
 	EvaluatedVariable,
 	Value,
-} from '../parser'
+} from '../evaluator'
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
-	const result = nearleyParse(input);
+	const result = parse(input);
 	assert.deepStrictEqual(result, expectedResult);
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
 function assertEvaluatedVariablesValueEqual(input: string, expectedValues: Value[]): void {
-	const result: ParsedData = parse(input);
+	const result: ParsedData = evaluate(input);
 	const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
 	assert.deepStrictEqual(actualValues, expectedValues);
 }
@@ -982,7 +985,7 @@ describe('parser', () => {
 				.Var2 = .Var1
 			`;
 			assert.throws(
-				() => parse(input),
+				() => evaluate(input),
 				{
 					name: 'ParseError',
 					message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
@@ -1008,7 +1011,7 @@ describe('parser', () => {
 				}
 			`;
 			assert.throws(
-				() => parse(input),
+				() => evaluate(input),
 				{
 					name: 'ParseError',
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -1026,7 +1029,7 @@ describe('parser', () => {
 				}
 			`;
 			assert.throws(
-				() => parse(input),
+				() => evaluate(input),
 				{
 					name: 'ParseError',
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -1135,7 +1138,7 @@ describe('parser', () => {
 				}
 			`;
 			assert.throws(
-				() => parse(input),
+				() => evaluate(input),
 				{
 					name: 'ParseError',
 					message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
@@ -1150,7 +1153,7 @@ describe('parser', () => {
 				}
 			`;
 			assert.throws(
-				() => parse(input),
+				() => evaluate(input),
 				{
 					name: 'ParseError',
 					message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
@@ -1175,7 +1178,7 @@ describe('parser', () => {
 				.MyVar2 = 'MyValue2'
 				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 			`;
-			const result: ParsedData = parse(input);
+			const result: ParsedData = evaluate(input);
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue1',
@@ -1202,7 +1205,7 @@ describe('parser', () => {
 				.MyVar = 'MyValue'
 				.Copy = .MyVar
 			`;
-			const result: ParsedData = parse(input);
+			const result: ParsedData = evaluate(input);
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue',
