@@ -9,7 +9,21 @@ import {
 	ParsedData,
 	EvaluatedVariable,
 	Value,
+	SourceRange,
 } from '../evaluator'
+
+function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+	return {
+		start: {
+			line: startLine,
+			character: startCharacter
+		},
+		end: {
+			line: endLine,
+			character: endCharacter
+		}
+	}
+}
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
 	const result = parse(input);
@@ -59,13 +73,14 @@ describe('parser', () => {
 		});
 
 		it('should work on assigning an integer', () => {
-			const input = `.My_Var = 123`;
+			const input = `.MyVar = 123`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'My_Var',
-						scope: 'current'
+						name: 'MyVar',
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 123
 				}
@@ -74,7 +89,7 @@ describe('parser', () => {
 
 		it('should work on assigning an integer across multiple lines', () => {
 			const input = `
-				.My_Var
+				.MyVar
 
 					=
 					
@@ -84,8 +99,9 @@ describe('parser', () => {
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'My_Var',
-						scope: 'current'
+						name: 'MyVar',
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: 123
 				}
@@ -99,7 +115,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: true
 				}
@@ -113,7 +130,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: false
 				}
@@ -127,7 +145,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'hi'
 				}
@@ -141,7 +160,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'hi'
 				}
@@ -155,7 +175,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'h"i'
 				}
@@ -169,7 +190,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'h\'i'
 				}
@@ -183,7 +205,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: "h'i"
 				}
@@ -197,7 +220,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'h"i'
 				}
@@ -211,7 +235,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: "h$i"
 				}
@@ -225,7 +250,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: "h^i"
 				}
@@ -239,7 +265,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -249,9 +276,7 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'OtherVar',
 								scope: 'current',
-								line: 0,
-								characterStart: 14,
-								characterEnd: 24,
+								range: createRange(0, 14, 0, 24)
 							},
 							'-post'
 						]
@@ -267,7 +292,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -277,9 +303,7 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'OtherVar',
 								scope: 'current',
-								line: 0,
-								characterStart: 14,
-								characterEnd: 24,
+								range: createRange(0, 14, 0, 24),
 							},
 							'-post'
 						]
@@ -295,7 +319,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -305,18 +330,14 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'OtherVar1',
 								scope: 'current',
-								line: 0,
-								characterStart: 14,
-								characterEnd: 25,
+								range: createRange(0, 14, 0, 25),
 							},
 							'-',
 							{
 								type: 'evaluatedVariable',
 								name: 'OtherVar2',
 								scope: 'current',
-								line: 0,
-								characterStart: 26,
-								characterEnd: 37,
+								range: createRange(0, 26, 0, 37),
 							},
 							'-post'
 						]
@@ -332,15 +353,14 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: {
 						type: 'evaluatedVariable',
 						name: 'OtherVar',
 						scope: 'current',
-						line: 0,
-						characterStart: 9,
-						characterEnd: 10000,  // TODO: see known issue in README.md
+						range: createRange(0, 9, 0, 10000 /*TODO: see known issue in README.md*/),
 					}
 				}
 			]);
@@ -359,15 +379,14 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: {
 						type: 'evaluatedVariable',
 						name: 'OtherVar',
 						scope: 'current',
-						line: 5,
-						characterStart: 5,
-						characterEnd: 10000,  // TODO: see known issue in README.md
+						range: createRange(5, 5, 5, 10000 /*TODO: see known issue in README.md*/),
 					}
 				}
 			]);
@@ -380,7 +399,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'parent'
+						scope: 'parent',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 123
 				}
@@ -396,7 +416,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: 123
 				}
@@ -405,16 +426,17 @@ describe('parser', () => {
 
 		it('should work on statements with comments on different lines', () => {
 			const input = `
-					// Comment 1
-					.My_Var = 123
-					// Comment 2
+				// Comment 1
+				.MyVar = 123
+				// Comment 2
 			`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'My_Var',
-						scope: 'current'
+						name: 'MyVar',
+						scope: 'current',
+						range: createRange(2, 4, 2, 10),
 					},
 					rhs: 123
 				}
@@ -422,13 +444,14 @@ describe('parser', () => {
 		});
 
 		it('should work on statements with comments on the same line', () => {
-			const input = `.My_Var = 123  // Comment`;
+			const input = `.MyVar = 123  // Comment`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'My_Var',
-						scope: 'current'
+						name: 'MyVar',
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 123
 				}
@@ -436,13 +459,14 @@ describe('parser', () => {
 		});
 
 		it('should work on statements with comments on the same with no spaces between', () => {
-			const input = `.My_Var = 123// Comment`;
+			const input = `.MyVar = 123// Comment`;
 			assertParseResultsEqual(input, [
 				{
 					type: 'variableDefinition',
 					lhs: {
-						name: 'My_Var',
-						scope: 'current'
+						name: 'MyVar',
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 123
 				}
@@ -462,7 +486,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar1',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 11),
 					},
 					rhs: 1
 				},
@@ -470,7 +495,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar2',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(5, 4, 5, 11),
 					},
 					rhs: 2
 				}
@@ -506,7 +532,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(2, 5, 2, 11),
 					},
 					rhs: 123
 				},
@@ -526,7 +553,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 14),
 					},
 					rhs: 'hello'
 				},
@@ -534,7 +562,8 @@ describe('parser', () => {
 					type: 'variableAddition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(2, 4, 2, 14),
 					},
 					rhs: ' world'
 				}
@@ -553,7 +582,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 14),
 					},
 					rhs: 'hello'
 				},
@@ -564,7 +594,8 @@ describe('parser', () => {
 					type: 'variableAddition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'parent'
+						scope: 'parent',
+						range: createRange(3, 5, 3, 15),
 					},
 					rhs: ' world'
 				},
@@ -585,7 +616,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyName',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 11),
 					},
 					rhs: 'Bobo'
 				},
@@ -593,7 +625,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(2, 4, 2, 14),
 					},
 					rhs: 'hello'
 				},
@@ -601,7 +634,8 @@ describe('parser', () => {
 					type: 'variableAddition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(3, 4, 3, 14),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -611,9 +645,7 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'MyName',
 								scope: 'current',
-								line: 3,
-								characterStart: 19,
-								characterEnd: 27,
+								range: createRange(3, 19, 3, 27),
 							}
 						]
 					}
@@ -631,7 +663,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 14),
 					},
 					rhs: 'hello world'
 				}
@@ -645,7 +678,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 10),
 					},
 					rhs: 'hello world'
 				}
@@ -663,7 +697,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 14),
 					},
 					rhs: 'hello world!'
 				}
@@ -678,7 +713,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: 'hello world!'
 				}
@@ -692,7 +728,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 10),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -702,9 +739,7 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'MyVar',
 								scope: 'current',
-								line: 0,
-								characterStart: 24,
-								characterEnd: 10000,  // TODO: see known issue in README.md
+								range: createRange(0, 24, 0, 10000 /*TODO: see known issue in README.md*/),
 							}
 						]
 					}
@@ -719,7 +754,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyMessage',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 10),
 					},
 					rhs: {
 						type: 'stringExpression',
@@ -729,17 +765,13 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'MyVar1',
 								scope: 'current',
-								line: 0,
-								characterStart: 24,
-								characterEnd: 10000,  // TODO: see known issue in README.md
+								range: createRange(0, 24, 0, 10000 /*TODO: see known issue in README.md*/),
 							},
 							{
 								type: 'evaluatedVariable',
 								name: 'MyVar2',
 								scope: 'current',
-								line: 0,
-								characterStart: 34,
-								characterEnd: 10000,  // TODO: see known issue in README.md
+								range: createRange(0, 34, 0, 10000 /*TODO: see known issue in README.md*/),
 							}
 						]
 					}
@@ -754,7 +786,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: []
 				}
@@ -768,7 +801,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: []
 				}
@@ -782,7 +816,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: [1]
 				}
@@ -799,7 +834,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: [1]
 				}
@@ -813,7 +849,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: [1, 100]
 				}
@@ -830,7 +867,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: [1, 2, 3]
 				}
@@ -844,7 +882,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: ['str1', 'str2']
 				}
@@ -858,7 +897,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(0, 0, 0, 6),
 					},
 					rhs: [true, false]
 				}
@@ -875,7 +915,8 @@ describe('parser', () => {
 					type: 'variableDefinition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(1, 4, 1, 10),
 					},
 					rhs: []
 				},
@@ -883,7 +924,8 @@ describe('parser', () => {
 					type: 'variableAddition',
 					lhs: {
 						name: 'MyVar',
-						scope: 'current'
+						scope: 'current',
+						range: createRange(2, 4, 2, 10),
 					},
 					rhs: 'cow'
 				}
@@ -911,17 +953,17 @@ describe('parser', () => {
 
 		it('should be detected in the RHS when assigning the value of another variable', () => {
 			const input = `
-				.My_Var = 1
-				.Copy = .My_Var
+				.MyVar = 1
+				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [1]);
 		});
 
 		it('should be detected in the RHS when assigning the value of another variable in the parent scope', () => {
 			const input = `
-				.My_Var = 1
+				.MyVar = 1
 				{
-					.Copy = ^My_Var
+					.Copy = ^MyVar
 				}
 			`;
 			assertEvaluatedVariablesValueEqual(input, [1]);
@@ -1180,19 +1222,11 @@ describe('parser', () => {
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue1',
-					range: {
-						line: 3,
-						characterStart: 22,
-						characterEnd: 30,
-					}
+					range: createRange(3, 22, 3, 30),
 				},
 				{
 					value: 'MyValue2',
-					range: {
-						line: 3,
-						characterStart: 31,
-						characterEnd: 39,
-					}
+					range: createRange(3, 31, 3, 39),
 				}
 			];
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -1207,11 +1241,7 @@ describe('parser', () => {
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue',
-					range: {
-						line: 2,
-						characterStart: 12,
-						characterEnd: 10000,  // TODO: see known issue in README.md
-					}
+					range: createRange(2, 12, 2, 10000 /*TODO: see known issue in README.md*/),
 				}
 			];
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);

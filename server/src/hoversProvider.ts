@@ -4,12 +4,15 @@ import {
 	MarkupKind,
 } from 'vscode-languageserver';
 
-import * as evaluator from './evaluator'
+import {
+	ParsedData,
+	SourceRange,
+} from './evaluator';
 
 export class HoverProvider {
-	private parsedData: evaluator.ParsedData | null = null;
+	private parsedData: ParsedData | null = null;
 
-	onParsedDataChanged(newParsedData: evaluator.ParsedData): void {
+	onParsedDataChanged(newParsedData: ParsedData): void {
 		this.parsedData = newParsedData;
 	}
 	
@@ -19,11 +22,12 @@ export class HoverProvider {
 	
 		for (let i = 0; i < evaluatedVariables.length; i++)
 		{
-			const range = evaluatedVariables[i].range;
-			if (range.line == position.line
-			   && (range.characterStart <= position.character && range.characterEnd >= position.character))
+			const evaluatedVariable = evaluatedVariables[i];
+			const range = evaluatedVariable.range;
+			// TODO: also match params.textDocument.uri
+			if (SourceRange.isPositionInRange(position, evaluatedVariable.range))
 			{
-				const value = evaluatedVariables[i].value;
+				const value = evaluatedVariable.value;
 				
 				const hoverText = JSON.stringify(value);
 	
@@ -32,16 +36,7 @@ export class HoverProvider {
 						kind: MarkupKind.PlainText,
 						value: hoverText
 					},
-					range: {
-						start: {
-							line: range.line,
-							character: range.characterStart,
-						},
-						end: {
-							line: range.line,
-							character: range.characterEnd
-						}
-					}
+					range: evaluatedVariable.range
 				}
 				return hover;
 			}
