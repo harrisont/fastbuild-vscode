@@ -8,53 +8,79 @@ export class EvaluationError extends Error {
 	}
 }
 
-export interface SourceRange
-{
-	line: number,
-	characterStart: number,
-	characterEnd: number
+interface SourcePosition {
+	line: number;
+	character: number;
+}
+
+export interface SourceRange {
+	start: SourcePosition;
+	end: SourcePosition;
+}
+
+export namespace SourceRange {
+	export function isPositionInRange(position: SourcePosition, range: SourceRange): boolean {
+		return position.line >= range.start.line
+			&& position.line <= range.end.line
+			&& position.character >= range.start.character
+			&& position.character < range.end.character;
+	}
 }
 
 export type Value = boolean | number | string | Value[];
 
-export interface EvaluatedVariable
-{
-	range: SourceRange
-	value: Value
+export interface EvaluatedVariable {
+	value: Value;
+	range: SourceRange;
+}
+
+export interface VariableDefinition {
+	range: SourceRange;
+}
+
+export interface VariableReference {
+	definition: VariableDefinition;
+	range: SourceRange;
 }
 
 export interface ParsedData {
-	evaluatedVariables: EvaluatedVariable[]
+	evaluatedVariables: EvaluatedVariable[];
+	variableReferences: VariableReference[];
 }
 
 type ScopeLocation = 'current' | 'parent';
 
 interface VariableDefinitionLhs {
-	name: string,
-	scope: ScopeLocation
+	name: string;
+	scope: ScopeLocation;
+	range: SourceRange;
 }
 
 interface GrammarEvaluatedVariable {
-	type: 'evaluatedVariable',
-	name: string,
-	scope: ScopeLocation,
-	line: number,
-	characterStart: number,
-	characterEnd: number,
+	type: 'evaluatedVariable';
+	name: string;
+	scope: ScopeLocation;
+	range: SourceRange;
 }
 
 interface ParsedStringExpression {
-	evaluatedString: string,
-	evaluatedVariables: EvaluatedVariable[],
+	evaluatedString: string;
+	evaluatedVariables: EvaluatedVariable[];
+	variableReferences: VariableReference[];
 }
 
 interface ParsedEvaluatedVariable {
-	evaluatedValue: Value,
-	evaluatedVariable: EvaluatedVariable,
+	evaluatedVariable: EvaluatedVariable;
+	variableReference: VariableReference;
+}
+
+interface ScopeVariable {
+	value: Value;
+	definition: VariableDefinition;
 }
 
 interface Scope {
-	variables: Map<string, Value>
+	variables: Map<string, ScopeVariable>;
 }
 
 class ScopeStack {
@@ -66,7 +92,7 @@ class ScopeStack {
 
 	push() {
 		let scope: Scope = {
-			variables: new Map<string, Value>()
+			variables: new Map<string, ScopeVariable>()
 		}
 
 		this.stack.push(scope);
@@ -79,52 +105,74 @@ class ScopeStack {
 		this.stack.pop();
 	}
 
-	// Get a variable value, searching from the current scope to its parents.
+	// Get a variable, searching from the current scope to its parents.
 	// Throw ParseError if the variable is not defined.
-	getVariableValueStartingFromCurrentScope(variableName: string): Value {
+	getVariableStartingFromCurrentScope(variableName: string): ScopeVariable {
 		for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
 			const scope = this.stack[scopeIndex];
-			const maybeValue = scope.variables.get(variableName);
-			if (maybeValue !== undefined) {
-				return maybeValue;
+			const maybeVariable = scope.variables.get(variableName);
+			if (maybeVariable !== undefined) {
+				return maybeVariable;
 			}
 		}
 		throw new EvaluationError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
 	}
 
 	// Throw ParseError if the variable is not defined.
-	getVariableValueInCurrentScope(variableName: string): Value {
+	getVariableInCurrentScope(variableName: string): ScopeVariable {
 		const currentScope = this.getCurrentScope();
-		const maybeValue = currentScope.variables.get(variableName);
-		if (maybeValue === undefined) {
+		const maybeVariable = currentScope.variables.get(variableName);
+		if (maybeVariable === undefined) {
 			throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
 		} else {
-			return maybeValue;
+			return maybeVariable;
 		}
 	}
 
 	// Throw ParseError if the variable is not defined.
-	getVariableValueInParentScope(variableName: string): Value {
+	getVariableInParentScope(variableName: string): ScopeVariable {
 		const parentScope = this.getParentScope();
-		const maybeValue = parentScope.variables.get(variableName);
-		if (maybeValue === undefined) {
+		const maybeVariable = parentScope.variables.get(variableName);
+		if (maybeVariable === undefined) {
 			throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
 		} else {
-			return maybeValue;
+			return maybeVariable;
 		}
 	}
 
-	setVariableInCurrentScope(name: string, value: Value): void {
+	setVariableInCurrentScope(name: string, value: Value, lhsRange: SourceRange): void {
 		const currentScope = this.getCurrentScope();
-		currentScope.variables.set(name, value);
+		const existingVariable = currentScope.variables.get(name);
+		if (existingVariable === undefined) {
+			const variable: ScopeVariable = {
+				value: value,
+				definition: {
+					range: lhsRange,
+				},
+			};
+			currentScope.variables.set(name, variable);
+		} else {
+			existingVariable.value = value;
+		}
+	}
+
+	updateVariableInCurrentScope(name: string, value: Value): void {
+		const currentScope = this.getCurrentScope();
+		const existingVariable = currentScope.variables.get(name);
+		if (existingVariable === undefined) {
+			throw new EvaluationError(`Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`);
+		} else {
+			existingVariable.value = value;
+		}
 	}
 
 	updateExistingVariableInParentScope(name: string, value: Value): void {
 		const parentScope = this.getParentScope();
-		if (parentScope.variables.get(name) === undefined) {
+		const existingVariable = parentScope.variables.get(name);
+		if (existingVariable === undefined) {
 			throw new EvaluationError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
 		}
-		parentScope.variables.set(name, value);
+		existingVariable.value = value;
 	}
 
 	private getCurrentScope(): Scope {
@@ -142,7 +190,11 @@ class ScopeStack {
 export function evaluate(input: string): ParsedData {
 	const statements = parser.parse(input);
 
-	let evaluatedVariables: EvaluatedVariable[] = [];
+	let result: ParsedData = {
+		evaluatedVariables: [],
+		variableReferences: [],
+	};
+	
 
 	let scopeStack = new ScopeStack();
 
@@ -154,18 +206,20 @@ export function evaluate(input: string): ParsedData {
 				if (rhs.type && rhs.type == 'stringExpression') {
 					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
-					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+					result.evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+					result.variableReferences.push(...parsedStringExpression.variableReferences);
 				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
 					const parsed = parseEvaluatedVariable(rhs, scopeStack);
-					evaluatedRhs = parsed.evaluatedValue;
-					evaluatedVariables.push(parsed.evaluatedVariable);
+					evaluatedRhs = parsed.evaluatedVariable.value;
+					result.evaluatedVariables.push(parsed.evaluatedVariable);
+					result.variableReferences.push(parsed.variableReference);
 				} else {
 					evaluatedRhs = rhs;
 				}
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
 				if (lhs.scope == 'current') {
-					scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs);
+					scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs, lhs.range);
 				} else {
 					scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
 				}
@@ -177,29 +231,39 @@ export function evaluate(input: string): ParsedData {
 				if (rhs.type && rhs.type == 'stringExpression') {
 					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
 					evaluatedRhs = parsedStringExpression.evaluatedString;
-					evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+					result.evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
+					result.variableReferences.push(...parsedStringExpression.variableReferences);
 				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
 					const parsed = parseEvaluatedVariable(rhs, scopeStack);
-					evaluatedRhs = parsed.evaluatedValue;
-					evaluatedVariables.push(parsed.evaluatedVariable);
+					evaluatedRhs = parsed.evaluatedVariable.value;
+					result.evaluatedVariables.push(parsed.evaluatedVariable);
+					result.variableReferences.push(parsed.variableReference);
 				} else {
 					evaluatedRhs = rhs;
 				}
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
+
+				// The previously-defined LHS variable.
+				let lhsDefinition: VariableDefinition | null = null;
+				
 				if (lhs.scope == 'current') {
-					const existingValue = scopeStack.getVariableValueInCurrentScope(lhs.name);
+					const existingVariable = scopeStack.getVariableInCurrentScope(lhs.name);
+					lhsDefinition = existingVariable.definition;
+					const existingValue = existingVariable.value;
 					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
 						existingValue.push(evaluatedRhs);
 					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs == 'string')) {
 						const sum = existingValue + evaluatedRhs;
-						scopeStack.setVariableInCurrentScope(lhs.name, sum);
+						scopeStack.updateVariableInCurrentScope(lhs.name, sum);
 					} else {
 						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				} else {
-					const existingValue = scopeStack.getVariableValueInParentScope(lhs.name);
+					const existingVariable = scopeStack.getVariableInParentScope(lhs.name);
+					lhsDefinition = existingVariable.definition;
+					const existingValue = existingVariable.value;
 					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
 						existingValue.push(evaluatedRhs);
@@ -210,6 +274,13 @@ export function evaluate(input: string): ParsedData {
 						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
 					}
 				}
+
+				// The addition's LHS is a variable reference.
+				result.variableReferences.push({
+					definition: lhsDefinition,
+					range: lhs.range
+				});
+
 				break;
 			}
 			case 'scopeStart':
@@ -221,26 +292,26 @@ export function evaluate(input: string): ParsedData {
 		}
 	}
 	
-	return {
-		evaluatedVariables: evaluatedVariables
-	};
+	return result;
 }
 
-function parseEvaluatedVariable(variable: GrammarEvaluatedVariable, scopeStack: ScopeStack): ParsedEvaluatedVariable {
-	const variableName: string = variable.name;
-	const variableValue = (variable.scope == 'current')
-							? scopeStack.getVariableValueStartingFromCurrentScope(variableName)
-							: scopeStack.getVariableValueInParentScope(variableName);
+function parseEvaluatedVariable(grammarEvaluatedVariable: GrammarEvaluatedVariable, scopeStack: ScopeStack): ParsedEvaluatedVariable {
+	const variableName: string = grammarEvaluatedVariable.name;
+	const variable = (grammarEvaluatedVariable.scope == 'current')
+						? scopeStack.getVariableStartingFromCurrentScope(variableName)
+						: scopeStack.getVariableInParentScope(variableName);
+
+	const range = grammarEvaluatedVariable.range;
+
 	return {
-		evaluatedValue: variableValue,
 		evaluatedVariable: {
-			value: variableValue,
-			range: {
-				line: variable.line,
-				characterStart: variable.characterStart,
-				characterEnd: variable.characterEnd,
-			}
-		}
+			value: variable.value,
+			range: range
+		},
+		variableReference: {
+			definition: variable.definition,
+			range: range
+		},
 	};
 }
 
@@ -249,13 +320,15 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 	let result: ParsedStringExpression = {
 		evaluatedString: '',
 		evaluatedVariables: [],
+		variableReferences: [],
 	};
 	
 	for (const part of parts) {
 		if (part.type && part.type == 'evaluatedVariable') {
 			const parsed = parseEvaluatedVariable(part, scopeStack);
-			result.evaluatedString += String(parsed.evaluatedValue);
+			result.evaluatedString += String(parsed.evaluatedVariable.value);
 			result.evaluatedVariables.push(parsed.evaluatedVariable);
+			result.variableReferences.push(parsed.variableReference);
 		} else {
 			// Literal
 			result.evaluatedString += part;

@@ -43,6 +43,7 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
     * Struct with a member array
     * Array of structs
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
+* Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support [functions](https://www.fastbuild.org/docs/functions.html):
     * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html))

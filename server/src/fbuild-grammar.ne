@@ -51,8 +51,7 @@ main -> lines  {% function(d) { return d[0]; } %}
 
 lines ->
     null  {% function(d) { return []; } %}
-  | %optionalWhitespaceAndMandatoryNewline lines  {% function(d) { return d[1]; } %}
-  | %whitespace lines  {% function(d) { return d[1]; } %}
+  | whitespaceOrNewline lines  {% function(d) { return d[1]; } %}
   | statementAndOrComment lines  {% function(d) { return d.flat(); } %}
 
 statementAndOrComment ->
@@ -67,39 +66,36 @@ statement ->
   | variableDefinition  {% function(d) { return d[0]; } %}
   | variableAddition  {% function(d) { return d[0]; } %}
 
+@{%
+
+// Creates a range from tokenStart's location (inclusive) to tokenEnd's location (exclusive).
+// tokenStart and tokenEnd must be lexer tokens.
+function createRange(tokenStart: any, tokenEnd: any) {
+    return {
+        start: {
+            line: tokenStart.line - 1,
+            character: tokenStart.col - 1
+        },
+        end: {
+            line: tokenEnd.line - 1,
+            character: tokenEnd.col - 1
+        }
+    };
+}
+
+%}
+
+lhsWithOperator[OPERATOR] ->
+    %variableReferenceCurrentScope %variableName                     $OPERATOR  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
+  | %variableReferenceCurrentScope %variableName whitespaceOrNewline $OPERATOR  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
+  | %variableReferenceParentScope  %variableName                     $OPERATOR  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
+  | %variableReferenceParentScope  %variableName whitespaceOrNewline $OPERATOR  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
+
 variableDefinition ->
-    # No whitespace/newlines.
-    lhs %operatorAssignment rhs                                                                                {% ([lhs, operator, rhs]) =>                 { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines left of the operator.
-  | lhs %whitespace %operatorAssignment rhs                                                                    {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment rhs                                         {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines right of the operator.
-  | lhs %operatorAssignment %whitespace rhs                                                                    {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines left and right of the operator.
-  | lhs %whitespace %operatorAssignment %whitespace rhs                                                        {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %whitespace rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %whitespace %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAssignment %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+    lhsWithOperator[%operatorAssignment] optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 variableAddition ->
-    # No whitespace/newlines.
-    lhs %operatorAddition rhs                                                                                {% ([lhs, operator, rhs]) =>                 { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines left of the operator.
-  | lhs %whitespace %operatorAddition rhs                                                                    {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition rhs                                         {% ([lhs, space1, operator, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines right of the operator.
-  | lhs %operatorAddition %whitespace rhs                                                                    {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([lhs, operator, space2, rhs]) =>         { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-    # Whitespace/newlines left and right of the operator.
-  | lhs %whitespace %operatorAddition %whitespace rhs                                                        {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs                             {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-  | lhs %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline rhs  {% ([lhs, space1, operator, space2, rhs]) => { return { type: "variableAddition", lhs: lhs, rhs: rhs }; } %}
-
-lhs ->
-    "." %variableName  {% function(d) { return { name: d[1].value, scope: "current" }; } %}
-  | "^" %variableName  {% function(d) { return { name: d[1].value, scope: "parent" }; } %}
+    lhsWithOperator[%operatorAddition]   optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableAddition",   lhs: lhs, rhs: rhs }; } %}
 
 rhs ->
     %integer  {% function(d) { return d[0].value; } %}
@@ -115,19 +111,25 @@ function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
         type: "evaluatedVariable",
         scope: scope,
         name: varName.value,
-        line: varName.line - 1,
-        // Include the "." character.
-        characterStart: varName.col - 2,
-        // TODO: determine the end. See the known issue in README.md.
-        characterEnd: 10000,
+        range: {
+            start: {
+                line: varName.line - 1,
+                character: varName.col - 2,
+            },
+            end: {
+                line: varName.line - 1,
+                // TODO: determine the end. See the known issue in README.md.
+                character: 10000,
+            }
+        }
     };
 }
 
 %}
 
 evaluatedVariable ->
-    "." %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "current") ] %}
-  | "^" %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "parent") ] %}
+    %variableReferenceCurrentScope %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "current") ] %}
+  | %variableReferenceParentScope  %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "parent") ] %}
 
 bool ->
     "true"  {% function(d) { return true; } %}
@@ -135,8 +137,8 @@ bool ->
 
 @{%
 
-interface TypedObject {
-    type: "evaluatedVariable"
+interface EvaluatedVariable {
+    type: "evaluatedVariable";
 }
 
 %}
@@ -147,7 +149,7 @@ interface TypedObject {
 # e.g. [evaluatedVariable] becomes evaluatedVariable
 # e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
 stringExpression -> stringExpressionHelper  {% ([parts]) => {
-    let joinedParts: (string | TypedObject)[] = [];
+    let joinedParts: (string | EvaluatedVariable)[] = [];
     let previousPartIsStringLiteral: boolean = false;
     for (const part of parts) {
         const isStringLiteral: boolean = (typeof part == "string");
@@ -161,7 +163,6 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
     }
 
     if (joinedParts.length == 1) {
-
         if ((typeof joinedParts[0] == "string") ||
             (joinedParts[0].type == "evaluatedVariable"))
         {
@@ -178,23 +179,12 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringExpressionHelper ->
     # Single string
-    stringOrEvaluatedVariable                                                                                                                         {% function(d) { return d[0]; } %}
-    # Multiple strings added together. No whitespace/newlines.
-  | stringOrEvaluatedVariable %operatorAddition stringExpressionHelper                                                                                {% ([lhs, operator, rhs]) =>                 { return [...lhs, ...rhs]; } %}
-    # Multiple strings added together. Whitespace/newlines left of the operator.
-  | stringOrEvaluatedVariable %whitespace %operatorAddition stringExpressionHelper                                                                    {% ([lhs, space1, operator, rhs]) =>         { return [...lhs, ...rhs]; } %}
-  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition stringExpressionHelper                                         {% ([lhs, space1, operator, rhs]) =>         { return [...lhs, ...rhs]; } %}
-    # Multiple strings added together. Whitespace/newlines right of the operator.
-  | stringOrEvaluatedVariable %operatorAddition %whitespace stringExpressionHelper                                                                    {% ([lhs, operator, space2, rhs]) =>         { return [...lhs, ...rhs]; } %}
-  | stringOrEvaluatedVariable %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper                                         {% ([lhs, operator, space2, rhs]) =>         { return [...lhs, ...rhs]; } %}
-    # Multiple strings added together. Whitespace/newlines left and right of the operator.
-  | stringOrEvaluatedVariable %whitespace %operatorAddition %whitespace stringExpressionHelper                                                        {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
-  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition %whitespace stringExpressionHelper                             {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
-  | stringOrEvaluatedVariable %whitespace %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper                             {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
-  | stringOrEvaluatedVariable %optionalWhitespaceAndMandatoryNewline %operatorAddition %optionalWhitespaceAndMandatoryNewline stringExpressionHelper  {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+    stringOrEvaluatedVariable  {% function(d) { return d[0]; } %}
+    # Multiple strings added together
+  | stringOrEvaluatedVariable optionalWhitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
 
 stringOrEvaluatedVariable ->
-    string  {% function(d) { return d[0]; } %}
+    string             {% function(d) { return d[0]; } %}
   | evaluatedVariable  {% function(d) { return d[0]; } %}
 
 string ->
@@ -217,14 +207,20 @@ stringContents ->
     } %}
     # Templated string
   | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
-          const evaluatedVariable = {
+        const evaluatedVariable = {
             type: "evaluatedVariable",
             scope: "current",
             name: varName.value,
-            line: varName.line - 1,
-            // Include the start and end "$" characters.
-            characterStart: startVarIndicator.col - 1,
-            characterEnd: endVarIndicator.col,
+            range: {
+                start: {
+                    line: varName.line - 1,
+                    character: startVarIndicator.col - 1,
+                },
+                end: {
+                    line: varName.line - 1,
+                    character: endVarIndicator.col,
+                }
+            }
         };
         if (rest.length > 0) {
             return [evaluatedVariable, ...rest];
@@ -237,35 +233,21 @@ array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, cont
 
 arrayContents ->
     # Empty
-    null                                    {% () => [] %}
-  | %whitespace                             {% () => [] %}
-  | %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
+    null                 {% () => [] %}
+  | whitespaceOrNewline  {% () => [] %}
   | nonEmptyArrayContents  {% ([contents]) => contents %}
 
 nonEmptyArrayContents ->
-    # Single item. No whitespace/newlines.
-                                           rhs                                         {% ([        content        ]) => [content] %}
-    # Single item. Whitespace/newlines left of the content.
-  | %whitespace                            rhs                                         {% ([space1, content        ]) => [content] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs                                         {% ([space1, content        ]) => [content] %}
-    # Single item. Whitespace/newlines right of the content.
-  |                                        rhs %whitespace                             {% ([        content, space2]) => [content] %}
-  |                                        rhs %optionalWhitespaceAndMandatoryNewline  {% ([        content, space2]) => [content] %}
-    # Single item. Whitespace/newlines left and right of the content.
-  | %whitespace                            rhs %whitespace                             {% ([space1, content, space2]) => [content] %}
-  | %whitespace                            rhs %optionalWhitespaceAndMandatoryNewline  {% ([space1, content, space2]) => [content] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs %whitespace                             {% ([space1, content, space2]) => [content] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs %optionalWhitespaceAndMandatoryNewline  {% ([space1, content, space2]) => [content] %}
-    # Multiple items.  No whitespace/newlines.
-  |                                        rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([        first,         separator, rest]) => [first, ...rest] %}
-    # Multiple items.  Whitespace/newlines left of the content.
-  | %whitespace                            rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first,         separator, rest]) => [first, ...rest] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first,         separator, rest]) => [first, ...rest] %}
-    # Multiple items.  Whitespace/newlines right of the content.
-  |                                        rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([        first, space2, separator, rest]) => [first, ...rest] %}
-  |                                        rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([        first, space2, separator, rest]) => [first, ...rest] %}
-    # Multiple items.  Whitespace/newlines left and right of the content.
-  | %whitespace                            rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
-  | %whitespace                            rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs %whitespace                            %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
-  | %optionalWhitespaceAndMandatoryNewline rhs %optionalWhitespaceAndMandatoryNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+    # Single item
+    optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline  {% ([space1, content, space2]) => [content] %}
+    # Multiple items
+  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+
+whitespaceOrNewline ->
+    %whitespace                             {% ([space]) => space %}
+  | %optionalWhitespaceAndMandatoryNewline  {% ([space]) => space %}
+
+optionalWhitespaceOrNewline ->
+    null                 {% () => null %}
+  | whitespaceOrNewline  {% () => null %}
+
