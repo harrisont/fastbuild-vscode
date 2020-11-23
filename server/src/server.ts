@@ -17,6 +17,7 @@ import * as evaluator from './evaluator'
 import { HoverProvider } from './hoversProvider'
 import { DefinitionProvider } from './definitionProvider'
 import { DiagnosticProvider } from './diagnosticProvider'
+import { ReferenceProvider } from './referenceProvider'
 
 class State {
 	// Create a connection for the server, using Node's IPC as a transport.
@@ -27,6 +28,7 @@ class State {
 
 	readonly hoverProvider = new HoverProvider();
 	readonly definitionProvider = new DefinitionProvider();
+	readonly referenceProvider = new ReferenceProvider();
 	diagnosticProvider: DiagnosticProvider | null = null;
 }
 
@@ -48,6 +50,7 @@ state.connection.onInitialize((params: InitializeParams) => {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			hoverProvider: true,
 			definitionProvider: true,
+			referencesProvider: true,
 		}
 	};
 
@@ -56,6 +59,7 @@ state.connection.onInitialize((params: InitializeParams) => {
 
 state.connection.onHover(state.hoverProvider.onHover.bind(state.hoverProvider));
 state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.definitionProvider));
+state.connection.onReferences(state.referenceProvider.onReferences.bind(state.referenceProvider));
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
@@ -67,6 +71,7 @@ state.documents.onDidChangeContent(change => {
 
 	state.hoverProvider.onParsedDataChanged(parsedData);
 	state.definitionProvider.onParsedDataChanged(uri, parsedData);
+	state.referenceProvider.onParsedDataChanged(uri, parsedData);
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events.

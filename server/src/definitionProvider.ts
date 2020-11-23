@@ -9,8 +9,11 @@ import {
 } from 'vscode-languageserver-types';
 
 import {
-	ParsedData,
 	SourceRange,
+} from './parser'
+
+import {
+	ParsedData,
 } from './evaluator'
 
 export class DefinitionProvider {

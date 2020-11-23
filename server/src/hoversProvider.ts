@@ -5,8 +5,11 @@ import {
 } from 'vscode-languageserver';
 
 import {
-	ParsedData,
 	SourceRange,
+} from './parser'
+
+import {
+	ParsedData,
 } from './evaluator';
 
 export class HoverProvider {

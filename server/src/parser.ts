@@ -1,6 +1,25 @@
 import * as nearley from 'nearley'
 import fbuildGrammar from './fbuild-grammar'
 
+export interface SourcePosition {
+	line: number;
+	character: number;
+}
+
+export interface SourceRange {
+	start: SourcePosition;
+	end: SourcePosition;
+}
+
+export namespace SourceRange {
+	export function isPositionInRange(position: SourcePosition, range: SourceRange): boolean {
+		return position.line >= range.start.line
+			&& position.line <= range.end.line
+			&& position.character >= range.start.character
+			&& position.character < range.end.character;
+	}
+}
+
 export class ParseError extends Error {
 	constructor(message?: string) {
 		super(message);
