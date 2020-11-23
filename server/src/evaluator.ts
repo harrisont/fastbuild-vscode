@@ -140,7 +140,7 @@ class ScopeStack {
 		}
 	}
 
-	setVariableInCurrentScope(name: string, value: Value, lhsRange: SourceRange): void {
+	setVariableInCurrentScope(name: string, value: Value, lhsRange: SourceRange): ScopeVariable {
 		const currentScope = this.getCurrentScope();
 		const existingVariable = currentScope.variables.get(name);
 		if (existingVariable === undefined) {
@@ -151,28 +151,31 @@ class ScopeStack {
 				},
 			};
 			currentScope.variables.set(name, variable);
+			return variable;
 		} else {
 			existingVariable.value = value;
+			return existingVariable;
 		}
 	}
 
-	updateVariableInCurrentScope(name: string, value: Value): void {
+	updateVariableInCurrentScope(name: string, value: Value): ScopeVariable {
 		const currentScope = this.getCurrentScope();
 		const existingVariable = currentScope.variables.get(name);
 		if (existingVariable === undefined) {
 			throw new EvaluationError(`Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`);
-		} else {
-			existingVariable.value = value;
 		}
+		existingVariable.value = value;
+		return existingVariable;
 	}
 
-	updateExistingVariableInParentScope(name: string, value: Value): void {
+	updateExistingVariableInParentScope(name: string, value: Value): ScopeVariable {
 		const parentScope = this.getParentScope();
 		const existingVariable = parentScope.variables.get(name);
 		if (existingVariable === undefined) {
 			throw new EvaluationError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
 		}
 		existingVariable.value = value;
+		return existingVariable;
 	}
 
 	private getCurrentScope(): Scope {
@@ -218,11 +221,18 @@ export function evaluate(input: string): ParsedData {
 				}
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
+				let variable: ScopeVariable | null = null;
 				if (lhs.scope == 'current') {
-					scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs, lhs.range);
+					variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs, lhs.range);
 				} else {
-					scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
+					variable = scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
 				}
+
+				result.variableReferences.push({
+					definition: variable.definition,
+					range: lhs.range,
+				});
+
 				break;
 			}
 			case 'variableAddition': {
