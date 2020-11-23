@@ -1,29 +1,13 @@
-import * as parser from './parser'
+import {
+	parse,
+	SourceRange,
+} from './parser'
 
 export class EvaluationError extends Error {
 	constructor(message?: string) {
 		super(message);
 		Object.setPrototypeOf(this, new.target.prototype);
 		this.name = EvaluationError.name;
-	}
-}
-
-interface SourcePosition {
-	line: number;
-	character: number;
-}
-
-export interface SourceRange {
-	start: SourcePosition;
-	end: SourcePosition;
-}
-
-export namespace SourceRange {
-	export function isPositionInRange(position: SourcePosition, range: SourceRange): boolean {
-		return position.line >= range.start.line
-			&& position.line <= range.end.line
-			&& position.character >= range.start.character
-			&& position.character < range.end.character;
 	}
 }
 
@@ -191,7 +175,7 @@ class ScopeStack {
 }
 
 export function evaluate(input: string): ParsedData {
-	const statements = parser.parse(input);
+	const statements = parse(input);
 
 	let result: ParsedData = {
 		evaluatedVariables: [],

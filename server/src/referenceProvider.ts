@@ -10,8 +10,11 @@ import {
 } from 'vscode-languageserver-types';
 
 import {
-	ParsedData,
 	SourceRange,
+} from './parser'
+
+import {
+	ParsedData,
 	VariableReference,
 } from './evaluator'
 
