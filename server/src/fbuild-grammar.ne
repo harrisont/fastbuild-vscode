@@ -162,7 +162,9 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
         previousPartIsStringLiteral = isStringLiteral;
     }
 
-    if (joinedParts.length == 1) {
+    if (joinedParts.length == 0) {
+        return '';
+    } else if (joinedParts.length == 1) {
         if ((typeof joinedParts[0] == "string") ||
             (joinedParts[0].type == "evaluatedVariable"))
         {
@@ -193,7 +195,7 @@ string ->
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringContents ->
-    null
+    null  {% () => [] %}
     # String literal
   | %stringLiteral stringContents  {% ([literal, rest]) => {
         // Handle escaped characters.

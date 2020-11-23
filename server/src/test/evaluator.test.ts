@@ -308,6 +308,14 @@ describe('evaluator', () => {
 			`;
 			assertEvaluatedVariablesValueEqual(input, [['cow']]);
 		});
+
+		it('should correctly evaulate an empty string literal', () => {
+			const input = `
+				.MyVar = ''
+				.Result = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, ['']);
+		});
 	});
 
 	describe('evaluatedVariables range', () => {

@@ -123,6 +123,21 @@ describe('parser', () => {
 		]);
 	});
 
+	it('should work on assigning an empty string literal', () => {
+		const input = `.MyVar = ''`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: ''
+			}
+		]);
+	});
+
 	it('should work on assigning a string literal with single quotes', () => {
 		const input = `.MyVar = 'hi'`;
 		assertParseResultsEqual(input, [
