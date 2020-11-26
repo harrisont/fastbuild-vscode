@@ -316,6 +316,156 @@ describe('evaluator', () => {
 			`;
 			assertEvaluatedVariablesValueEqual(input, ['']);
 		});
+	
+		it('should evaluate an array of string literals', () => {
+			const input = `
+				.MyVar = {
+					'thing1',
+					'thing2'
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				['thing1', 'thing2']
+			]);
+		});
+	
+		it('should evaluate an array of string templates', () => {
+			const input = `
+				.Type = 'thing'
+				.MyVar = {
+					'$Type$1',
+					'$Type$2'
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				'thing',
+				'thing',
+				['thing1', 'thing2']
+			]);
+		});
+	
+		it('should evaluate an array of evaluated variables', () => {
+			const input = `
+				.Var1 = 'thing1'
+				.Var2 = 'thing2'
+				.MyVar = {
+					.Var1,
+					.Var2
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				'thing1',
+				'thing2',
+				['thing1', 'thing2']
+			]);
+		});
+
+		it('should evaluate an empty struct', () => {
+			const input = `
+				.MyVar = []
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				new Map()
+			]);
+		});
+	
+		it('should evaluate a basic struct', () => {
+			const input = `
+				.MyVar = [
+					.MyBool = true
+					.MyInt = 123
+					.MyStr = 'Hello world!'
+				]
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				new Map(Object.entries({
+					MyBool: true,
+					MyInt: 123,
+					MyStr: 'Hello world!'
+				}))
+			]);
+		});
+
+		it('should evaluate a struct with an evaluated variable', () => {
+			const input = `
+				.B = 1
+				.MyVar = [
+					.A = .B
+				]
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				1,
+				new Map(Object.entries({
+					A: 1
+				}))
+			]);
+		});
+	
+		it('should evaluate a struct containing an array', () => {
+			const input = `
+				.MyVar = [
+					.MyArray = {1, 2, 3}
+				]
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				new Map(Object.entries({
+					MyArray: [1, 2, 3]
+				}))
+			]);
+		});
+	
+		it('should evaluate a struct containing a struct', () => {
+			const input = `
+				.MyVar = [
+					.MyStruct = [
+						.MyInt = 1
+					]
+				]
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				new Map(Object.entries({
+					MyStruct: new Map(Object.entries({
+						MyInt: 1
+					}))
+				}))
+			]);
+		});
+	
+		it('should evaluate an array of structs', () => {
+			const input = `
+				.Struct1 = [.MyInt = 1]
+				.Struct2 = [.MyInt = 2]
+				.MyVar = {
+					.Struct1,
+					.Struct2
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				new Map(Object.entries({
+					MyInt: 1,
+				})),
+				new Map(Object.entries({
+					MyInt: 2,
+				})),
+				[
+					new Map(Object.entries({
+						MyInt: 1,
+					})),
+					new Map(Object.entries({
+						MyInt: 2,
+					}))
+				]
+			]);
+		});
 	});
 
 	describe('evaluatedVariables range', () => {

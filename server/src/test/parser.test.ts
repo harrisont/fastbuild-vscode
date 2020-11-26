@@ -72,6 +72,21 @@ describe('parser', () => {
 		]);
 	});
 
+	it('should work on assignment with no spaces', () => {
+		const input = `.MyVar=123`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: 123
+			}
+		]);
+	});
+
 	it('should work on assigning an integer across multiple lines', () => {
 		const input = `
 			.MyVar
@@ -341,6 +356,306 @@ describe('parser', () => {
 						},
 						'-post'
 					]
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning an empty struct', () => {
+		const input = `.MyVar = []`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with a single item', () => {
+		const input = `
+			.MyVar = [
+				.MyBool = true
+			]
+			`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyBool',
+								scope: 'current',
+								range: createRange(2, 4, 2, 11),
+							},
+							rhs: true
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with multiple items', () => {
+		const input = `
+			.MyVar = [
+				.MyBool = true
+				.MyInt = 123
+				.MyStr = 'Hello world!'
+			]
+			`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyBool',
+								scope: 'current',
+								range: createRange(2, 4, 2, 11),
+							},
+							rhs: true
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyInt',
+								scope: 'current',
+								range: createRange(3, 4, 3, 10),
+							},
+							rhs: 123
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyStr',
+								scope: 'current',
+								range: createRange(4, 4, 4, 10),
+							},
+							rhs: 'Hello world!'
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with commas', () => {
+		const input = `
+			.MyVar = [
+				.MyBool = true,
+				.MyInt = 123,
+				.MyStr = 'Hello world!'
+			]
+			`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyBool',
+								scope: 'current',
+								range: createRange(2, 4, 2, 11),
+							},
+							rhs: true
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyInt',
+								scope: 'current',
+								range: createRange(3, 4, 3, 10),
+							},
+							rhs: 123
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyStr',
+								scope: 'current',
+								range: createRange(4, 4, 4, 10),
+							},
+							rhs: 'Hello world!'
+						},
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with comments', () => {
+		const input = `
+			.MyVar = [
+				// Comment 1
+				.MyBool = true
+				// Comment 2
+				.MyInt = 123
+			]
+			`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyBool',
+								scope: 'current',
+								range: createRange(3, 4, 3, 11),
+							},
+							rhs: true
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyInt',
+								scope: 'current',
+								range: createRange(5, 4, 5, 10),
+							},
+							rhs: 123
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with a single item with a trailing comma', () => {
+		const input = `
+			.MyVar = [
+				.MyBool = true,
+			]
+			`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'MyBool',
+								scope: 'current',
+								range: createRange(2, 4, 2, 11),
+							},
+							rhs: true
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct on a single line with commas', () => {
+		const input = `.MyVar = [.A=1, .B=2]`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'A',
+								scope: 'current',
+								range: createRange(0, 10, 0, 12),
+							},
+							rhs: 1
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'B',
+								scope: 'current',
+								range: createRange(0, 16, 0, 18),
+							},
+							rhs: 2
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with an evaluated variable', () => {
+		const input = `.MyVar = [.A=.B]`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'A',
+								scope: 'current',
+								range: createRange(0, 10, 0, 12),
+							},
+							rhs: {
+								type: 'evaluatedVariable',
+								name: 'B',
+								scope: 'current',
+								range: createRange(0, 13, 0, 10000 /*TODO: see known issue in README.md*/),
+							}
+						}
+					],
 				}
 			}
 		]);

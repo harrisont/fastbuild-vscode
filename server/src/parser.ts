@@ -20,6 +20,8 @@ export namespace SourceRange {
 	}
 }
 
+export type Statement = Record<string, any>;
+
 export class ParseError extends Error {
 	constructor(message?: string) {
 		super(message);
@@ -29,7 +31,7 @@ export class ParseError extends Error {
 }
 
 // Parse the input and return the statements.
-export function parse(input: string): any[] {
+export function parse(input: string): Statement[] {
 	// Make the input always end in a newline in order to make parsing easier.
 	// This lets the grammar assume that statements always end in a newline.
 	const modifiedInput = input + '\n';

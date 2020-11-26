@@ -1,6 +1,7 @@
 import {
 	parse,
 	SourceRange,
+	Statement,
 } from './parser'
 
 export class EvaluationError extends Error {
@@ -11,7 +12,9 @@ export class EvaluationError extends Error {
 	}
 }
 
-export type Value = boolean | number | string | Value[];
+export type Value = boolean | number | string | Value[] | Struct;
+
+export type Struct = Map<string, Value>;
 
 export interface EvaluatedVariable {
 	value: Value;
@@ -47,6 +50,12 @@ interface GrammarEvaluatedVariable {
 	range: SourceRange;
 }
 
+interface EvaluatedRValue {
+	value: Value;
+	evaluatedVariables: EvaluatedVariable[];
+	variableReferences: VariableReference[];
+}
+
 interface ParsedStringExpression {
 	evaluatedString: string;
 	evaluatedVariables: EvaluatedVariable[];
@@ -56,6 +65,12 @@ interface ParsedStringExpression {
 interface ParsedEvaluatedVariable {
 	evaluatedVariable: EvaluatedVariable;
 	variableReference: VariableReference;
+}
+
+interface ParsedStruct {
+	evaluatedValue: Struct;
+	evaluatedVariables: EvaluatedVariable[];
+	variableReferences: VariableReference[];
 }
 
 interface ScopeVariable {
@@ -162,7 +177,7 @@ class ScopeStack {
 		return existingVariable;
 	}
 
-	private getCurrentScope(): Scope {
+	getCurrentScope(): Scope {
 		return this.stack[this.stack.length - 1];
 	}
 
@@ -176,42 +191,32 @@ class ScopeStack {
 
 export function evaluate(input: string): ParsedData {
 	const statements = parse(input);
+	let scopeStack = new ScopeStack();
+	return evaluateStatements(statements, scopeStack)
+}
 
+export function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): ParsedData {
 	let result: ParsedData = {
 		evaluatedVariables: [],
 		variableReferences: [],
 	};
-	
-
-	let scopeStack = new ScopeStack();
 
 	for (const statement of statements) {
 		switch (statement.type) {
 			case 'variableDefinition': {
-				const rhs = statement.rhs;
-				let evaluatedRhs: Value;
-				if (rhs.type && rhs.type == 'stringExpression') {
-					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
-					evaluatedRhs = parsedStringExpression.evaluatedString;
-					result.evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
-					result.variableReferences.push(...parsedStringExpression.variableReferences);
-				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
-					const parsed = parseEvaluatedVariable(rhs, scopeStack);
-					evaluatedRhs = parsed.evaluatedVariable.value;
-					result.evaluatedVariables.push(parsed.evaluatedVariable);
-					result.variableReferences.push(parsed.variableReference);
-				} else {
-					evaluatedRhs = rhs;
-				}
+				const evaluatedRhs = evaluateRValue(statement.rhs, scopeStack);
+				result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
+				result.variableReferences.push(...evaluatedRhs.variableReferences);
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
 				let variable: ScopeVariable | null = null;
 				if (lhs.scope == 'current') {
-					variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs, lhs.range);
+					variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs.value, lhs.range);
 				} else {
-					variable = scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs);
+					variable = scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs.value);
 				}
 
+				// The definition's LHS is a variable reference.
 				result.variableReferences.push({
 					definition: variable.definition,
 					range: lhs.range,
@@ -220,39 +225,27 @@ export function evaluate(input: string): ParsedData {
 				break;
 			}
 			case 'variableAddition': {
-				const rhs = statement.rhs;
-				let evaluatedRhs: Value;
-				if (rhs.type && rhs.type == 'stringExpression') {
-					const parsedStringExpression = parseStringExpression(rhs.parts, scopeStack);
-					evaluatedRhs = parsedStringExpression.evaluatedString;
-					result.evaluatedVariables.push(...parsedStringExpression.evaluatedVariables);
-					result.variableReferences.push(...parsedStringExpression.variableReferences);
-				} else if (rhs.type && rhs.type == 'evaluatedVariable') {
-					const parsed = parseEvaluatedVariable(rhs, scopeStack);
-					evaluatedRhs = parsed.evaluatedVariable.value;
-					result.evaluatedVariables.push(parsed.evaluatedVariable);
-					result.variableReferences.push(parsed.variableReference);
-				} else {
-					evaluatedRhs = rhs;
-				}
+				const evaluatedRhs = evaluateRValue(statement.rhs, scopeStack);
+				result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
+				result.variableReferences.push(...evaluatedRhs.variableReferences);
 
 				const lhs: VariableDefinitionLhs = statement.lhs;
 
 				// The previously-defined LHS variable.
 				let lhsDefinition: VariableDefinition | null = null;
-				
+
 				if (lhs.scope == 'current') {
 					const existingVariable = scopeStack.getVariableInCurrentScope(lhs.name);
 					lhsDefinition = existingVariable.definition;
 					const existingValue = existingVariable.value;
 					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
-						existingValue.push(evaluatedRhs);
-					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs == 'string')) {
-						const sum = existingValue + evaluatedRhs;
+						existingValue.push(evaluatedRhs.value);
+					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
+						const sum = existingValue + evaluatedRhs.value;
 						scopeStack.updateVariableInCurrentScope(lhs.name, sum);
 					} else {
-						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
+						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs.value}.`);
 					}
 				} else {
 					const existingVariable = scopeStack.getVariableInParentScope(lhs.name);
@@ -260,12 +253,12 @@ export function evaluate(input: string): ParsedData {
 					const existingValue = existingVariable.value;
 					// Can only add strings and arrays.
 					if (existingValue instanceof Array) {
-						existingValue.push(evaluatedRhs);
-					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs == 'string')) {
-						const sum = existingValue + evaluatedRhs;
+						existingValue.push(evaluatedRhs.value);
+					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
+						const sum = existingValue + evaluatedRhs.value;
 						scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
 					} else {
-						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs}.`);
+						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs.value}.`);
 					}
 				}
 
@@ -285,15 +278,53 @@ export function evaluate(input: string): ParsedData {
 				break;
 		}
 	}
-	
+
+	return result;
+}
+
+function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
+	let result: EvaluatedRValue = {
+		value: '',
+		evaluatedVariables: [],
+		variableReferences: [],
+	};
+
+	if (rValue.type && rValue.type == 'stringExpression') {
+		const parsed = parseStringExpression(rValue.parts, scopeStack);
+		result.value = parsed.evaluatedString;
+		result.evaluatedVariables.push(...parsed.evaluatedVariables);
+		result.variableReferences.push(...parsed.variableReferences);
+	} else if (rValue.type && rValue.type == 'struct') {
+		const parsed = parseStruct(rValue.statements, scopeStack);
+		result.value = parsed.evaluatedValue;
+		result.evaluatedVariables.push(...parsed.evaluatedVariables);
+		result.variableReferences.push(...parsed.variableReferences);
+	} else if (rValue.type && rValue.type == 'evaluatedVariable') {
+		const parsed = parseEvaluatedVariable(rValue, scopeStack);
+		result.value = parsed.evaluatedVariable.value;
+		result.evaluatedVariables.push(parsed.evaluatedVariable);
+		result.variableReferences.push(parsed.variableReference);
+	} else if (rValue instanceof Array) {
+		result.value = [];
+		for (const rvalue of rValue) {
+			const evaluated = evaluateRValue(rvalue, scopeStack);
+			result.value.push(evaluated.value);
+			result.evaluatedVariables.push(...evaluated.evaluatedVariables);
+			result.variableReferences.push(...evaluated.variableReferences);
+		}
+	} else {
+		// Primitive (boolean | number | string)
+		result.value = rValue;
+	}
+
 	return result;
 }
 
 function parseEvaluatedVariable(grammarEvaluatedVariable: GrammarEvaluatedVariable, scopeStack: ScopeStack): ParsedEvaluatedVariable {
 	const variableName: string = grammarEvaluatedVariable.name;
 	const variable = (grammarEvaluatedVariable.scope == 'current')
-						? scopeStack.getVariableStartingFromCurrentScope(variableName)
-						: scopeStack.getVariableInParentScope(variableName);
+		? scopeStack.getVariableStartingFromCurrentScope(variableName)
+		: scopeStack.getVariableInParentScope(variableName);
 
 	const range = grammarEvaluatedVariable.range;
 
@@ -316,7 +347,7 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 		evaluatedVariables: [],
 		variableReferences: [],
 	};
-	
+
 	for (const part of parts) {
 		if (part.type && part.type == 'evaluatedVariable') {
 			const parsed = parseEvaluatedVariable(part, scopeStack);
@@ -328,6 +359,30 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 			result.evaluatedString += part;
 		}
 	}
+
+	return result;
+}
+
+function parseStruct(statements: Statement[], scopeStack: ScopeStack): ParsedStruct {
+	let result: ParsedStruct = {
+		evaluatedValue: new Map(),
+		evaluatedVariables: [],
+		variableReferences: [],
+	};
+
+	scopeStack.push();
+	const parsedData = evaluateStatements(statements, scopeStack);
+	const structScope: Scope = scopeStack.getCurrentScope();
+	scopeStack.pop();
+
+	const evaluatedValue: Struct = new Map<string, Value>();
+	for (const [name, variable] of structScope.variables) {
+		evaluatedValue.set(name, variable.value);
+	}
+
+	result.evaluatedValue = evaluatedValue;
+	result.evaluatedVariables.push(...parsedData.evaluatedVariables);
+	result.variableReferences.push(...parsedData.variableReferences);
 
 	return result;
 }

@@ -19,7 +19,7 @@ const lexer = moo.states({
         variableReferenceParentScope: '^',
         operatorAssignment: '=',
         operatorAddition: '+',
-        arrayItemSeparator: ',',
+        arrayOrStructItemSeparator: ',',
         structStart: '[',
         structEnd: ']',
     },
@@ -47,24 +47,27 @@ const lexer = moo.states({
 
 @preprocessor typescript
 
-main -> lines  {% function(d) { return d[0]; } %}
+main -> lines  {% (d) => d[0] %}
 
 lines ->
-    null  {% function(d) { return []; } %}
-  | whitespaceOrNewline lines  {% function(d) { return d[1]; } %}
-  | statementAndOrComment lines  {% function(d) { return d.flat(); } %}
+    null  {% () => [] %}
+  | whitespaceOrNewline lines  {% ([space, lines]) => lines %}
+  | statementAndOrComment %optionalWhitespaceAndMandatoryNewline lines  {% ([first, space, rest]) => [...first, ...rest] %}
 
+# Returns either:
+#  * a 1-length array with the item being the statement
+#  * a 0-length array
 statementAndOrComment ->
-    statement %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
-  | statement %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
-  | statement %whitespace %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return d[0]; } %}
-  | %comment %optionalWhitespaceAndMandatoryNewline  {% function(d) { return []; } %}
+    statement                       {% (d) => [d[0]] %}
+  | statement %comment              {% (d) => [d[0]] %}
+  | statement %whitespace %comment  {% (d) => [d[0]] %}
+  | %comment                        {% ()  => [] %}
 
 statement ->
-    %scopeOrArrayStart  {% function(d) { return { type: "scopeStart" }; } %}
-  | %scopeOrArrayEnd  {% function(d) { return { type: "scopeEnd" }; } %}
-  | variableDefinition  {% function(d) { return d[0]; } %}
-  | variableAddition  {% function(d) { return d[0]; } %}
+    %scopeOrArrayStart  {% () => { return { type: "scopeStart" }; } %}
+  | %scopeOrArrayEnd    {% () => { return { type: "scopeEnd" }; } %}
+  | variableDefinition  {% (d) => d[0] %}
+  | variableAddition    {% (d) => d[0] %}
 
 @{%
 
@@ -85,24 +88,31 @@ function createRange(tokenStart: any, tokenEnd: any) {
 
 %}
 
-lhsWithOperator[OPERATOR] ->
-    %variableReferenceCurrentScope %variableName                     $OPERATOR  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
-  | %variableReferenceCurrentScope %variableName whitespaceOrNewline $OPERATOR  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
-  | %variableReferenceParentScope  %variableName                     $OPERATOR  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
-  | %variableReferenceParentScope  %variableName whitespaceOrNewline $OPERATOR  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
+lhsWithOperatorAssignment ->
+    %variableReferenceCurrentScope %variableName                     %operatorAssignment  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
+  | %variableReferenceCurrentScope %variableName whitespaceOrNewline %operatorAssignment  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
+  | %variableReferenceParentScope  %variableName                     %operatorAssignment  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
+  | %variableReferenceParentScope  %variableName whitespaceOrNewline %operatorAssignment  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
+
+lhsWithOperatorAddition ->
+    %variableReferenceCurrentScope %variableName                     %operatorAddition    {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
+  | %variableReferenceCurrentScope %variableName whitespaceOrNewline %operatorAddition    {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
+  | %variableReferenceParentScope  %variableName                     %operatorAddition    {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
+  | %variableReferenceParentScope  %variableName whitespaceOrNewline %operatorAddition    {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
 
 variableDefinition ->
-    lhsWithOperator[%operatorAssignment] optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+    lhsWithOperatorAssignment optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
 
 variableAddition ->
-    lhsWithOperator[%operatorAddition]   optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableAddition",   lhs: lhs, rhs: rhs }; } %}
+    lhsWithOperatorAddition   optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableAddition",   lhs: lhs, rhs: rhs }; } %}
 
 rhs ->
-    %integer  {% function(d) { return d[0].value; } %}
-  | bool  {% function(d) { return d[0]; } %}
+    %integer          {% (d) => d[0].value %}
+  | bool              {% (d) => d[0] %}
   # evaluatedVariable is in stringExpression and not rhs in order to remove ambiguity
-  | stringExpression  {% function(d) { return d[0]; } %}
-  | array  {% function(d) { return d[0]; } %}
+  | stringExpression  {% (d) => d[0] %}
+  | array             {% (d) => d[0] %}
+  | struct            {% (d) => d[0] %}
 
 @{%
 
@@ -132,8 +142,8 @@ evaluatedVariable ->
   | %variableReferenceParentScope  %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "parent") ] %}
 
 bool ->
-    "true"  {% function(d) { return true; } %}
-  | "false"  {% function(d) { return false; } %}
+    "true"   {% () => true %}
+  | "false"  {% () => false %}
 
 @{%
 
@@ -181,13 +191,13 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringExpressionHelper ->
     # Single string
-    stringOrEvaluatedVariable  {% function(d) { return d[0]; } %}
+    stringOrEvaluatedVariable  {% (d) => d[0] %}
     # Multiple strings added together
   | stringOrEvaluatedVariable optionalWhitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
 
 stringOrEvaluatedVariable ->
-    string             {% function(d) { return d[0]; } %}
-  | evaluatedVariable  {% function(d) { return d[0]; } %}
+    string             {% (d) => d[0] %}
+  | evaluatedVariable  {% (d) => d[0] %}
 
 string ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
@@ -243,7 +253,34 @@ nonEmptyArrayContents ->
     # Single item
     optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline  {% ([space1, content, space2]) => [content] %}
     # Multiple items
-  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+
+struct -> %structStart structContents %structEnd  {% ([braceOpen, contents, braceClose]) => contents %}
+
+@{%
+
+function createStruct(statements: any[]) {
+    return {
+        type: "struct",
+        statements: statements,
+    }
+}
+
+%}
+
+structContents ->
+    # Empty
+    null                      {% (            ) => createStruct([]) %}
+  | whitespaceOrNewline       {% (            ) => createStruct([]) %}
+  | nonEmptyStructStatements  {% ([statements]) => createStruct(statements) %}
+
+nonEmptyStructStatements ->
+    # Single item. Optional trailing item separator (",").
+    optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline                                                          {% ([space1, statement, space2                   ]) => statement %}
+  | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, statement, space2, separator, space3]) => statement %}
+    # Multiple items. The items must be separated by a newline and/or an item separator (",").
+  | optionalWhitespaceOrNewline statementAndOrComment %optionalWhitespaceAndMandatoryNewline                  nonEmptyStructStatements     {% ([space1, statement, space2,            rest]) => [...statement, ...rest] %}
+  | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyStructStatements     {% ([space1, statement, space2, separator, rest]) => [...statement, ...rest] %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

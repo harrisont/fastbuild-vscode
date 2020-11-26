@@ -40,10 +40,11 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
+* Support making the item separator (`,`) in arrays optional, if the items on are different lines.
 * (In progress) Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).
-    * Struct with a member struct
-    * Struct with a member array
-    * Array of structs
+    * Support `Using` keyword, both outside and inside a struct defintion.
+    * Struct addition
+* Support arrays with comments
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
