@@ -13,15 +13,15 @@ import {
 } from './parser'
 
 import {
-	ParsedData,
+	EvaluatedData,
 } from './evaluator'
 
 export class DefinitionProvider {
-	private parsedData: ParsedData | null = null;
+	private evaluatedData: EvaluatedData | null = null;
 	private uri: DocumentUri | null = null;
 
-	onParsedDataChanged(uri: DocumentUri, newParsedData: ParsedData): void {
-		this.parsedData = newParsedData;
+	onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
+		this.evaluatedData = newEvaluatedData;
 		this.uri = uri;
 	}
 
@@ -31,7 +31,7 @@ export class DefinitionProvider {
 		}
 
 		const position = params.position;
-		const variableReferences = this.parsedData?.variableReferences ?? [];
+		const variableReferences = this.evaluatedData?.variableReferences ?? [];
 	
 		for (let i = 0; i < variableReferences.length; i++)
 		{

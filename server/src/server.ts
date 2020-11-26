@@ -67,11 +67,11 @@ state.documents.onDidChangeContent(change => {
 
 	const uri = change.document.uri;
 	const text = change.document.getText();
-	const parsedData = evaluator.evaluate(text);
+	const evaluatedData = evaluator.evaluate(text);
 
-	state.hoverProvider.onParsedDataChanged(parsedData);
-	state.definitionProvider.onParsedDataChanged(uri, parsedData);
-	state.referenceProvider.onParsedDataChanged(uri, parsedData);
+	state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
+	state.definitionProvider.onEvaluatedDataChanged(uri, evaluatedData);
+	state.referenceProvider.onEvaluatedDataChanged(uri, evaluatedData);
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events.

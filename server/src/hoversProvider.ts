@@ -9,19 +9,19 @@ import {
 } from './parser'
 
 import {
-	ParsedData,
+	EvaluatedData,
 } from './evaluator';
 
 export class HoverProvider {
-	private parsedData: ParsedData | null = null;
+	private evaluatedData: EvaluatedData | null = null;
 
-	onParsedDataChanged(newParsedData: ParsedData): void {
-		this.parsedData = newParsedData;
+	onEvaluatedDataChanged(newEvaluatedData: EvaluatedData): void {
+		this.evaluatedData = newEvaluatedData;
 	}
 	
 	onHover(params: HoverParams): Hover | null {
 		const position = params.position;
-		const evaluatedVariables = this.parsedData?.evaluatedVariables ?? [];
+		const evaluatedVariables = this.evaluatedData?.evaluatedVariables ?? [];
 	
 		for (let i = 0; i < evaluatedVariables.length; i++)
 		{

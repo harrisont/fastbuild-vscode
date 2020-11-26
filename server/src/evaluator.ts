@@ -30,7 +30,7 @@ export interface VariableReference {
 	range: SourceRange;
 }
 
-export interface ParsedData {
+export interface EvaluatedData {
 	evaluatedVariables: EvaluatedVariable[];
 	variableReferences: VariableReference[];
 }
@@ -43,7 +43,7 @@ interface VariableDefinitionLhs {
 	range: SourceRange;
 }
 
-interface GrammarEvaluatedVariable {
+interface ParsedEvaluatedVariable {
 	type: 'evaluatedVariable';
 	name: string;
 	scope: ScopeLocation;
@@ -56,18 +56,18 @@ interface EvaluatedRValue {
 	variableReferences: VariableReference[];
 }
 
-interface ParsedStringExpression {
+interface EvaluatedStringExpression {
 	evaluatedString: string;
 	evaluatedVariables: EvaluatedVariable[];
 	variableReferences: VariableReference[];
 }
 
-interface ParsedEvaluatedVariable {
+interface EvaluatedEvaluatedVariable {
 	evaluatedVariable: EvaluatedVariable;
 	variableReference: VariableReference;
 }
 
-interface ParsedStruct {
+interface EvaluatedStruct {
 	evaluatedValue: Struct;
 	evaluatedVariables: EvaluatedVariable[];
 	variableReferences: VariableReference[];
@@ -105,7 +105,7 @@ class ScopeStack {
 	}
 
 	// Get a variable, searching from the current scope to its parents.
-	// Throw ParseError if the variable is not defined.
+	// Throw EvaluationError if the variable is not defined.
 	getVariableStartingFromCurrentScope(variableName: string): ScopeVariable {
 		for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
 			const scope = this.stack[scopeIndex];
@@ -117,7 +117,7 @@ class ScopeStack {
 		throw new EvaluationError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
 	}
 
-	// Throw ParseError if the variable is not defined.
+	// Throw EvaluationError if the variable is not defined.
 	getVariableInCurrentScope(variableName: string): ScopeVariable {
 		const currentScope = this.getCurrentScope();
 		const maybeVariable = currentScope.variables.get(variableName);
@@ -128,7 +128,7 @@ class ScopeStack {
 		}
 	}
 
-	// Throw ParseError if the variable is not defined.
+	// Throw EvaluationError if the variable is not defined.
 	getVariableInParentScope(variableName: string): ScopeVariable {
 		const parentScope = this.getParentScope();
 		const maybeVariable = parentScope.variables.get(variableName);
@@ -189,14 +189,14 @@ class ScopeStack {
 	}
 }
 
-export function evaluate(input: string): ParsedData {
+export function evaluate(input: string): EvaluatedData {
 	const statements = parse(input);
 	let scopeStack = new ScopeStack();
 	return evaluateStatements(statements, scopeStack)
 }
 
-export function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): ParsedData {
-	let result: ParsedData = {
+export function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): EvaluatedData {
+	let result: EvaluatedData = {
 		evaluatedVariables: [],
 		variableReferences: [],
 	};
@@ -290,20 +290,20 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
 	};
 
 	if (rValue.type && rValue.type == 'stringExpression') {
-		const parsed = parseStringExpression(rValue.parts, scopeStack);
-		result.value = parsed.evaluatedString;
-		result.evaluatedVariables.push(...parsed.evaluatedVariables);
-		result.variableReferences.push(...parsed.variableReferences);
+		const evaluated = evaluateStringExpression(rValue.parts, scopeStack);
+		result.value = evaluated.evaluatedString;
+		result.evaluatedVariables.push(...evaluated.evaluatedVariables);
+		result.variableReferences.push(...evaluated.variableReferences);
 	} else if (rValue.type && rValue.type == 'struct') {
-		const parsed = parseStruct(rValue.statements, scopeStack);
-		result.value = parsed.evaluatedValue;
-		result.evaluatedVariables.push(...parsed.evaluatedVariables);
-		result.variableReferences.push(...parsed.variableReferences);
+		const evaluated = evaluateStruct(rValue.statements, scopeStack);
+		result.value = evaluated.evaluatedValue;
+		result.evaluatedVariables.push(...evaluated.evaluatedVariables);
+		result.variableReferences.push(...evaluated.variableReferences);
 	} else if (rValue.type && rValue.type == 'evaluatedVariable') {
-		const parsed = parseEvaluatedVariable(rValue, scopeStack);
-		result.value = parsed.evaluatedVariable.value;
-		result.evaluatedVariables.push(parsed.evaluatedVariable);
-		result.variableReferences.push(parsed.variableReference);
+		const evaluated = evaluateEvaluatedVariable(rValue, scopeStack);
+		result.value = evaluated.evaluatedVariable.value;
+		result.evaluatedVariables.push(evaluated.evaluatedVariable);
+		result.variableReferences.push(evaluated.variableReference);
 	} else if (rValue instanceof Array) {
 		result.value = [];
 		for (const rvalue of rValue) {
@@ -320,13 +320,13 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
 	return result;
 }
 
-function parseEvaluatedVariable(grammarEvaluatedVariable: GrammarEvaluatedVariable, scopeStack: ScopeStack): ParsedEvaluatedVariable {
-	const variableName: string = grammarEvaluatedVariable.name;
-	const variable = (grammarEvaluatedVariable.scope == 'current')
+function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, scopeStack: ScopeStack): EvaluatedEvaluatedVariable {
+	const variableName: string = parsedEvaluatedVariable.name;
+	const variable = (parsedEvaluatedVariable.scope == 'current')
 		? scopeStack.getVariableStartingFromCurrentScope(variableName)
 		: scopeStack.getVariableInParentScope(variableName);
 
-	const range = grammarEvaluatedVariable.range;
+	const range = parsedEvaluatedVariable.range;
 
 	return {
 		evaluatedVariable: {
@@ -341,8 +341,8 @@ function parseEvaluatedVariable(grammarEvaluatedVariable: GrammarEvaluatedVariab
 }
 
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
-function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack): ParsedStringExpression {
-	let result: ParsedStringExpression = {
+function evaluateStringExpression(parts: (string | any)[], scopeStack: ScopeStack): EvaluatedStringExpression {
+	let result: EvaluatedStringExpression = {
 		evaluatedString: '',
 		evaluatedVariables: [],
 		variableReferences: [],
@@ -350,10 +350,10 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 
 	for (const part of parts) {
 		if (part.type && part.type == 'evaluatedVariable') {
-			const parsed = parseEvaluatedVariable(part, scopeStack);
-			result.evaluatedString += String(parsed.evaluatedVariable.value);
-			result.evaluatedVariables.push(parsed.evaluatedVariable);
-			result.variableReferences.push(parsed.variableReference);
+			const evaluated = evaluateEvaluatedVariable(part, scopeStack);
+			result.evaluatedString += String(evaluated.evaluatedVariable.value);
+			result.evaluatedVariables.push(evaluated.evaluatedVariable);
+			result.variableReferences.push(evaluated.variableReference);
 		} else {
 			// Literal
 			result.evaluatedString += part;
@@ -363,15 +363,15 @@ function parseStringExpression(parts: (string | any)[], scopeStack: ScopeStack):
 	return result;
 }
 
-function parseStruct(statements: Statement[], scopeStack: ScopeStack): ParsedStruct {
-	let result: ParsedStruct = {
+function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): EvaluatedStruct {
+	let result: EvaluatedStruct = {
 		evaluatedValue: new Map(),
 		evaluatedVariables: [],
 		variableReferences: [],
 	};
 
 	scopeStack.push();
-	const parsedData = evaluateStatements(statements, scopeStack);
+	const evaluatedStatements = evaluateStatements(statements, scopeStack);
 	const structScope: Scope = scopeStack.getCurrentScope();
 	scopeStack.pop();
 
@@ -381,8 +381,8 @@ function parseStruct(statements: Statement[], scopeStack: ScopeStack): ParsedStr
 	}
 
 	result.evaluatedValue = evaluatedValue;
-	result.evaluatedVariables.push(...parsedData.evaluatedVariables);
-	result.variableReferences.push(...parsedData.variableReferences);
+	result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+	result.variableReferences.push(...evaluatedStatements.variableReferences);
 
 	return result;
 }

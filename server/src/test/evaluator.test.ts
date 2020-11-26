@@ -6,7 +6,7 @@ import {
 
 import {
 	evaluate,
-	ParsedData,
+	EvaluatedData,
 	EvaluatedVariable,
 	Value,
 } from '../evaluator'
@@ -26,7 +26,7 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
 function assertEvaluatedVariablesValueEqual(input: string, expectedValues: Value[]): void {
-	const result: ParsedData = evaluate(input);
+	const result: EvaluatedData = evaluate(input);
 	const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
 	assert.deepStrictEqual(actualValues, expectedValues);
 }
@@ -475,7 +475,7 @@ describe('evaluator', () => {
 				.MyVar2 = 'MyValue2'
 				.Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
 			`;
-			const result: ParsedData = evaluate(input);
+			const result: EvaluatedData = evaluate(input);
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue1',
@@ -494,7 +494,7 @@ describe('evaluator', () => {
 				.MyVar = 'MyValue'
 				.Copy = .MyVar
 			`;
-			const result: ParsedData = evaluate(input);
+			const result: EvaluatedData = evaluate(input);
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue',

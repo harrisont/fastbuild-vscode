@@ -14,16 +14,16 @@ import {
 } from './parser'
 
 import {
-	ParsedData,
+	EvaluatedData,
 	VariableReference,
 } from './evaluator'
 
 export class ReferenceProvider {
-	private parsedData: ParsedData | null = null;
+	private evaluatedData: EvaluatedData | null = null;
 	private uri: DocumentUri | null = null;
 
-	onParsedDataChanged(uri: DocumentUri, newParsedData: ParsedData): void {
-		this.parsedData = newParsedData;
+	onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
+		this.evaluatedData = newEvaluatedData;
 		this.uri = uri;
 	}
 
@@ -44,7 +44,7 @@ export class ReferenceProvider {
 		const variableDefinition = variableReference.definition;
 		let locations: Location[] = [];
 
-		const variableReferences = this.parsedData?.variableReferences ?? [];
+		const variableReferences = this.evaluatedData?.variableReferences ?? [];
 		for (let i = 0; i < variableReferences.length; i++)
 		{
 			const variableReference = variableReferences[i];
@@ -60,7 +60,7 @@ export class ReferenceProvider {
 	}
 
 	private getVariableReferenceAtPosition(position: Position): VariableReference | null {
-		const variableReferences = this.parsedData?.variableReferences ?? [];
+		const variableReferences = this.evaluatedData?.variableReferences ?? [];
 	
 		for (let i = 0; i < variableReferences.length; i++)
 		{
