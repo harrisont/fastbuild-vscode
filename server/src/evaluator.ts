@@ -244,8 +244,11 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
 						const sum = existingValue + evaluatedRhs.value;
 						scopeStack.updateVariableInCurrentScope(lhs.name, sum);
+					} else if ((typeof existingValue == 'number') && (typeof evaluatedRhs.value == 'number')) {
+						const sum = existingValue + evaluatedRhs.value;
+						scopeStack.updateVariableInCurrentScope(lhs.name, sum);
 					} else {
-						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs.value}.`);
+						throw new EvaluationError(`Cannot add a ${typeof evaluatedRhs.value} (${JSON.stringify(statement.rhs)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
 					}
 				} else {
 					const existingVariable = scopeStack.getVariableInParentScope(lhs.name);
@@ -257,8 +260,11 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 					} else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
 						const sum = existingValue + evaluatedRhs.value;
 						scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
+					} else if ((typeof existingValue == 'number') && (typeof evaluatedRhs.value == 'number')) {
+						const sum = existingValue + evaluatedRhs.value;
+						scopeStack.updateVariableInCurrentScope(lhs.name, sum);
 					} else {
-						throw new EvaluationError(`Cannot add incompatible types: LHS=${typeof existingValue}, RHS=${typeof evaluatedRhs.value}.`);
+						throw new EvaluationError(`Cannot add a ${typeof evaluatedRhs.value} (${JSON.stringify(statement.rhs)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
 					}
 				}
 

@@ -9,6 +9,7 @@ import {
 	EvaluatedData,
 	EvaluatedVariable,
 	Value,
+	VariableReference,
 } from '../evaluator'
 
 function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
@@ -174,6 +175,15 @@ describe('evaluator', () => {
 					message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
 				}
 			);
+		});
+
+		it('should work on adding an integer', () => {
+			const input = `
+				.MySum = 1
+				.MySum + 2
+				.Evaluated = .MySum
+			`;
+			assertEvaluatedVariablesValueEqual(input, [3]);
 		});
 
 		it('should work on adding a string literal', () => {
