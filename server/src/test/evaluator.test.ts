@@ -514,4 +514,103 @@ describe('evaluator', () => {
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 		});
 	});
+
+	describe('variableReferences', () => {
+		it('should be detected in a variable definition LHS', () => {
+			const input = `
+				.MyVar = 1
+			`;
+			const result: EvaluatedData = evaluate(input);
+			const expectedReferences: VariableReference[] = [
+				{
+					definition: {
+						range: createRange(1, 4, 1, 10),
+					},
+					range: createRange(1, 4, 1, 10),
+				}
+			];
+			assert.deepStrictEqual(result.variableReferences, expectedReferences);
+		});
+
+		it('should be detected in a variable addition LHS', () => {
+			const input = `
+				.MyVar = 1
+				.MyVar + 2
+			`;
+			const result: EvaluatedData = evaluate(input);
+			const expectedReferences: VariableReference[] = [
+				{
+					definition: {
+						range: createRange(1, 4, 1, 10),
+					},
+					range: createRange(1, 4, 1, 10),
+				},
+				{
+					definition: {
+						range: createRange(1, 4, 1, 10),
+					},
+					range: createRange(2, 4, 2, 10),
+				}
+			];
+			assert.deepStrictEqual(result.variableReferences, expectedReferences);
+		});
+
+		it('should be detected in an evaluated variable (standalone)', () => {
+			const input = `
+				.MyVar1 = 1
+				.MyVar2 = .MyVar1
+			`;
+			const result: EvaluatedData = evaluate(input);
+			const expectedReferences: VariableReference[] = [
+				{
+					definition: {
+						range: createRange(1, 4, 1, 11),
+					},
+					range: createRange(1, 4, 1, 11),
+				},
+				{
+					definition: {
+						range: createRange(1, 4, 1, 11),
+					},
+					range: createRange(2, 14, 2, 10000 /*TODO: see known issue in README.md*/),
+				},
+				{
+					definition: {
+						range: createRange(2, 4, 2, 11),
+					},
+					range: createRange(2, 4, 2, 11),
+				}
+			];
+			assert.deepStrictEqual(result.variableReferences, expectedReferences);
+		});
+
+		it('should be detected in an evaluated variable (string template)', () => {
+			const input = `
+				.MyVar1 = 'hello'
+				.MyVar2 = '$MyVar1$ world'
+			`;
+			const result: EvaluatedData = evaluate(input);
+			const expectedReferences: VariableReference[] = [
+				{
+					definition: {
+						range: createRange(1, 4, 1, 11),
+					},
+					range: createRange(1, 4, 1, 11),
+				},
+				{
+					definition: {
+						range: createRange(1, 4, 1, 11),
+					},
+					range: createRange(2, 15, 2, 23),
+				},
+				{
+					definition: {
+						range: createRange(2, 4, 2, 11),
+					},
+					range: createRange(2, 4, 2, 11),
+				}
+			];
+			assert.deepStrictEqual(result.variableReferences, expectedReferences);
+		});
+	});
 })
