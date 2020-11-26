@@ -195,7 +195,7 @@ export function evaluate(input: string): EvaluatedData {
 	return evaluateStatements(statements, scopeStack)
 }
 
-export function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): EvaluatedData {
+function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): EvaluatedData {
 	let result: EvaluatedData = {
 		evaluatedVariables: [],
 		variableReferences: [],
