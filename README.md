@@ -41,10 +41,11 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 ## TODO
 
 * Support making the item separator (`,`) in arrays optional, if the items on are different lines.
+* Support arrays with comments
+* Fix bug where the hover extends to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
 * (In progress) Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).
     * Support `Using` keyword, both outside and inside a struct defintion.
     * Struct addition
-* Support arrays with comments
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
@@ -56,4 +57,3 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)).
-* Fix bug where the hover extends to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
