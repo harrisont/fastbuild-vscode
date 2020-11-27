@@ -251,11 +251,15 @@ arrayContents ->
 
 nonEmptyArrayContents ->
     # Single item. Optional trailing item separator (",").
-    optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline                                                          {% ([space1, content, space2                   ]) => [content] %}
-  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, content, space2, separator, space3]) => [content] %}
-    # Multiple items. The items must be separated by a newline and/or an item separator (",").
-  | optionalWhitespaceOrNewline rhs %optionalWhitespaceAndMandatoryNewline                  nonEmptyArrayContents  {% ([space1, first, space2,            rest]) => [first, ...rest] %}
-  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+    optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline                                                          {% ([space1, content, space2                   ]) => [content] %}
+  | optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, content, space2, separator, space3]) => [content] %}
+    # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
+  | optionalWhitespaceOrNewline rhs     %optionalWhitespaceAndMandatoryNewline                  nonEmptyArrayContents  {% ([space1, first, space2,            rest]) => [first, ...rest] %}
+  | optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+    # Single comment.
+  | optionalWhitespaceOrNewline %comment optionalWhitespaceOrNewline                                   {% () => [] %}
+    # Comment and then another item(s).
+  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyArrayContents  {% ([space, comment, newline, rest]) => [...rest] %}
 
 struct -> %structStart structContents %structEnd  {% ([braceOpen, contents, braceClose]) => contents %}
 
@@ -269,7 +273,7 @@ nonEmptyStructStatements ->
     # Single item. Optional trailing item separator (",").
     optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline                                                          {% ([space1, statement, space2                   ]) => statement %}
   | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, statement, space2, separator, space3]) => statement %}
-    # Multiple items. The items must be separated by a newline and/or an item separator (",").
+    # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
   | optionalWhitespaceOrNewline statementAndOrComment %optionalWhitespaceAndMandatoryNewline                  nonEmptyStructStatements     {% ([space1, statement, space2,            rest]) => [...statement, ...rest] %}
   | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyStructStatements     {% ([space1, statement, space2, separator, rest]) => [...statement, ...rest] %}
 

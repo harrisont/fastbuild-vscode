@@ -327,6 +327,16 @@ describe('evaluator', () => {
 			assertEvaluatedVariablesValueEqual(input, ['']);
 		});
 	
+		it('should evaluate an empty array', () => {
+			const input = `
+				.MyVar = {}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				[]
+			]);
+		});
+	
 		it('should evaluate an array of string literals', () => {
 			const input = `
 				.MyVar = {
@@ -370,6 +380,33 @@ describe('evaluator', () => {
 				'thing1',
 				'thing2',
 				['thing1', 'thing2']
+			]);
+		});
+	
+		it('should evaluate an array with just comments', () => {
+			const input = `
+				.MyVar = {
+					// Some comment
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				[]
+			]);
+		});
+	
+		it('should evaluate an array with comments and items', () => {
+			const input = `
+				.MyVar = {
+					'a'
+					// 2nd letter
+					'b'
+					// ...and so on...
+				}
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				['a', 'b']
 			]);
 		});
 
