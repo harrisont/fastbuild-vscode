@@ -259,22 +259,11 @@ nonEmptyArrayContents ->
 
 struct -> %structStart structContents %structEnd  {% ([braceOpen, contents, braceClose]) => contents %}
 
-@{%
-
-function createStruct(statements: any[]) {
-    return {
-        type: "struct",
-        statements: statements,
-    }
-}
-
-%}
-
 structContents ->
     # Empty
-    null                      {% (            ) => createStruct([]) %}
-  | whitespaceOrNewline       {% (            ) => createStruct([]) %}
-  | nonEmptyStructStatements  {% ([statements]) => createStruct(statements) %}
+    null                      {% (            ) => { return { type: "struct", statements: []         }; } %}
+  | whitespaceOrNewline       {% (            ) => { return { type: "struct", statements: []         }; } %}
+  | nonEmptyStructStatements  {% ([statements]) => { return { type: "struct", statements: statements }; } %}
 
 nonEmptyStructStatements ->
     # Single item. Optional trailing item separator (",").
