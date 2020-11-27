@@ -250,9 +250,11 @@ arrayContents ->
   | nonEmptyArrayContents  {% ([contents]) => contents %}
 
 nonEmptyArrayContents ->
-    # Single item
-    optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline  {% ([space1, content, space2]) => [content] %}
-    # Multiple items
+    # Single item. Optional trailing item separator (",").
+    optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline                                                          {% ([space1, content, space2                   ]) => [content] %}
+  | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, content, space2, separator, space3]) => [content] %}
+    # Multiple items. The items must be separated by a newline and/or an item separator (",").
+  | optionalWhitespaceOrNewline rhs %optionalWhitespaceAndMandatoryNewline                  nonEmptyArrayContents  {% ([space1, first, space2,            rest]) => [first, ...rest] %}
   | optionalWhitespaceOrNewline rhs optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
 
 struct -> %structStart structContents %structEnd  {% ([braceOpen, contents, braceClose]) => contents %}

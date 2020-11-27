@@ -1158,7 +1158,26 @@ describe('parser', () => {
 	});
 
 	it('should work on assigning an array of integers', () => {
-		const input = `.MyVar = {1,100}`;
+		const input = `
+			.MyVar = {
+				1
+				100
+			}`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(1, 3, 1, 9),
+				},
+				rhs: [1, 100]
+			}
+		]);
+	});
+
+	it('should work on assigning an array of integers on the same line with commas', () => {
+		const input = `.MyVar = {1,2,3}`;
 		assertParseResultsEqual(input, [
 			{
 				type: 'variableDefinition',
@@ -1167,14 +1186,14 @@ describe('parser', () => {
 					scope: 'current',
 					range: createRange(0, 0, 0, 6),
 				},
-				rhs: [1, 100]
+				rhs: [1, 2, 3]
 			}
 		]);
 	});
 
 	it('should work on assigning an array of integers with whitespace', () => {
 		const input = `
-			.MyVar = {1 , 2,
+			.MyVar = {1 , 2
 						3}
 		`;
 		assertParseResultsEqual(input, [

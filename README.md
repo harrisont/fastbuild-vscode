@@ -40,7 +40,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
-* Support making the item separator (`,`) in arrays optional, if the items on are different lines.
 * Support arrays with comments
 * Fix bug where the hover extends to the end of the line when the RHS is another variable directly, and not a string template (e.g. `.MyVarCopy = .MyVar // Comment`). See `TODO: determine the end` in `server/src/fbuild-grammar.ne`.
 * (In progress) Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).

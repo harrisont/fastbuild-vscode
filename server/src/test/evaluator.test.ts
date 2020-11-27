@@ -330,7 +330,7 @@ describe('evaluator', () => {
 		it('should evaluate an array of string literals', () => {
 			const input = `
 				.MyVar = {
-					'thing1',
+					'thing1'
 					'thing2'
 				}
 				.Copy = .MyVar
@@ -344,7 +344,7 @@ describe('evaluator', () => {
 			const input = `
 				.Type = 'thing'
 				.MyVar = {
-					'$Type$1',
+					'$Type$1'
 					'$Type$2'
 				}
 				.Copy = .MyVar
@@ -361,7 +361,7 @@ describe('evaluator', () => {
 				.Var1 = 'thing1'
 				.Var2 = 'thing2'
 				.MyVar = {
-					.Var1,
+					.Var1
 					.Var2
 				}
 				.Copy = .MyVar
@@ -454,7 +454,7 @@ describe('evaluator', () => {
 				.Struct1 = [.MyInt = 1]
 				.Struct2 = [.MyInt = 2]
 				.MyVar = {
-					.Struct1,
+					.Struct1
 					.Struct2
 				}
 				.Copy = .MyVar
