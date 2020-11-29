@@ -628,7 +628,7 @@ describe('parser', () => {
 		]);
 	});
 
-	it('should work on assigning a struct with an evaluated variable', () => {
+	it('should work on assigning a struct with one evaluated variable', () => {
 		const input = `.MyVar = [.A=.B]`;
 		assertParseResultsEqual(input, [
 			{
@@ -653,6 +653,53 @@ describe('parser', () => {
 								name: 'B',
 								scope: 'current',
 								range: createRange(0, 13, 0, 15),
+							}
+						}
+					],
+				}
+			}
+		]);
+	});
+
+	it('should work on assigning a struct with multiple evaluated variables', () => {
+		const input = `.MyVar = [.A=.B, .C=.D]`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: {
+					type: 'struct',
+					statements: [
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'A',
+								scope: 'current',
+								range: createRange(0, 10, 0, 12),
+							},
+							rhs: {
+								type: 'evaluatedVariable',
+								name: 'B',
+								scope: 'current',
+								range: createRange(0, 13, 0, 15),
+							}
+						},
+						{
+							type: 'variableDefinition',
+							lhs: {
+								name: 'C',
+								scope: 'current',
+								range: createRange(0, 17, 0, 19),
+							},
+							rhs: {
+								type: 'evaluatedVariable',
+								name: 'D',
+								scope: 'current',
+								range: createRange(0, 20, 0, 22),
 							}
 						}
 					],
@@ -1235,6 +1282,34 @@ describe('parser', () => {
 					range: createRange(0, 0, 0, 6),
 				},
 				rhs: [true, false]
+			}
+		]);
+	});
+
+	it('should work on assigning an array of evaluated variables', () => {
+		const input = `.MyVar = {.A, .B}`;
+		assertParseResultsEqual(input, [
+			{
+				type: 'variableDefinition',
+				lhs: {
+					name: 'MyVar',
+					scope: 'current',
+					range: createRange(0, 0, 0, 6),
+				},
+				rhs: [
+					{
+						type: 'evaluatedVariable',
+						name: 'A',
+						scope: 'current',
+						range: createRange(0, 10, 0, 12),
+					},
+					{
+						type: 'evaluatedVariable',
+						name: 'B',
+						scope: 'current',
+						range: createRange(0, 14, 0, 16),
+					}
+				]
 			}
 		]);
 	});
