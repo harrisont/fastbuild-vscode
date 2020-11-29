@@ -36,7 +36,7 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 	* [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
 	* [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
 * Other resources:
-    * [RegExr](https://regexr.com/) regex playgound
+    * [RegEx101](https://regex101.com/): regex playgound
 
 ## TODO
 
