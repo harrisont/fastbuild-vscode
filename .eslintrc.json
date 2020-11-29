@@ -13,6 +13,6 @@
 		"curly": "warn",
 		"quotes": ["error", "single", { "allowTemplateLiterals": true } ],
 		"eqeqeq": "error",
-		"indent": ["warn", "tab", { "SwitchCase": 1 } ]
+		"indent": ["error", 4, { "SwitchCase": 1 } ]
 	}
 }

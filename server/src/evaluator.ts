@@ -14,7 +14,8 @@ export class EvaluationError extends Error {
 
 export type Value = boolean | number | string | Value[] | Struct;
 
-export type Struct = Map<string, Value>;
+export class Struct extends Map<string, Value> {
+}
 
 export interface EvaluatedVariable {
 	value: Value;
@@ -371,7 +372,7 @@ function evaluateStringExpression(parts: (string | any)[], scopeStack: ScopeStac
 
 function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): EvaluatedStruct {
 	let result: EvaluatedStruct = {
-		evaluatedValue: new Map(),
+		evaluatedValue: new Struct(),
 		evaluatedVariables: [],
 		variableReferences: [],
 	};
@@ -381,7 +382,7 @@ function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): Evalua
 	const structScope: Scope = scopeStack.getCurrentScope();
 	scopeStack.pop();
 
-	const evaluatedValue: Struct = new Map<string, Value>();
+	const evaluatedValue = new Struct();
 	for (const [name, variable] of structScope.variables) {
 		evaluatedValue.set(name, variable.value);
 	}

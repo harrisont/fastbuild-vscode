@@ -11,7 +11,8 @@ module.exports = {
 		'plugin:@typescript-eslint/recommended',
 	],
 	rules: {
-		'semi': [2, "always"],
+		'semi': ['error', 'always'],
+		'indent': ['error', 4, { 'SwitchCase': 1 } ],
 		'@typescript-eslint/no-unused-vars': 0,
 		'@typescript-eslint/no-explicit-any': 0,
 		'@typescript-eslint/explicit-module-boundary-types': 0,

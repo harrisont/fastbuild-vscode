@@ -8,6 +8,7 @@ import {
 	evaluate,
 	EvaluatedData,
 	EvaluatedVariable,
+	Struct,
 	Value,
 	VariableReference,
 } from '../evaluator'
@@ -416,7 +417,7 @@ describe('evaluator', () => {
 				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
-				new Map()
+				new Struct()
 			]);
 		});
 	
@@ -430,7 +431,7 @@ describe('evaluator', () => {
 				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					MyBool: true,
 					MyInt: 123,
 					MyStr: 'Hello world!'
@@ -448,7 +449,7 @@ describe('evaluator', () => {
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
 				1,
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					A: 1
 				}))
 			]);
@@ -467,7 +468,7 @@ describe('evaluator', () => {
 			assertEvaluatedVariablesValueEqual(input, [
 				1,
 				2,
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					A1: 1,
 					A2: 2
 				}))
@@ -482,7 +483,7 @@ describe('evaluator', () => {
 				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					MyArray: [1, 2, 3]
 				}))
 			]);
@@ -498,8 +499,8 @@ describe('evaluator', () => {
 				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
-				new Map(Object.entries({
-					MyStruct: new Map(Object.entries({
+				new Struct(Object.entries({
+					MyStruct: new Struct(Object.entries({
 						MyInt: 1
 					}))
 				}))
@@ -517,17 +518,17 @@ describe('evaluator', () => {
 				.Copy = .MyVar
 			`;
 			assertEvaluatedVariablesValueEqual(input, [
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					MyInt: 1,
 				})),
-				new Map(Object.entries({
+				new Struct(Object.entries({
 					MyInt: 2,
 				})),
 				[
-					new Map(Object.entries({
+					new Struct(Object.entries({
 						MyInt: 1,
 					})),
-					new Map(Object.entries({
+					new Struct(Object.entries({
 						MyInt: 2,
 					}))
 				]
