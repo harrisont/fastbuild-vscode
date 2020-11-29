@@ -453,6 +453,26 @@ describe('evaluator', () => {
 				}))
 			]);
 		});
+
+		it('should evaluate a struct with multiple evaluated variables', () => {
+			const input = `
+				.B1 = 1
+				.B2 = 2
+				.MyVar = [
+					.A1 = .B1
+					.A2 = .B2
+				]
+				.Copy = .MyVar
+			`;
+			assertEvaluatedVariablesValueEqual(input, [
+				1,
+				2,
+				new Map(Object.entries({
+					A1: 1,
+					A2: 2
+				}))
+			]);
+		});
 	
 		it('should evaluate a struct containing an array', () => {
 			const input = `
@@ -545,7 +565,7 @@ describe('evaluator', () => {
 			const expectedEvaluatedVariables: EvaluatedVariable[] = [
 				{
 					value: 'MyValue',
-					range: createRange(2, 12, 2, 10000 /*TODO: see known issue in README.md*/),
+					range: createRange(2, 12, 2, 18),
 				}
 			];
 			assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -609,7 +629,7 @@ describe('evaluator', () => {
 					definition: {
 						range: createRange(1, 4, 1, 11),
 					},
-					range: createRange(2, 14, 2, 10000 /*TODO: see known issue in README.md*/),
+					range: createRange(2, 14, 2, 21),
 				},
 				{
 					definition: {

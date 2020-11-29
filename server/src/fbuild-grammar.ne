@@ -52,22 +52,37 @@ main -> lines  {% (d) => d[0] %}
 lines ->
     null  {% () => [] %}
   | whitespaceOrNewline lines  {% ([space, lines]) => lines %}
-  | statementAndOrComment %optionalWhitespaceAndMandatoryNewline lines  {% ([first, space, rest]) => [...first, ...rest] %}
+  | statementAndOrCommentAndNewline lines  {% ([first, rest]) => [...first, ...rest] %}
+
+@{%
+
+class ParseContext {
+    onNextToken: null | ((token:any) => void) = null;
+}
+
+function callOnNextToken(context: ParseContext, token: object) {
+    if (context.onNextToken !== null) {
+        context.onNextToken(token);
+        context.onNextToken = null;
+    }
+}
+
+%}
 
 # Returns either:
 #  * a 1-length array with the item being the statement
 #  * a 0-length array
-statementAndOrComment ->
-    statement                       {% (d) => [d[0]] %}
-  | statement %comment              {% (d) => [d[0]] %}
-  | statement %whitespace %comment  {% (d) => [d[0]] %}
-  | %comment                        {% ()  => [] %}
+statementAndOrCommentAndNewline ->
+    statement                      %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context],                  space2]) => { callOnNextToken(context, space2);  return [statement]; } %}
+  | statement             %comment %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context],         comment, space2]) => { callOnNextToken(context, comment); return [statement]; } %}
+  | statement %whitespace %comment %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, comment, space2]) => { callOnNextToken(context, space1);  return [statement]; } %}
+  |                       %comment %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
 
 statement ->
-    %scopeOrArrayStart  {% () => { return { type: "scopeStart" }; } %}
-  | %scopeOrArrayEnd    {% () => { return { type: "scopeEnd" }; } %}
-  | variableDefinition  {% (d) => d[0] %}
-  | variableAddition    {% (d) => d[0] %}
+    %scopeOrArrayStart  {% () => [ { type: "scopeStart" }, new ParseContext() ] %}
+  | %scopeOrArrayEnd    {% () => [ { type: "scopeEnd"   }, new ParseContext() ] %}
+  | variableDefinition  {% ([valueWithContext]) => valueWithContext %}
+  | variableAddition    {% ([valueWithContext]) => valueWithContext %}
 
 @{%
 
@@ -101,23 +116,23 @@ lhsWithOperatorAddition ->
   | %variableReferenceParentScope  %variableName whitespaceOrNewline %operatorAddition    {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
 
 variableDefinition ->
-    lhsWithOperatorAssignment optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableDefinition", lhs: lhs, rhs: rhs }; } %}
+    lhsWithOperatorAssignment optionalWhitespaceOrNewline rhs  {% ([lhs, space, [rhs, context]]) => { return [ { type: "variableDefinition", lhs: lhs, rhs: rhs }, context ]; } %}
 
 variableAddition ->
-    lhsWithOperatorAddition   optionalWhitespaceOrNewline rhs  {% ([lhs, space, rhs]) => { return { type: "variableAddition",   lhs: lhs, rhs: rhs }; } %}
+    lhsWithOperatorAddition   optionalWhitespaceOrNewline rhs  {% ([lhs, space, [rhs, context]]) => { return [ { type: "variableAddition",   lhs: lhs, rhs: rhs }, context ]; } %}
 
 rhs ->
-    %integer          {% (d) => d[0].value %}
-  | bool              {% (d) => d[0] %}
+    %integer          {% ([token]) => [ token.value, new ParseContext() ] %}
+  | bool              {% ([value]) => [ value,       new ParseContext() ] %}
   # evaluatedVariable is in stringExpression and not rhs in order to remove ambiguity
-  | stringExpression  {% (d) => d[0] %}
-  | array             {% (d) => d[0] %}
-  | struct            {% (d) => d[0] %}
+  | stringExpression  {% ([valueWithContext]) => valueWithContext %}
+  | array             {% ([valueWithContext]) => valueWithContext %}
+  | struct            {% ([valueWithContext]) => valueWithContext %}
 
 @{%
 
 function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
-    return {
+    const evaluatedVariable = {
         type: "evaluatedVariable",
         scope: scope,
         name: varName.value,
@@ -128,18 +143,25 @@ function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
             },
             end: {
                 line: varName.line - 1,
-                // TODO: determine the end. See the known issue in README.md.
-                character: 10000,
+                // Updated by the onNextToken callback
+                character: 0,
             }
-        }
+        },
     };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: any) => {
+        evaluatedVariable.range.end.character = token.col - 1;
+    };
+
+    return [[evaluatedVariable], context];
 }
 
 %}
 
 evaluatedVariable ->
-    %variableReferenceCurrentScope %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "current") ] %}
-  | %variableReferenceParentScope  %variableName  {% ([_, varName]) => [ createEvaluatedVariable(varName, "parent") ] %}
+    %variableReferenceCurrentScope %variableName  {% ([_, varName]) => createEvaluatedVariable(varName, "current") %}
+  | %variableReferenceParentScope  %variableName  {% ([_, varName]) => createEvaluatedVariable(varName, "parent") %}
 
 bool ->
     "true"   {% () => true %}
@@ -158,7 +180,7 @@ interface EvaluatedVariable {
 # e.g. ['hello', ' world'] becomes 'hello world'
 # e.g. [evaluatedVariable] becomes evaluatedVariable
 # e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
-stringExpression -> stringExpressionHelper  {% ([parts]) => {
+stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
     let joinedParts: (string | EvaluatedVariable)[] = [];
     let previousPartIsStringLiteral: boolean = false;
     for (const part of parts) {
@@ -173,31 +195,34 @@ stringExpression -> stringExpressionHelper  {% ([parts]) => {
     }
 
     if (joinedParts.length == 0) {
-        return '';
+        return ['', context];
     } else if (joinedParts.length == 1) {
         if ((typeof joinedParts[0] == "string") ||
             (joinedParts[0].type == "evaluatedVariable"))
         {
-            return joinedParts[0];
+            return [joinedParts[0], context];
         }
     }
 
-    return {
+    let stringExpression = {
         type: 'stringExpression',
         parts: joinedParts,
     };
+
+    return [stringExpression, context];
 } %}
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringExpressionHelper ->
     # Single string
-    stringOrEvaluatedVariable  {% (d) => d[0] %}
+    stringOrEvaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
     # Multiple strings added together
-  | stringOrEvaluatedVariable optionalWhitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([lhs, space1, operator, space2, rhs]) => { return [...lhs, ...rhs]; } %}
+  | stringOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rhs], rhsContext]; } %}
+  | stringOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rhs], rhsContext]; } %}
 
 stringOrEvaluatedVariable ->
-    string             {% (d) => d[0] %}
-  | evaluatedVariable  {% (d) => d[0] %}
+    string             {% ([value]) => [ value, new ParseContext() ] %}
+  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
 
 string ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
@@ -241,42 +266,63 @@ stringContents ->
         }
     } %}
 
-array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, contents, braceClose]) => contents %}
+array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [contents, context], braceClose]) => { callOnNextToken(context, braceClose); return [contents, context]; } %}
 
 arrayContents ->
     # Empty
-    null                 {% () => [] %}
-  | whitespaceOrNewline  {% () => [] %}
-  | nonEmptyArrayContents  {% ([contents]) => contents %}
+    null                 {% () => [[], new ParseContext()] %}
+  | whitespaceOrNewline  {% () => [[], new ParseContext()] %}
+  | nonEmptyArrayContents  {% ([contentsWithContext]) => contentsWithContext %}
 
 nonEmptyArrayContents ->
     # Single item. Optional trailing item separator (",").
-    optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline                                                          {% ([space1, content, space2                   ]) => [content] %}
-  | optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, content, space2, separator, space3]) => [content] %}
+    optionalWhitespaceOrNewline rhs                                                                              {% ([space1, [content, context]                           ]) => {                                      return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rhs whitespaceOrNewline                                                          {% ([space1, [content, context], space2                   ]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rhs                     %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context],         separator, space3]) => { callOnNextToken(context, separator); return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rhs whitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context], space2, separator, space3]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
     # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
-  | optionalWhitespaceOrNewline rhs     %optionalWhitespaceAndMandatoryNewline                  nonEmptyArrayContents  {% ([space1, first, space2,            rest]) => [first, ...rest] %}
-  | optionalWhitespaceOrNewline rhs     optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, first, space2, separator, rest]) => [first, ...rest] %}
+  | optionalWhitespaceOrNewline rhs %optionalWhitespaceAndMandatoryNewline                             nonEmptyArrayContents  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline rhs                                        %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[first, ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline rhs whitespaceOrNewline                    %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
     # Single comment.
-  | optionalWhitespaceOrNewline %comment optionalWhitespaceOrNewline                                   {% () => [] %}
+  | optionalWhitespaceOrNewline %comment optionalWhitespaceOrNewline                                   {% () => [[], new ParseContext()] %}
     # Comment and then another item(s).
-  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyArrayContents  {% ([space, comment, newline, rest]) => [...rest] %}
+  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyArrayContents  {% ([space, comment, newline, [rest, context]]) => [[...rest], context] %}
 
-struct -> %structStart structContents %structEnd  {% ([braceOpen, contents, braceClose]) => contents %}
+struct -> %structStart structContents %structEnd  {% ([braceOpen, [statements, context], braceClose]) => {
+    callOnNextToken(context, braceClose);
+    return [
+        { type: "struct", statements: statements },
+        context
+    ];
+} %}
 
 structContents ->
     # Empty
-    null                      {% (            ) => { return { type: "struct", statements: []         }; } %}
-  | whitespaceOrNewline       {% (            ) => { return { type: "struct", statements: []         }; } %}
-  | nonEmptyStructStatements  {% ([statements]) => { return { type: "struct", statements: statements }; } %}
+    null                      {% () => [ [], new ParseContext() ] %}
+  | whitespaceOrNewline       {% () => [ [], new ParseContext() ] %}
+  | nonEmptyStructStatements  {% ([statementsWithContext]) => statementsWithContext %}
 
 nonEmptyStructStatements ->
     # Single item. Optional trailing item separator (",").
-    optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline                                                          {% ([space1, statement, space2                   ]) => statement %}
-  | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, statement, space2, separator, space3]) => statement %}
+    optionalWhitespaceOrNewline statementAndOptionalComment                                                                              {% ([space1, [statement, context]                           ]) => {                                      return [[statement], context]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline                                                          {% ([space1, [statement, context], space2                   ]) => { callOnNextToken(context, space2);    return [[statement], context]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment                     %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [statement, context],         separator, space3]) => { callOnNextToken(context, separator); return [[statement], context]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [statement, context], space2, separator, space3]) => { callOnNextToken(context, space2);    return [[statement], context]; } %}
     # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
-  | optionalWhitespaceOrNewline statementAndOrComment %optionalWhitespaceAndMandatoryNewline                  nonEmptyStructStatements     {% ([space1, statement, space2,            rest]) => [...statement, ...rest] %}
-  | optionalWhitespaceOrNewline statementAndOrComment optionalWhitespaceOrNewline %arrayOrStructItemSeparator nonEmptyStructStatements     {% ([space1, statement, space2, separator, rest]) => [...statement, ...rest] %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment %optionalWhitespaceAndMandatoryNewline                             nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2,            [restStatements, restContext]]) => { callOnNextToken(firstContext, space2);    return [[firstStatement, ...restStatements], restContext]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment                                        %arrayOrStructItemSeparator nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext],         separator, [restStatements, restContext]]) => { callOnNextToken(firstContext, separator); return [[firstStatement, ...restStatements], restContext]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline                    %arrayOrStructItemSeparator nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, separator, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2);    return [[firstStatement, ...restStatements], restContext]; } %}
+    # Single comment.
+  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline {% () => [[], new ParseContext()] %}
+    # Comment and then another item(s).
+  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements {% ([space, comment, newline, restWithContext]) => restWithContext %}
 
+statementAndOptionalComment ->
+    statement                       {% ([statementWithContext,                ]) => {                                    return statementWithContext; } %}
+  | statement             %comment  {% ([[statement, context],         comment]) => { callOnNextToken(context, comment); return [statement, context]; } %}
+  | statement %whitespace %comment  {% ([[statement, context], space1, comment]) => { callOnNextToken(context, space1);  return [statement, context]; } %}
+  
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
   | %optionalWhitespaceAndMandatoryNewline  {% ([space]) => space %}

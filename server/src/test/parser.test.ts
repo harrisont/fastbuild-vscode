@@ -652,7 +652,7 @@ describe('parser', () => {
 								type: 'evaluatedVariable',
 								name: 'B',
 								scope: 'current',
-								range: createRange(0, 13, 0, 10000 /*TODO: see known issue in README.md*/),
+								range: createRange(0, 13, 0, 15),
 							}
 						}
 					],
@@ -675,7 +675,7 @@ describe('parser', () => {
 					type: 'evaluatedVariable',
 					name: 'OtherVar',
 					scope: 'current',
-					range: createRange(0, 9, 0, 10000 /*TODO: see known issue in README.md*/),
+					range: createRange(0, 9, 0, 18),
 				}
 			}
 		]);
@@ -701,7 +701,7 @@ describe('parser', () => {
 					type: 'evaluatedVariable',
 					name: 'OtherVar',
 					scope: 'current',
-					range: createRange(5, 4, 5, 10000 /*TODO: see known issue in README.md*/),
+					range: createRange(5, 4, 5, 13),
 				}
 			}
 		]);
@@ -1054,7 +1054,7 @@ describe('parser', () => {
 							type: 'evaluatedVariable',
 							name: 'MyVar',
 							scope: 'current',
-							range: createRange(0, 24, 0, 10000 /*TODO: see known issue in README.md*/),
+							range: createRange(0, 24, 0, 30),
 						}
 					]
 				}
@@ -1080,13 +1080,13 @@ describe('parser', () => {
 							type: 'evaluatedVariable',
 							name: 'MyVar1',
 							scope: 'current',
-							range: createRange(0, 24, 0, 10000 /*TODO: see known issue in README.md*/),
+							range: createRange(0, 24, 0, 31),
 						},
 						{
 							type: 'evaluatedVariable',
 							name: 'MyVar2',
 							scope: 'current',
-							range: createRange(0, 34, 0, 10000 /*TODO: see known issue in README.md*/),
+							range: createRange(0, 34, 0, 41),
 						}
 					]
 				}
