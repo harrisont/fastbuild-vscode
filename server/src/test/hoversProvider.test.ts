@@ -3,11 +3,11 @@ import * as assert from 'assert';
 import {
     Struct,
     Value,
-} from '../evaluator'
+} from '../evaluator';
 
 import {
     valueToString,
-} from '../hoversProvider'
+} from '../hoversProvider';
 
 describe('hoversProvider', () => {
     describe('valueToString', () => {
@@ -30,7 +30,7 @@ describe('hoversProvider', () => {
             const value: Value = [];
             const str = valueToString(value);
             assert.strictEqual(
-`{
+                `{
 }`,
                 str);
         });
@@ -39,7 +39,7 @@ describe('hoversProvider', () => {
             const value = ['Hello', 'world'];
             const str = valueToString(value);
             assert.strictEqual(
-`{
+                `{
     "Hello"
     "world"
 }`,
@@ -59,7 +59,7 @@ describe('hoversProvider', () => {
             ];
             const str = valueToString(value);
             assert.strictEqual(
-`{
+                `{
     {
         0
         1
@@ -76,7 +76,7 @@ describe('hoversProvider', () => {
             const value = new Struct();
             const str = valueToString(value);
             assert.strictEqual(
-`[
+                `[
 ]`,
                 str);
         });
@@ -88,7 +88,7 @@ describe('hoversProvider', () => {
             }));
             const str = valueToString(value);
             assert.strictEqual(
-`[
+                `[
     .A = 1
     .B = 2
 ]`,
@@ -108,7 +108,7 @@ describe('hoversProvider', () => {
             }));
             const str = valueToString(value);
             assert.strictEqual(
-`[
+                `[
     .A = [
         .A1 = 1
         .A2 = 2

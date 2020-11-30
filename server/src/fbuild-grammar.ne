@@ -181,14 +181,14 @@ interface EvaluatedVariable {
 # e.g. [evaluatedVariable] becomes evaluatedVariable
 # e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
 stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
-    let joinedParts: (string | EvaluatedVariable)[] = [];
-    let previousPartIsStringLiteral: boolean = false;
+    const joinedParts: (string | EvaluatedVariable)[] = [];
+    let previousPartIsStringLiteral = false;
     for (const part of parts) {
         const isStringLiteral: boolean = (typeof part == "string");
         if (isStringLiteral && previousPartIsStringLiteral) {
-          joinedParts[joinedParts.length - 1] += part;
+            joinedParts[joinedParts.length - 1] += part;
         } else {
-          joinedParts.push(part);
+            joinedParts.push(part);
         }
         
         previousPartIsStringLiteral = isStringLiteral;
@@ -204,7 +204,7 @@ stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
         }
     }
 
-    let stringExpression = {
+    const stringExpression = {
         type: 'stringExpression',
         parts: joinedParts,
     };
