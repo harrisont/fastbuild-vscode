@@ -140,14 +140,14 @@ class ScopeStack {
         }
     }
 
-    setVariableInCurrentScope(name: string, value: Value, lhsRange: SourceRange): ScopeVariable {
+    setVariableInCurrentScope(name: string, value: Value, definitionRange: SourceRange): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
             const variable: ScopeVariable = {
                 value: value,
                 definition: {
-                    range: lhsRange,
+                    range: definitionRange,
                 },
             };
             currentScope.variables.set(name, variable);
@@ -283,6 +283,24 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
             case 'scopeEnd':
                 scopeStack.pop();
                 break;
+            case 'using': {
+                if (!statement.struct.type || statement.struct.type !== 'evaluatedVariable') {
+                    throw new EvaluationError(`'Using' parameter must be an evaluated variable`);
+                }
+                const evaluated = evaluateEvaluatedVariable(statement.struct, scopeStack);
+                result.evaluatedVariables.push(evaluated.evaluatedVariable);
+                result.variableReferences.push(evaluated.variableReference);
+
+                const struct = evaluated.evaluatedVariable.value;
+                if (!(struct instanceof Struct)) {
+                    throw new EvaluationError(`'Using' parameter must be a struct`);
+                }
+                for (const [varName, varValue] of struct) {
+                    scopeStack.setVariableInCurrentScope(varName, varValue, statement.range);
+                }
+
+                break;
+            }
         }
     }
 

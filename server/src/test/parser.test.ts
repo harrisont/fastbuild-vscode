@@ -1340,4 +1340,177 @@ describe('parser', () => {
             }
         ]);
     });
+
+    describe('functions', () => {
+        it('Call Using outside a struct', () => {
+            const input = `
+                .MyVar = [
+                    .MyBool = true
+                ]
+                Using(.MyVar)
+            `;
+            assertParseResultsEqual(input, [
+                {
+                    type: 'variableDefinition',
+                    lhs: {
+                        name: 'MyVar',
+                        scope: 'current',
+                        range: createRange(1, 16, 1, 22),
+                    },
+                    rhs: {
+                        type: 'struct',
+                        statements: [
+                            {
+                                type: 'variableDefinition',
+                                lhs: {
+                                    name: 'MyBool',
+                                    scope: 'current',
+                                    range: createRange(2, 20, 2, 27),
+                                },
+                                rhs: true
+                            }
+                        ],
+                    }
+                },
+                {
+                    type: 'using',
+                    struct: {
+                        type: 'evaluatedVariable',
+                        name: 'MyVar',
+                        scope: 'current',
+                        range: createRange(4, 22, 4, 28),
+                    },
+                    range: {
+                        start: {
+                            line: 4,
+                            character: 16
+                        },
+                        end: {
+                            line: 4,
+                            character: 29
+                        }
+                    },
+                }
+            ]);
+        });
+
+        it('Call Using, with whitespace, outside a struct', () => {
+            const input = `
+                .MyVar = [
+                    .MyBool = true
+                ]
+                Using  (  .MyVar  )
+            `;
+            assertParseResultsEqual(input, [
+                {
+                    type: 'variableDefinition',
+                    lhs: {
+                        name: 'MyVar',
+                        scope: 'current',
+                        range: createRange(1, 16, 1, 22),
+                    },
+                    rhs: {
+                        type: 'struct',
+                        statements: [
+                            {
+                                type: 'variableDefinition',
+                                lhs: {
+                                    name: 'MyBool',
+                                    scope: 'current',
+                                    range: createRange(2, 20, 2, 27),
+                                },
+                                rhs: true
+                            }
+                        ],
+                    }
+                },
+                {
+                    type: 'using',
+                    struct: {
+                        type: 'evaluatedVariable',
+                        name: 'MyVar',
+                        scope: 'current',
+                        range: createRange(4, 26, 4, 32),
+                    },
+                    range: {
+                        start: {
+                            line: 4,
+                            character: 16
+                        },
+                        end: {
+                            line: 4,
+                            character: 35
+                        }
+                    },
+                }
+            ]);
+        });
+    
+        it('Call Using inside a struct', () => {
+            const input = `
+                .MyVar = [
+                    .MyBool = true
+                ]
+                .Other = [
+                    Using(.MyVar)
+                ]
+            `;
+            assertParseResultsEqual(input, [
+                {
+                    type: 'variableDefinition',
+                    lhs: {
+                        name: 'MyVar',
+                        scope: 'current',
+                        range: createRange(1, 16, 1, 22),
+                    },
+                    rhs: {
+                        type: 'struct',
+                        statements: [
+                            {
+                                type: 'variableDefinition',
+                                lhs: {
+                                    name: 'MyBool',
+                                    scope: 'current',
+                                    range: createRange(2, 20, 2, 27),
+                                },
+                                rhs: true
+                            }
+                        ],
+                    }
+                },
+                {
+                    type: 'variableDefinition',
+                    lhs: {
+                        name: 'Other',
+                        scope: 'current',
+                        range: createRange(4, 16, 4, 22),
+                    },
+                    rhs: {
+                        type: 'struct',
+                        statements: [
+                            {
+                                type: 'using',
+                                struct: {
+                                    type: 'evaluatedVariable',
+                                    name: 'MyVar',
+                                    scope: 'current',
+                                    range: createRange(5, 26, 5, 32),
+                                },
+                                range: {
+                                    start: {
+                                        line: 5,
+                                        character: 20
+                                    },
+                                    end: {
+                                        line: 5,
+                                        character: 33
+                                    }
+                                },
+                            }
+                        ],
+                    }
+                }
+            ]);
+        });
+    });
 });

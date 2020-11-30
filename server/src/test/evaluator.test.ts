@@ -670,5 +670,113 @@ describe('evaluator', () => {
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
+
+        it('should be detected in an evaluated variable from a Using', () => {
+            const input = `
+                .MyStruct = [
+                    .StructVar = 1
+                ]
+                
+                Using( .MyStruct )
+                .Copy = .StructVar
+            `;
+            const result: EvaluatedData = evaluate(input);
+            const expectedReferences: VariableReference[] = [
+                // .StructVar = 1
+                {
+                    definition: {
+                        range: createRange(2, 20, 2, 30),
+                    },
+                    range: createRange(2, 20, 2, 30),
+                },
+                // .MyStruct = [...]
+                {
+                    definition: {
+                        range: createRange(1, 16, 1, 25),
+                    },
+                    range: createRange(1, 16, 1, 25),
+                },
+                // Using( .MyStruct )
+                {
+                    definition: {
+                        range: createRange(1, 16, 1, 25),
+                    },
+                    range: createRange(5, 23, 5, 32),
+                },
+                // .Copy = .StructVar (RHS)
+                {
+                    definition: {
+                        // "Using( .MyStruct )"
+                        range: createRange(5, 16, 5, 34),
+                    },
+                    range: createRange(6, 24, 6, 34),
+                },
+                // .Copy = .StructVar (LHS)
+                {
+                    definition: {
+                        range: createRange(6, 16, 6, 21),
+                    },
+                    range: createRange(6, 16, 6, 21),
+                }
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
+        });
+    });
+
+    describe('functions', () => {
+        it('Call Using outside a struct', () => {
+            const input = `
+                .MyStruct = [
+                    .MyBool = true
+                    .MyInt = 1
+                    .MyString = 'hello'
+                ]
+                Using(.MyStruct)
+                .MyBoolCopy = .MyBool
+                .MyIntCopy = .MyInt
+                .MyStringCopy = .MyString
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                new Struct(Object.entries({
+                    MyBool: true,
+                    MyInt: 1,
+                    MyString: 'hello'
+                })),
+                true,
+                1,
+                'hello'
+            ]);
+        });
+    
+        it('Call Using inside a struct', () => {
+            const input = `
+                .MyVar = 'fun'
+                .MyStruct = [
+                    .MyBool = true
+                    .MyInt = 1
+                    .MyString = 'hello'
+                    .MyEvaluatedVar = .MyVar
+                ]
+                .Other = [
+                    Using(.MyStruct)
+                ]
+                .Copy = .Other
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'fun',
+                new Struct(Object.entries({
+                    MyBool: true,
+                    MyInt: 1,
+                    MyString: 'hello',
+                    MyEvaluatedVar: 'fun'
+                })),
+                new Struct(Object.entries({
+                    MyBool: true,
+                    MyInt: 1,
+                    MyString: 'hello',
+                    MyEvaluatedVar: 'fun'
+                }))
+            ]);
+        });
     });
 });

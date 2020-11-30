@@ -14,7 +14,9 @@ const lexer = moo.states({
         integer: { match: /0|[1-9][0-9]*/, value: (s: string) => parseInt(s) },
         singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
-        variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
+        variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, type: moo.keywords({
+            'keywordUsing': 'Using',
+        }) },
         variableReferenceCurrentScope: '.',
         variableReferenceParentScope: '^',
         operatorAssignment: '=',
@@ -22,6 +24,8 @@ const lexer = moo.states({
         arrayOrStructItemSeparator: ',',
         structStart: '[',
         structEnd: ']',
+        functionParametersStart: '(',
+        functionParametersEnd: ')',
     },
     singleQuotedStringBody: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -83,21 +87,39 @@ statement ->
   | %scopeOrArrayEnd    {% () => [ { type: "scopeEnd"   }, new ParseContext() ] %}
   | variableDefinition  {% ([valueWithContext]) => valueWithContext %}
   | variableAddition    {% ([valueWithContext]) => valueWithContext %}
+  | functionUsing       {% ([valueWithContext]) => valueWithContext %}
 
 @{%
 
+interface SourceLocation {
+    line: number;
+    character: number;
+}
+
+interface SourceRange {
+    start: SourceLocation;
+    end: SourceLocation;
+}
+
+interface Token {
+    line: number;
+    col: number;
+    value: any;
+}
+
+function createLocation(token: Token): SourceLocation {
+    return {
+        line: token.line - 1,
+        character: token.col - 1
+    };
+}
+
 // Creates a range from tokenStart's location (inclusive) to tokenEnd's location (exclusive).
 // tokenStart and tokenEnd must be lexer tokens.
-function createRange(tokenStart: any, tokenEnd: any) {
+function createRange(tokenStart: Token, tokenEnd: Token): SourceRange {
     return {
-        start: {
-            line: tokenStart.line - 1,
-            character: tokenStart.col - 1
-        },
-        end: {
-            line: tokenEnd.line - 1,
-            character: tokenEnd.col - 1
-        }
+        start: createLocation(tokenStart),
+        end: createLocation(tokenEnd)
     };
 }
 
@@ -131,27 +153,24 @@ rValue ->
 
 @{%
 
-function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
+function createEvaluatedVariable(varNameToken: Token, startToken: Token, scope: ("current" | "parent")) {
     const evaluatedVariable = {
         type: "evaluatedVariable",
         scope: scope,
-        name: varName.value,
+        name: varNameToken.value,
         range: {
-            start: {
-                line: varName.line - 1,
-                character: varName.col - 2,
-            },
+            start: createLocation(startToken),
+            // Updated by the onNextToken callback
             end: {
-                line: varName.line - 1,
-                // Updated by the onNextToken callback
+                line: 0,
                 character: 0,
             }
         },
     };
 
     const context = new ParseContext();
-    context.onNextToken = (token: any) => {
-        evaluatedVariable.range.end.character = token.col - 1;
+    context.onNextToken = (token: Token) => {
+        evaluatedVariable.range.end = createLocation(token);
     };
 
     return [[evaluatedVariable], context];
@@ -160,8 +179,8 @@ function createEvaluatedVariable(varName: any, scope: ("current" | "parent")) {
 %}
 
 evaluatedVariable ->
-    %variableReferenceCurrentScope %variableName  {% ([_, varName]) => createEvaluatedVariable(varName, "current") %}
-  | %variableReferenceParentScope  %variableName  {% ([_, varName]) => createEvaluatedVariable(varName, "parent") %}
+    %variableReferenceCurrentScope %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "current") %}
+  | %variableReferenceParentScope  %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "parent") %}
 
 bool ->
     "true"   {% () => true %}
@@ -323,6 +342,37 @@ statementAndOptionalComment ->
   | statement             %comment  {% ([[statement, context],         comment]) => { callOnNextToken(context, comment); return [statement, context]; } %}
   | statement %whitespace %comment  {% ([[statement, context], space1, comment]) => { callOnNextToken(context, space1);  return [statement, context]; } %}
   
+
+@{%
+
+function createUsing(struct: object, statementStartToken: Token) {
+    const using = {
+        type: 'using',
+        struct,
+        range: {
+            start: createLocation(statementStartToken),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        using.range.end = createLocation(token);
+    };
+
+    return [using, context];
+}
+
+%}
+
+functionUsing ->
+    %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [[evaluatedVariable], context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName); } %}
+  | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [[evaluatedVariable], context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName); } %}
+
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
   | %optionalWhitespaceAndMandatoryNewline  {% ([space]) => space %}
