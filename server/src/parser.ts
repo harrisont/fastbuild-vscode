@@ -15,7 +15,7 @@ export function isPositionInRange(position: SourcePosition, range: SourceRange):
     return position.line >= range.start.line
         && position.line <= range.end.line
         && position.character >= range.start.character
-        && position.character < range.end.character;
+        && position.character <= range.end.character;
 }
 
 export type Statement = Record<string, any>;
