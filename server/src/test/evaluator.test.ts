@@ -547,11 +547,11 @@ describe('evaluator', () => {
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue1',
-                    range: createRange(3, 22, 3, 30),
+                    range: createRange(3, 34, 3, 42),
                 },
                 {
                     value: 'MyValue2',
-                    range: createRange(3, 31, 3, 39),
+                    range: createRange(3, 43, 3, 51),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -566,7 +566,7 @@ describe('evaluator', () => {
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue',
-                    range: createRange(2, 12, 2, 18),
+                    range: createRange(2, 24, 2, 30),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -582,9 +582,9 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 10),
+                        range: createRange(1, 16, 1, 22),
                     },
-                    range: createRange(1, 4, 1, 10),
+                    range: createRange(1, 16, 1, 22),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -599,15 +599,15 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 10),
+                        range: createRange(1, 16, 1, 22),
                     },
-                    range: createRange(1, 4, 1, 10),
+                    range: createRange(1, 16, 1, 22),
                 },
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 10),
+                        range: createRange(1, 16, 1, 22),
                     },
-                    range: createRange(2, 4, 2, 10),
+                    range: createRange(2, 16, 2, 22),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -622,21 +622,21 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 11),
+                        range: createRange(1, 16, 1, 23),
                     },
-                    range: createRange(1, 4, 1, 11),
+                    range: createRange(1, 16, 1, 23),
                 },
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 11),
+                        range: createRange(1, 16, 1, 23),
                     },
-                    range: createRange(2, 14, 2, 21),
+                    range: createRange(2, 26, 2, 33),
                 },
                 {
                     definition: {
-                        range: createRange(2, 4, 2, 11),
+                        range: createRange(2, 16, 2, 23),
                     },
-                    range: createRange(2, 4, 2, 11),
+                    range: createRange(2, 16, 2, 23),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -651,21 +651,21 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 11),
+                        range: createRange(1, 16, 1, 23),
                     },
-                    range: createRange(1, 4, 1, 11),
+                    range: createRange(1, 16, 1, 23),
                 },
                 {
                     definition: {
-                        range: createRange(1, 4, 1, 11),
+                        range: createRange(1, 16, 1, 23),
                     },
-                    range: createRange(2, 15, 2, 23),
+                    range: createRange(2, 27, 2, 35),
                 },
                 {
                     definition: {
-                        range: createRange(2, 4, 2, 11),
+                        range: createRange(2, 16, 2, 23),
                     },
-                    range: createRange(2, 4, 2, 11),
+                    range: createRange(2, 16, 2, 23),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);

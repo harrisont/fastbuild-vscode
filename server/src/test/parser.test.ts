@@ -101,7 +101,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: 123
             }
@@ -391,7 +391,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -401,7 +401,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyBool',
                                 scope: 'current',
-                                range: createRange(2, 4, 2, 11),
+                                range: createRange(2, 16, 2, 23),
                             },
                             rhs: true
                         }
@@ -425,7 +425,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -435,7 +435,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyBool',
                                 scope: 'current',
-                                range: createRange(2, 4, 2, 11),
+                                range: createRange(2, 16, 2, 23),
                             },
                             rhs: true
                         },
@@ -444,7 +444,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyInt',
                                 scope: 'current',
-                                range: createRange(3, 4, 3, 10),
+                                range: createRange(3, 16, 3, 22),
                             },
                             rhs: 123
                         },
@@ -453,7 +453,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyStr',
                                 scope: 'current',
-                                range: createRange(4, 4, 4, 10),
+                                range: createRange(4, 16, 4, 22),
                             },
                             rhs: 'Hello world!'
                         }
@@ -477,7 +477,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -487,7 +487,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyBool',
                                 scope: 'current',
-                                range: createRange(2, 4, 2, 11),
+                                range: createRange(2, 16, 2, 23),
                             },
                             rhs: true
                         },
@@ -496,7 +496,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyInt',
                                 scope: 'current',
-                                range: createRange(3, 4, 3, 10),
+                                range: createRange(3, 16, 3, 22),
                             },
                             rhs: 123
                         },
@@ -505,7 +505,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyStr',
                                 scope: 'current',
-                                range: createRange(4, 4, 4, 10),
+                                range: createRange(4, 16, 4, 22),
                             },
                             rhs: 'Hello world!'
                         },
@@ -530,7 +530,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -540,7 +540,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyBool',
                                 scope: 'current',
-                                range: createRange(3, 4, 3, 11),
+                                range: createRange(3, 16, 3, 23),
                             },
                             rhs: true
                         },
@@ -549,7 +549,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyInt',
                                 scope: 'current',
-                                range: createRange(5, 4, 5, 10),
+                                range: createRange(5, 16, 5, 22),
                             },
                             rhs: 123
                         }
@@ -571,7 +571,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -581,7 +581,7 @@ describe('parser', () => {
                             lhs: {
                                 name: 'MyBool',
                                 scope: 'current',
-                                range: createRange(2, 4, 2, 11),
+                                range: createRange(2, 16, 2, 23),
                             },
                             rhs: true
                         }
@@ -742,13 +742,13 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'evaluatedVariable',
                     name: 'OtherVar',
                     scope: 'current',
-                    range: createRange(5, 4, 5, 13),
+                    range: createRange(5, 16, 5, 25),
                 }
             }
         ]);
@@ -779,7 +779,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: 123
             }
@@ -798,7 +798,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(2, 3, 2, 9),
+                    range: createRange(2, 12, 2, 18),
                 },
                 rhs: 123
             }
@@ -849,7 +849,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar1',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 10),
+                    range: createRange(1, 12, 1, 19),
                 },
                 rhs: 1
             },
@@ -858,7 +858,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar2',
                     scope: 'current',
-                    range: createRange(5, 3, 5, 10),
+                    range: createRange(5, 12, 5, 19),
                 },
                 rhs: 2
             }
@@ -895,7 +895,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(2, 4, 2, 10),
+                    range: createRange(2, 16, 2, 22),
                 },
                 rhs: 123
             },
@@ -916,7 +916,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 13),
+                    range: createRange(1, 12, 1, 22),
                 },
                 rhs: 'hello'
             },
@@ -925,7 +925,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(2, 3, 2, 13),
+                    range: createRange(2, 12, 2, 22),
                 },
                 rhs: ' world'
             }
@@ -945,7 +945,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 13),
+                    range: createRange(1, 12, 1, 22),
                 },
                 rhs: 'hello'
             },
@@ -957,7 +957,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'parent',
-                    range: createRange(3, 4, 3, 14),
+                    range: createRange(3, 16, 3, 26),
                 },
                 rhs: ' world'
             },
@@ -979,7 +979,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyName',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 10),
+                    range: createRange(1, 12, 1, 19),
                 },
                 rhs: 'Bobo'
             },
@@ -988,7 +988,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(2, 3, 2, 13),
+                    range: createRange(2, 12, 2, 22),
                 },
                 rhs: 'hello'
             },
@@ -997,7 +997,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(3, 3, 3, 13),
+                    range: createRange(3, 12, 3, 22),
                 },
                 rhs: {
                     type: 'stringExpression',
@@ -1007,7 +1007,7 @@ describe('parser', () => {
                             type: 'evaluatedVariable',
                             name: 'MyName',
                             scope: 'current',
-                            range: createRange(3, 18, 3, 26),
+                            range: createRange(3, 27, 3, 35),
                         }
                     ]
                 }
@@ -1026,7 +1026,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 13),
+                    range: createRange(1, 12, 1, 22),
                 },
                 rhs: 'hello world'
             }
@@ -1060,7 +1060,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyMessage',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 13),
+                    range: createRange(1, 12, 1, 22),
                 },
                 rhs: 'hello world!'
             }
@@ -1197,7 +1197,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: [1]
             }
@@ -1216,7 +1216,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: [1, 100]
             }
@@ -1249,7 +1249,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: [1, 2, 3]
             }
@@ -1325,7 +1325,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(1, 3, 1, 9),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: []
             },
@@ -1334,7 +1334,7 @@ describe('parser', () => {
                 lhs: {
                     name: 'MyVar',
                     scope: 'current',
-                    range: createRange(2, 3, 2, 9),
+                    range: createRange(2, 12, 2, 18),
                 },
                 rhs: 'cow'
             }
