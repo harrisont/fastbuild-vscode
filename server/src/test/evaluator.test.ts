@@ -582,9 +582,11 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(1, 16, 1, 22),
+                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -599,15 +601,19 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(1, 16, 1, 22),
+                    usingRange: null,
                 },
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(2, 16, 2, 22),
+                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -622,21 +628,27 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(1, 16, 1, 23),
+                    usingRange: null,
                 },
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(2, 26, 2, 33),
+                    usingRange: null,
                 },
                 {
                     definition: {
+                        id: 2,
                         range: createRange(2, 16, 2, 23),
                     },
                     range: createRange(2, 16, 2, 23),
+                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -651,21 +663,27 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(1, 16, 1, 23),
+                    usingRange: null,
                 },
                 {
                     definition: {
+                        id: 1,
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(2, 27, 2, 35),
+                    usingRange: null,
                 },
                 {
                     definition: {
+                        id: 2,
                         range: createRange(2, 16, 2, 23),
                     },
                     range: createRange(2, 16, 2, 23),
+                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -685,38 +703,49 @@ describe('evaluator', () => {
                 // .StructVar = 1
                 {
                     definition: {
+                        id: 1,
                         range: createRange(2, 20, 2, 30),
                     },
                     range: createRange(2, 20, 2, 30),
+                    usingRange: null,
                 },
                 // .MyStruct = [...]
                 {
                     definition: {
+                        id: 2,
                         range: createRange(1, 16, 1, 25),
                     },
                     range: createRange(1, 16, 1, 25),
+                    usingRange: null,
                 },
                 // Using( .MyStruct )
                 {
                     definition: {
+                        id: 2,
                         range: createRange(1, 16, 1, 25),
                     },
                     range: createRange(5, 23, 5, 32),
+                    usingRange: null,
                 },
                 // .Copy = .StructVar (RHS)
                 {
+                    // .StructVar = 1
                     definition: {
-                        // "Using( .MyStruct )"
-                        range: createRange(5, 16, 5, 34),
+                        id: 1,
+                        range: createRange(2, 20, 2, 30),
                     },
                     range: createRange(6, 24, 6, 34),
+                    // "Using( .MyStruct )"
+                    usingRange: createRange(5, 16, 5, 34),
                 },
                 // .Copy = .StructVar (LHS)
                 {
                     definition: {
+                        id: 3,
                         range: createRange(6, 16, 6, 21),
                     },
                     range: createRange(6, 16, 6, 21),
+                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);

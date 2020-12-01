@@ -41,7 +41,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 ## TODO
 
 * (In progress) Support structs ([docs](https://www.fastbuild.org/docs/syntaxguide.html#structs)).
-    * After `Using` a struct, support go-to-definition for the struct's members.
     * Struct addition
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
 * Support multiple documents. Right now everything assumes a single document.

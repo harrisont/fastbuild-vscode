@@ -32,27 +32,32 @@ export class ReferenceProvider {
         }
 
         // TODO: also match params.textDocument.uri
-        const variableReference = this.getVariableReferenceAtPosition(params.position);
-        if (variableReference === null) {
+        const variableReferenceAtPosition = this.getVariableReferenceAtPosition(params.position);
+        if (variableReferenceAtPosition === null) {
             return null;
         }
 
         // Search algorithm: for each variable references, check if the variable definition is the same as this one.
         // This is not very optimized.
 
-        const variableDefinition = variableReference.definition;
         const locations: Location[] = [];
 
         const variableReferences = this.evaluatedData?.variableReferences ?? [];
-        for (let i = 0; i < variableReferences.length; i++)
+        for (const variableReference of variableReferences)
         {
-            const variableReference = variableReferences[i];
-            if (variableReference.definition === variableDefinition) {
+            if (variableReference.definition.id === variableReferenceAtPosition.definition.id) {
                 locations.push({
                     uri: this.uri,
                     range: variableReference.range
                 });
             }
+        }
+
+        if (variableReferenceAtPosition.usingRange) {
+            locations.push({
+                uri: this.uri,
+                range: variableReferenceAtPosition.usingRange
+            });
         }
 
         return locations;

@@ -23,17 +23,21 @@ export interface EvaluatedVariable {
 }
 
 export interface VariableDefinition {
+    id: number;
     range: SourceRange;
 }
 
 export interface VariableReference {
     definition: VariableDefinition;
     range: SourceRange;
+    // Set when the reference is to a variable defined in a struct brought into scope from a `Using` call.
+    usingRange: SourceRange | null;
 }
 
 export interface EvaluatedData {
     evaluatedVariables: EvaluatedVariable[];
     variableReferences: VariableReference[];
+    variableDefinitions: Map<string, VariableDefinition>;
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -55,6 +59,8 @@ interface EvaluatedRValue {
     value: Value;
     evaluatedVariables: EvaluatedVariable[];
     variableReferences: VariableReference[];
+    // Used for structs.
+    variableDefinitions: Map<string, VariableDefinition>;
 }
 
 interface EvaluatedStringExpression {
@@ -63,20 +69,38 @@ interface EvaluatedStringExpression {
     variableReferences: VariableReference[];
 }
 
-interface EvaluatedEvaluatedVariable {
-    evaluatedVariable: EvaluatedVariable;
-    variableReference: VariableReference;
+class EvaluatedEvaluatedVariable {
+    readonly evaluatedVariable: EvaluatedVariable;
+    readonly variableReference: VariableReference;
+
+    constructor(readonly scopeVariable: ScopeVariable, referenceRange: SourceRange) {
+        this.evaluatedVariable = {
+            value: scopeVariable.value,
+            range: referenceRange,
+        };
+
+        this.variableReference = {
+            definition: scopeVariable.definition,
+            usingRange: scopeVariable.usingRange,
+            range: referenceRange,
+        };
+    }
 }
 
 interface EvaluatedStruct {
     evaluatedValue: Struct;
     evaluatedVariables: EvaluatedVariable[];
     variableReferences: VariableReference[];
+    variableDefinitions: Map<string, VariableDefinition>;
 }
 
 interface ScopeVariable {
     value: Value;
     definition: VariableDefinition;
+    // Set if `value` is a Struct.
+    structMemberDefinitions: Map<string, VariableDefinition> | null;
+    // Set if the variable was created from a `Using` statement.
+    usingRange: SourceRange | null;
 }
 
 interface Scope {
@@ -85,6 +109,7 @@ interface Scope {
 
 class ScopeStack {
     private stack: Array<Scope> = []
+    private nextVariableDefinitionId = 1;
 
     constructor() {
         this.push();
@@ -140,15 +165,15 @@ class ScopeStack {
         }
     }
 
-    setVariableInCurrentScope(name: string, value: Value, definitionRange: SourceRange): ScopeVariable {
+    setVariableInCurrentScope(name: string, value: Value, definition: VariableDefinition): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
             const variable: ScopeVariable = {
                 value: value,
-                definition: {
-                    range: definitionRange,
-                },
+                definition: definition,
+                structMemberDefinitions: null,
+                usingRange: null,
             };
             currentScope.variables.set(name, variable);
             return variable;
@@ -188,6 +213,15 @@ class ScopeStack {
         }
         return this.stack[this.stack.length - 2];
     }
+
+    createVariableDefinition(range: SourceRange): VariableDefinition {
+        const id = this.nextVariableDefinitionId;
+        this.nextVariableDefinitionId += 1;
+        return {
+            id,
+            range,
+        };
+    }
 }
 
 export function evaluate(input: string): EvaluatedData {
@@ -200,6 +234,7 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
     const result: EvaluatedData = {
         evaluatedVariables: [],
         variableReferences: [],
+        variableDefinitions: new Map<string, VariableDefinition>(),
     };
 
     for (const statement of statements) {
@@ -208,20 +243,33 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 const evaluatedRhs = evaluateRValue(statement.rhs, scopeStack);
                 result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
                 result.variableReferences.push(...evaluatedRhs.variableReferences);
+                for (const [varName, varDefinition] of evaluatedRhs.variableDefinitions) {
+                    result.variableDefinitions.set(varName, varDefinition);
+                }
 
                 const lhs: VariableDefinitionLhs = statement.lhs;
                 let variable: ScopeVariable | null = null;
                 if (lhs.scope == 'current') {
-                    variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs.value, lhs.range);
+                    const definition = scopeStack.createVariableDefinition(lhs.range);
+                    variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs.value, definition);
                 } else {
                     variable = scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs.value);
+                }
+
+                if (evaluatedRhs.value instanceof Struct) {
+                    variable.structMemberDefinitions = evaluatedRhs.variableDefinitions;
                 }
 
                 // The definition's LHS is a variable reference.
                 result.variableReferences.push({
                     definition: variable.definition,
                     range: lhs.range,
+                    usingRange: null,
                 });
+
+                
+                // The definition's LHS is a variable definition.
+                result.variableDefinitions.set(lhs.name, variable.definition);
 
                 break;
             }
@@ -272,7 +320,8 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 // The addition's LHS is a variable reference.
                 result.variableReferences.push({
                     definition: lhsDefinition,
-                    range: lhs.range
+                    range: lhs.range,
+                    usingRange: null,
                 });
 
                 break;
@@ -295,8 +344,18 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 if (!(struct instanceof Struct)) {
                     throw new EvaluationError(`'Using' parameter must be a struct`);
                 }
+
+                const structVariable = evaluated.scopeVariable;
+                if (structVariable.structMemberDefinitions === null) {
+                    throw new EvaluationError(`'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
+                }
                 for (const [varName, varValue] of struct) {
-                    scopeStack.setVariableInCurrentScope(varName, varValue, statement.range);
+                    const definition = structVariable.structMemberDefinitions.get(varName);
+                    if (definition === undefined) {
+                        throw new EvaluationError(`'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
+                    }
+                    const variable = scopeStack.setVariableInCurrentScope(varName, varValue, definition);
+                    variable.usingRange = statement.range;
                 }
 
                 break;
@@ -308,61 +367,67 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 }
 
 function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
-    const result: EvaluatedRValue = {
-        value: '',
-        evaluatedVariables: [],
-        variableReferences: [],
-    };
-
     if (rValue.type && rValue.type == 'stringExpression') {
         const evaluated = evaluateStringExpression(rValue.parts, scopeStack);
-        result.value = evaluated.evaluatedString;
-        result.evaluatedVariables.push(...evaluated.evaluatedVariables);
-        result.variableReferences.push(...evaluated.variableReferences);
+        return {
+            value: evaluated.evaluatedString,
+            evaluatedVariables: evaluated.evaluatedVariables,
+            variableReferences: evaluated.variableReferences,
+            variableDefinitions: new Map<string, VariableDefinition>(),
+        };
     } else if (rValue.type && rValue.type == 'struct') {
         const evaluated = evaluateStruct(rValue.statements, scopeStack);
-        result.value = evaluated.evaluatedValue;
-        result.evaluatedVariables.push(...evaluated.evaluatedVariables);
-        result.variableReferences.push(...evaluated.variableReferences);
+        return {
+            value: evaluated.evaluatedValue,
+            evaluatedVariables: evaluated.evaluatedVariables,
+            variableReferences: evaluated.variableReferences,
+            variableDefinitions: evaluated.variableDefinitions,
+        };
     } else if (rValue.type && rValue.type == 'evaluatedVariable') {
         const evaluated = evaluateEvaluatedVariable(rValue, scopeStack);
-        result.value = evaluated.evaluatedVariable.value;
-        result.evaluatedVariables.push(evaluated.evaluatedVariable);
-        result.variableReferences.push(evaluated.variableReference);
+        return {
+            value: evaluated.evaluatedVariable.value,
+            evaluatedVariables: [evaluated.evaluatedVariable],
+            variableReferences: [evaluated.variableReference],
+            variableDefinitions: new Map<string, VariableDefinition>(),
+        };
     } else if (rValue instanceof Array) {
+        const result: EvaluatedRValue = {
+            value: [],
+            evaluatedVariables: [],
+            variableReferences: [],
+            variableDefinitions: new Map<string, VariableDefinition>(),
+        };
         result.value = [];
         for (const rvalue of rValue) {
             const evaluated = evaluateRValue(rvalue, scopeStack);
             result.value.push(evaluated.value);
             result.evaluatedVariables.push(...evaluated.evaluatedVariables);
             result.variableReferences.push(...evaluated.variableReferences);
+            for (const [varName, varDefinition] of evaluated.variableDefinitions) {
+                result.variableDefinitions.set(varName, varDefinition);
+            }
         }
+        return result;
     } else {
         // Primitive (boolean | number | string)
-        result.value = rValue;
+        return {
+            value: rValue,
+            evaluatedVariables: [],
+            variableReferences: [],
+            variableDefinitions: new Map<string, VariableDefinition>(),
+        };
     }
-
-    return result;
 }
 
 function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, scopeStack: ScopeStack): EvaluatedEvaluatedVariable {
     const variableName: string = parsedEvaluatedVariable.name;
+    
     const variable = (parsedEvaluatedVariable.scope == 'current')
         ? scopeStack.getVariableStartingFromCurrentScope(variableName)
         : scopeStack.getVariableInParentScope(variableName);
 
-    const range = parsedEvaluatedVariable.range;
-
-    return {
-        evaluatedVariable: {
-            value: variable.value,
-            range: range
-        },
-        variableReference: {
-            definition: variable.definition,
-            range: range
-        },
-    };
+    return new EvaluatedEvaluatedVariable(variable, parsedEvaluatedVariable.range);
 }
 
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
@@ -389,12 +454,6 @@ function evaluateStringExpression(parts: (string | any)[], scopeStack: ScopeStac
 }
 
 function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): EvaluatedStruct {
-    const result: EvaluatedStruct = {
-        evaluatedValue: new Struct(),
-        evaluatedVariables: [],
-        variableReferences: [],
-    };
-
     scopeStack.push();
     const evaluatedStatements = evaluateStatements(statements, scopeStack);
     const structScope: Scope = scopeStack.getCurrentScope();
@@ -402,12 +461,14 @@ function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): Evalua
 
     const evaluatedValue = new Struct();
     for (const [name, variable] of structScope.variables) {
+        //variable.definition.id
         evaluatedValue.set(name, variable.value);
     }
 
-    result.evaluatedValue = evaluatedValue;
-    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-    result.variableReferences.push(...evaluatedStatements.variableReferences);
-
-    return result;
+    return {
+        evaluatedValue: evaluatedValue,
+        evaluatedVariables: evaluatedStatements.evaluatedVariables,
+        variableReferences: evaluatedStatements.variableReferences,
+        variableDefinitions: evaluatedStatements.variableDefinitions,
+    };
 }
