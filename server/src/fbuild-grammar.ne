@@ -3,8 +3,8 @@ const moo = require('moo');
 
 const lexer = moo.states({
     main: {
-        whitespace: /[ \t]+/,
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
+        whitespace: /[ \t]+/,
         comment: /(?:;|\/\/).*/,
         // The symbols for array/scope delimeters are the same.
         // We could distinguish them by pushing state when we're on the RHS of an operator (assignment/addition), to know that the symbols are array delimeters.
@@ -380,4 +380,3 @@ whitespaceOrNewline ->
 optionalWhitespaceOrNewline ->
     null                 {% () => null %}
   | whitespaceOrNewline  {% () => null %}
-

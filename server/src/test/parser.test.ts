@@ -108,6 +108,23 @@ describe('parser', () => {
         ]);
     });
 
+    it('should work on assigning an integer across multiple lines with a space after the LHS', () => {
+        // Use a unicode space instead of a literal space to prevent people from accidentally removing the trailing whitespace.
+        const input = `.MyVar\u{20}
+=123`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: 'MyVar',
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: 123
+            }
+        ]);
+    });
+
     it('should work on assigning true', () => {
         const input = `.MyVar = true`;
         assertParseResultsEqual(input, [
