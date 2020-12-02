@@ -45,10 +45,32 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support dynamic variable names ([docs](https://www.fastbuild.org/docs/syntaxguide.html#dynamic_construction)).
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
-* Support [functions](https://www.fastbuild.org/docs/functions.html):
+* Support functions that change how we evaluate:
     * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html))
-    * `Using` ([docs](https://www.fastbuild.org/docs/functions/using.html))
     * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
+* Support functions that define targets. We only need to support them to the extent that we detect the target name and handle the function body's statements.
+    * `Alias`
+    * `Compiler`
+    * `Copy`
+    * `CopyDir`
+    * `CSAssembly`
+    * `DLL`
+    * `Exec`
+    * `Executable`
+    * `Library`
+    * `ObjectList`
+    * `RemoveDir`
+    * `Test`
+    * `TextFile`
+    * `Unity`
+    * `VCXProject`
+    * `VSProjectExternal`
+    * `VSSolution`
+    * `XCodeProject`
+* Support functions that take immediate actions but do not change how we evaluate.
+    * `Error`
+    * `Print`
+    * `Settings`
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
