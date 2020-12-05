@@ -80,6 +80,7 @@
 			],
 			"group": "build",
 			"presentation": {
+				"reveal": "silent",
 				"clear": true
 			},
 			"problemMatcher": []

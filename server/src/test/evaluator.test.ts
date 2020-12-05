@@ -28,7 +28,7 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
 function assertEvaluatedVariablesValueEqual(input: string, expectedValues: Value[]): void {
-    const result: EvaluatedData = evaluate(input);
+    const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
 }
@@ -126,7 +126,7 @@ describe('evaluator', () => {
                 .Var2 = .Var1
             `;
             assert.throws(
-                () => evaluate(input),
+                () => evaluate(input, { enableDiagnostics: true }),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
@@ -152,7 +152,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input),
+                () => evaluate(input, { enableDiagnostics: true }),
                 {
                     name: 'EvaluationError',
                     message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -170,7 +170,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input),
+                () => evaluate(input, { enableDiagnostics: true }),
                 {
                     name: 'EvaluationError',
                     message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -288,7 +288,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input),
+                () => evaluate(input, { enableDiagnostics: true }),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
@@ -303,7 +303,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input),
+                () => evaluate(input, { enableDiagnostics: true }),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
@@ -543,7 +543,7 @@ describe('evaluator', () => {
                 .MyVar2 = 'MyValue2'
                 .Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue1',
@@ -562,7 +562,7 @@ describe('evaluator', () => {
                 .MyVar = 'MyValue'
                 .Copy = .MyVar
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue',
@@ -578,7 +578,7 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = 1
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -597,7 +597,7 @@ describe('evaluator', () => {
                 .MyVar = 1
                 .MyVar + 2
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -624,7 +624,7 @@ describe('evaluator', () => {
                 .MyVar1 = 1
                 .MyVar2 = .MyVar1
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -659,7 +659,7 @@ describe('evaluator', () => {
                 .MyVar1 = 'hello'
                 .MyVar2 = '$MyVar1$ world'
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -698,7 +698,7 @@ describe('evaluator', () => {
                 Using( .MyStruct )
                 .Copy = .StructVar
             `;
-            const result: EvaluatedData = evaluate(input);
+            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
             const expectedReferences: VariableReference[] = [
                 // .StructVar = 1
                 {

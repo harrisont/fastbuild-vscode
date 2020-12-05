@@ -19,7 +19,7 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
 }
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
-    const result = parse(input);
+    const result = parse(input, { enableDiagnostics: true} );
     assert.deepStrictEqual(result, expectedResult);
 }
 

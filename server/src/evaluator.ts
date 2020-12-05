@@ -224,8 +224,12 @@ class ScopeStack {
     }
 }
 
-export function evaluate(input: string): EvaluatedData {
-    const statements = parse(input);
+export interface EvaluateOptions {
+    enableDiagnostics: boolean
+}
+
+export function evaluate(input: string, options: EvaluateOptions): EvaluatedData {
+    const statements = parse(input, { enableDiagnostics: options.enableDiagnostics});
     const scopeStack = new ScopeStack();
     return evaluateStatements(statements, scopeStack);
 }

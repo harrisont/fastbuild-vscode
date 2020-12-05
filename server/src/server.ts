@@ -67,7 +67,10 @@ state.documents.onDidChangeContent(change => {
 
     const uri = change.document.uri;
     const text = change.document.getText();
-    const evaluatedData = evaluator.evaluate(text);
+    const evaluatorOptions: evaluator.EvaluateOptions = {
+        enableDiagnostics: false
+    };
+    const evaluatedData = evaluator.evaluate(text, evaluatorOptions);
 
     state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
     state.definitionProvider.onEvaluatedDataChanged(uri, evaluatedData);
