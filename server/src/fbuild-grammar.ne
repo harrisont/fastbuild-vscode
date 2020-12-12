@@ -148,7 +148,7 @@ rValue ->
   | bool              {% ([value]) => [ value,       new ParseContext() ] %}
   # evaluatedVariable is in stringExpression and not rValue in order to remove ambiguity
   | stringExpression  {% ([valueWithContext]) => valueWithContext %}
-  | array             {% ([valueWithContext]) => valueWithContext %}
+  | arrayExpression   {% ([valueWithContext]) => valueWithContext %}
   | struct            {% ([valueWithContext]) => valueWithContext %}
 
 @{%
@@ -203,7 +203,7 @@ stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
     const joinedParts: (string | EvaluatedVariable)[] = [];
     let previousPartIsStringLiteral = false;
     for (const part of parts) {
-        const isStringLiteral: boolean = (typeof part == "string");
+        const isStringLiteral = (typeof part == "string");
         if (isStringLiteral && previousPartIsStringLiteral) {
             joinedParts[joinedParts.length - 1] += part;
         } else {
@@ -216,11 +216,7 @@ stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
     if (joinedParts.length == 0) {
         return ['', context];
     } else if (joinedParts.length == 1) {
-        if ((typeof joinedParts[0] == "string") ||
-            (joinedParts[0].type == "evaluatedVariable"))
-        {
-            return [joinedParts[0], context];
-        }
+        return [joinedParts[0], context];
     }
 
     const stringExpression = {
@@ -284,6 +280,56 @@ stringContents ->
             return [evaluatedVariable];
         }
     } %}
+
+# An array expression is a sum of (Value | Value[] | evaluatedVariable).
+# Generates (Value | evaluatedVariable)[]
+# Merges array literals.
+#
+# Example:
+#     Source: {'a', 'b'} + {'c'}
+#     Result: ['a', 'b', 'c']
+#
+# Example:
+#     Source: {'a', 'b'} + 'c'
+#     Result: ['a', 'b', 'c']
+#
+# Example:
+#     Source: {'a', 'b'} + .MyVar
+#     Result: ['a', 'b', {type:'evaluatedVariable', ...}]
+#
+# Example:
+#     Source: {'a', 'b'} + .MyVar + {'c'}
+#     Result: ['a', 'b', {type:'evaluatedVariable', ...}, 'c']
+arrayExpression -> arrayExpressionHelper  {% ([[parts, context]]) => {
+    return [parts.flat(), context];
+} %}
+
+# Generates an array of either value-arrays or evaluatedVariables: (Value[] | evaluatedVariable)[]
+arrayExpressionHelper ->
+    # Single item. Don't allow a single evaluatedVariable, since that would be an ambiguous parse with stringExpressionHelper.
+    array  {% ([valueWithContext]) => valueWithContext %}
+    # Multiple items added together
+  | arrayOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
+  | arrayOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
+
+# Same as arrayExpressionHelper but allow a single evaluatedVariable.
+arrayExpressionHelperAllowEvaluatedVariable ->
+    # Single item
+    arrayOrEvaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+    # Multiple items added together
+  | arrayOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
+  | arrayOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
+
+stringExpressionOrArrayExpression ->
+    # Wrap the stringExpression value in an array to make it consistent with arrayExpressionHelper.
+    stringExpression  {% ([[value, context]]) =>
+        [[value], context] %}
+  | arrayExpressionHelperAllowEvaluatedVariable   {% ([valueWithContext]) =>
+        valueWithContext %}
+
+arrayOrEvaluatedVariable ->
+    array              {% ([valueWithContext]) => valueWithContext %}
+  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
 
 array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [contents, context], braceClose]) => { callOnNextToken(context, braceClose); return [contents, context]; } %}
 

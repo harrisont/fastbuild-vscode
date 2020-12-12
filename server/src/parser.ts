@@ -71,6 +71,9 @@ export function parse(input: string, options: ParseOptions): Statement[] {
 
     const numResults = parser.results.length;
     if (numResults != 1) {
+        if (options.enableDiagnostics) {
+            console.log(getParseTable(parser));
+        }
         throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
     }
     const statements = parser.results[0];

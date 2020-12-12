@@ -1331,10 +1331,51 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on adding an item to an array', () => {
+    it('should work on adding an array', () => {
         const input = `
-            .MyVar = {}
-            .MyVar + 'cow'
+            .MyVar + {'cow'}
+        `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableAddition',
+                lhs: {
+                    name: 'MyVar',
+                    scope: 'current',
+                    range: createRange(1, 12, 1, 18),
+                },
+                rhs: ['cow']
+            }
+        ]);
+    });
+
+    it('should work on adding an array with an evaluated variable', () => {
+        const input = `
+            .MyVar + {.B, 'c'}
+        `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableAddition',
+                lhs: {
+                    name: 'MyVar',
+                    scope: 'current',
+                    range: createRange(1, 12, 1, 18),
+                },
+                rhs: [
+                    {
+                        type: 'evaluatedVariable',
+                        name: 'B',
+                        scope: 'current',
+                        range: createRange(1, 22, 1, 24),
+                    },
+                    'c'
+                ]
+            }
+        ]);
+    });
+
+    it('should work on inline adding an array with an evaluated variable', () => {
+        const input = `
+            .MyVar = {'a'} + { .B , 'c'}
         `;
         assertParseResultsEqual(input, [
             {
@@ -1344,16 +1385,16 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: []
-            },
-            {
-                type: 'variableAddition',
-                lhs: {
-                    name: 'MyVar',
-                    scope: 'current',
-                    range: createRange(2, 12, 2, 18),
-                },
-                rhs: 'cow'
+                rhs: [
+                    'a',
+                    {
+                        type: 'evaluatedVariable',
+                        name: 'B',
+                        scope: 'current',
+                        range: createRange(1, 31, 1, 33),
+                    },
+                    'c'
+                ]
             }
         ]);
     });

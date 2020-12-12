@@ -293,7 +293,11 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                     const existingValue = existingVariable.value;
                     // Can only add strings and arrays.
                     if (existingValue instanceof Array) {
-                        existingValue.push(evaluatedRhs.value);
+                        if (evaluatedRhs.value instanceof Array) {
+                            existingValue.push(...evaluatedRhs.value);
+                        } else {
+                            existingValue.push(evaluatedRhs.value);
+                        }
                     } else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
                         const sum = existingValue + evaluatedRhs.value;
                         scopeStack.updateVariableInCurrentScope(lhs.name, sum);
@@ -309,7 +313,11 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                     const existingValue = existingVariable.value;
                     // Can only add strings and arrays.
                     if (existingValue instanceof Array) {
-                        existingValue.push(evaluatedRhs.value);
+                        if (evaluatedRhs.value instanceof Array) {
+                            existingValue.push(...evaluatedRhs.value);
+                        } else {
+                            existingValue.push(evaluatedRhs.value);
+                        }
                     } else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
                         const sum = existingValue + evaluatedRhs.value;
                         scopeStack.updateExistingVariableInParentScope(lhs.name, sum);

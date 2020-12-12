@@ -320,6 +320,50 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [['cow']]);
         });
 
+        it('should work on inline adding an item to an array', () => {
+            const input = `
+                .MyVar = {} + 'cow'
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [['cow']]);
+        });
+
+        it('should work on adding an array to an array', () => {
+            const input = `
+                .MyVar = {'a'}
+                .MyVar + {'b'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [['a', 'b']]);
+        });
+
+        it('should work on inline adding an array to an array', () => {
+            const input = `
+                .MyVar = {'a'} + {'b'} + {'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [['a', 'b', 'c']]);
+        });
+
+        it('should work on adding an array with an evaluated variable to an array', () => {
+            const input = `
+                .B = 'b'
+                .MyVar = {'a'}
+                .MyVar + {.B, 'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['b', ['a', 'b', 'c']]);
+        });
+
+        it('should work on inline adding an array with an evaluated variable to an array', () => {
+            const input = `
+                .B = 'b'
+                .MyVar = {'a'} + { .B , 'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['b', ['a', 'b', 'c']]);
+        });
+
         it('should correctly evaulate an empty string literal', () => {
             const input = `
                 .MyVar = ''
