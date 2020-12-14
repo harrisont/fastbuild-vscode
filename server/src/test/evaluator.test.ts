@@ -364,6 +364,30 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['b', ['a', 'b', 'c']]);
         });
 
+        it('should work on adding a struct to a struct', () => {
+            const input = `
+                .Struct1 = [ .A=0, .B=2 ]
+                .Struct2 = [ .A=1, .C=3 ]
+                .MyVar = .Struct1 + .Struct2
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                new Struct(Object.entries({
+                    A: 0,
+                    B: 2,
+                })),
+                new Struct(Object.entries({
+                    A: 1,
+                    C: 3
+                })),
+                new Struct(Object.entries({
+                    A: 1,
+                    B: 2,
+                    C: 3
+                }))
+            ]);
+        });
+
         it('should correctly evaulate an empty string literal', () => {
             const input = `
                 .MyVar = ''
@@ -796,7 +820,7 @@ describe('evaluator', () => {
         });
     });
 
-    describe('functions', () => {
+    describe('Using', () => {
         it('Call Using outside a struct', () => {
             const input = `
                 .MyStruct = [

@@ -146,9 +146,8 @@ variableAddition ->
 rValue ->
     %integer          {% ([token]) => [ token.value, new ParseContext() ] %}
   | bool              {% ([value]) => [ value,       new ParseContext() ] %}
-  # evaluatedVariable is in stringExpression and not rValue in order to remove ambiguity
-  | stringExpression  {% ([valueWithContext]) => valueWithContext %}
-  | arrayExpression   {% ([valueWithContext]) => valueWithContext %}
+  # sum is the sum of 1 or more strings, evaluated variables, or arrays.
+  | sum               {% ([valueWithContext]) => valueWithContext %}
   | struct            {% ([valueWithContext]) => valueWithContext %}
 
 @{%
@@ -173,73 +172,59 @@ function createEvaluatedVariable(varNameToken: Token, startToken: Token, scope: 
         evaluatedVariable.range.end = createLocation(token);
     };
 
-    return [[evaluatedVariable], context];
+    return [evaluatedVariable, context];
 }
 
 %}
-
-evaluatedVariable ->
-    %variableReferenceCurrentScope %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "current") %}
-  | %variableReferenceParentScope  %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "parent") %}
 
 bool ->
     "true"   {% () => true %}
   | "false"  {% () => false %}
 
-@{%
+# A single item or multiple items added together.
+sum -> sumHelper  {% ([[parts, context]]) => {
+    if (parts.length == 1) {
+        return [parts[0], context];
+    } else {
+        const sum = {
+            type: 'sum',
+            summands: parts,
+        };
+        return [sum, context];
+    }
+} %}
 
-interface EvaluatedVariable {
-    type: "evaluatedVariable";
-}
+sumHelper ->
+    # Single item
+    summand  {% ([[value, context]]) => [value, context] %}
+    # Multiple items added together
+  | summand                     %operatorAddition optionalWhitespaceOrNewline sumHelper  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
+  | summand whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline sumHelper  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
 
-%}
+summand ->
+    string             {% ([value]) => [ [value], new ParseContext() ] %}
+  | evaluatedVariable  {% ([[value, context]]) => [ [value], context] %}
+  | array              {% ([[value, context]]) => [ [value], context] %}
 
-# Generates string | evaluatedVariable | (string | evaluatedVariable)[]
 # Merges string literals.
 # e.g. ['hello', ' world'] becomes 'hello world'
 # e.g. [evaluatedVariable] becomes evaluatedVariable
 # e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
-stringExpression -> stringExpressionHelper  {% ([[parts, context]]) => {
-    const joinedParts: (string | EvaluatedVariable)[] = [];
-    let previousPartIsStringLiteral = false;
-    for (const part of parts) {
-        const isStringLiteral = (typeof part == "string");
-        if (isStringLiteral && previousPartIsStringLiteral) {
-            joinedParts[joinedParts.length - 1] += part;
-        } else {
-            joinedParts.push(part);
-        }
-        
-        previousPartIsStringLiteral = isStringLiteral;
+string -> stringHelper  {% ([parts]) => {
+    if (parts.length == 0) {
+        return '';
+    } else if (parts.length == 1) {
+        return parts[0];
+    } else {
+        const stringExpression = {
+            type: 'stringExpression',
+            parts,
+        };
+        return stringExpression;
     }
-
-    if (joinedParts.length == 0) {
-        return ['', context];
-    } else if (joinedParts.length == 1) {
-        return [joinedParts[0], context];
-    }
-
-    const stringExpression = {
-        type: 'stringExpression',
-        parts: joinedParts,
-    };
-
-    return [stringExpression, context];
 } %}
 
-# Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
-stringExpressionHelper ->
-    # Single string
-    stringOrEvaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
-    # Multiple strings added together
-  | stringOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
-  | stringOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionHelper  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-
-stringOrEvaluatedVariable ->
-    string             {% ([value]) => [ value, new ParseContext() ] %}
-  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
-
-string ->
+stringHelper ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
   | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
 
@@ -281,55 +266,9 @@ stringContents ->
         }
     } %}
 
-# An array expression is a sum of (Value | Value[] | evaluatedVariable).
-# Generates (Value | evaluatedVariable)[]
-# Merges array literals.
-#
-# Example:
-#     Source: {'a', 'b'} + {'c'}
-#     Result: ['a', 'b', 'c']
-#
-# Example:
-#     Source: {'a', 'b'} + 'c'
-#     Result: ['a', 'b', 'c']
-#
-# Example:
-#     Source: {'a', 'b'} + .MyVar
-#     Result: ['a', 'b', {type:'evaluatedVariable', ...}]
-#
-# Example:
-#     Source: {'a', 'b'} + .MyVar + {'c'}
-#     Result: ['a', 'b', {type:'evaluatedVariable', ...}, 'c']
-arrayExpression -> arrayExpressionHelper  {% ([[parts, context]]) => {
-    return [parts.flat(), context];
-} %}
-
-# Generates an array of either value-arrays or evaluatedVariables: (Value[] | evaluatedVariable)[]
-arrayExpressionHelper ->
-    # Single item. Don't allow a single evaluatedVariable, since that would be an ambiguous parse with stringExpressionHelper.
-    array  {% ([valueWithContext]) => valueWithContext %}
-    # Multiple items added together
-  | arrayOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
-  | arrayOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-
-# Same as arrayExpressionHelper but allow a single evaluatedVariable.
-arrayExpressionHelperAllowEvaluatedVariable ->
-    # Single item
-    arrayOrEvaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
-    # Multiple items added together
-  | arrayOrEvaluatedVariable                     %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext],         operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
-  | arrayOrEvaluatedVariable whitespaceOrNewline %operatorAddition optionalWhitespaceOrNewline stringExpressionOrArrayExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-
-stringExpressionOrArrayExpression ->
-    # Wrap the stringExpression value in an array to make it consistent with arrayExpressionHelper.
-    stringExpression  {% ([[value, context]]) =>
-        [[value], context] %}
-  | arrayExpressionHelperAllowEvaluatedVariable   {% ([valueWithContext]) =>
-        valueWithContext %}
-
-arrayOrEvaluatedVariable ->
-    array              {% ([valueWithContext]) => valueWithContext %}
-  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+evaluatedVariable ->
+    %variableReferenceCurrentScope %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "current") %}
+  | %variableReferenceParentScope  %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "parent") %}
 
 array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [contents, context], braceClose]) => { callOnNextToken(context, braceClose); return [contents, context]; } %}
 
@@ -337,6 +276,7 @@ arrayContents ->
     # Empty
     null                 {% () => [[], new ParseContext()] %}
   | whitespaceOrNewline  {% () => [[], new ParseContext()] %}
+    # Not empty
   | nonEmptyArrayContents  {% ([contentsWithContext]) => contentsWithContext %}
 
 nonEmptyArrayContents ->
@@ -416,8 +356,8 @@ function createUsing(struct: object, statementStartToken: Token) {
 %}
 
 functionUsing ->
-    %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [[evaluatedVariable], context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName); } %}
-  | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [[evaluatedVariable], context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName); } %}
+    %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName); } %}
+  | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName); } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

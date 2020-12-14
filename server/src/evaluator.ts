@@ -87,13 +87,6 @@ class EvaluatedEvaluatedVariable {
     }
 }
 
-interface EvaluatedStruct {
-    evaluatedValue: Struct;
-    evaluatedVariables: EvaluatedVariable[];
-    variableReferences: VariableReference[];
-    variableDefinitions: Map<string, VariableDefinition>;
-}
-
 interface ScopeVariable {
     value: Value;
     definition: VariableDefinition;
@@ -165,6 +158,15 @@ class ScopeStack {
         }
     }
 
+    // Throw EvaluationError if the variable is not defined.
+    getVariableInScope(scope: ScopeLocation, variableName: string): ScopeVariable {
+        if (scope == 'current') {
+            return this.getVariableInCurrentScope(variableName);
+        } else {
+            return this.getVariableInParentScope(variableName);
+        }
+    }
+
     setVariableInCurrentScope(name: string, value: Value, definition: VariableDefinition): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
@@ -183,7 +185,7 @@ class ScopeStack {
         }
     }
 
-    updateVariableInCurrentScope(name: string, value: Value): ScopeVariable {
+    updateExistingVariableInCurrentScope(name: string, value: Value): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
@@ -201,6 +203,14 @@ class ScopeStack {
         }
         existingVariable.value = value;
         return existingVariable;
+    }
+
+    updateExistingVariableInScope(scope: ScopeLocation, name: string, value: Value): ScopeVariable {
+        if (scope == 'current') {
+            return this.updateExistingVariableInCurrentScope(name, value);
+        } else {
+            return this.updateExistingVariableInParentScope(name, value);
+        }
     }
 
     getCurrentScope(): Scope {
@@ -284,54 +294,12 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 
                 const lhs: VariableDefinitionLhs = statement.lhs;
 
-                // The previously-defined LHS variable.
-                let lhsDefinition: VariableDefinition | null = null;
-
-                if (lhs.scope == 'current') {
-                    const existingVariable = scopeStack.getVariableInCurrentScope(lhs.name);
-                    lhsDefinition = existingVariable.definition;
-                    const existingValue = existingVariable.value;
-                    // Can only add strings and arrays.
-                    if (existingValue instanceof Array) {
-                        if (evaluatedRhs.value instanceof Array) {
-                            existingValue.push(...evaluatedRhs.value);
-                        } else {
-                            existingValue.push(evaluatedRhs.value);
-                        }
-                    } else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
-                        const sum = existingValue + evaluatedRhs.value;
-                        scopeStack.updateVariableInCurrentScope(lhs.name, sum);
-                    } else if ((typeof existingValue == 'number') && (typeof evaluatedRhs.value == 'number')) {
-                        const sum = existingValue + evaluatedRhs.value;
-                        scopeStack.updateVariableInCurrentScope(lhs.name, sum);
-                    } else {
-                        throw new EvaluationError(`Cannot add a ${typeof evaluatedRhs.value} (${JSON.stringify(statement.rhs)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
-                    }
-                } else {
-                    const existingVariable = scopeStack.getVariableInParentScope(lhs.name);
-                    lhsDefinition = existingVariable.definition;
-                    const existingValue = existingVariable.value;
-                    // Can only add strings and arrays.
-                    if (existingValue instanceof Array) {
-                        if (evaluatedRhs.value instanceof Array) {
-                            existingValue.push(...evaluatedRhs.value);
-                        } else {
-                            existingValue.push(evaluatedRhs.value);
-                        }
-                    } else if ((typeof existingValue == 'string') && (typeof evaluatedRhs.value == 'string')) {
-                        const sum = existingValue + evaluatedRhs.value;
-                        scopeStack.updateExistingVariableInParentScope(lhs.name, sum);
-                    } else if ((typeof existingValue == 'number') && (typeof evaluatedRhs.value == 'number')) {
-                        const sum = existingValue + evaluatedRhs.value;
-                        scopeStack.updateVariableInCurrentScope(lhs.name, sum);
-                    } else {
-                        throw new EvaluationError(`Cannot add a ${typeof evaluatedRhs.value} (${JSON.stringify(statement.rhs)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
-                    }
-                }
+                const existingVariable = scopeStack.getVariableInScope(lhs.scope, lhs.name);
+                existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value);
 
                 // The addition's LHS is a variable reference.
                 result.variableReferences.push({
-                    definition: lhsDefinition,
+                    definition: existingVariable.definition,
                     range: lhs.range,
                     usingRange: null,
                 });
@@ -388,13 +356,9 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
             variableDefinitions: new Map<string, VariableDefinition>(),
         };
     } else if (rValue.type && rValue.type == 'struct') {
-        const evaluated = evaluateStruct(rValue.statements, scopeStack);
-        return {
-            value: evaluated.evaluatedValue,
-            evaluatedVariables: evaluated.evaluatedVariables,
-            variableReferences: evaluated.variableReferences,
-            variableDefinitions: evaluated.variableDefinitions,
-        };
+        return evaluateStruct(rValue.statements, scopeStack);
+    } else if (rValue.type && rValue.type == 'sum') {
+        return evaluateSum(rValue.summands, scopeStack);
     } else if (rValue.type && rValue.type == 'evaluatedVariable') {
         const evaluated = evaluateEvaluatedVariable(rValue, scopeStack);
         return {
@@ -411,8 +375,8 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
             variableDefinitions: new Map<string, VariableDefinition>(),
         };
         result.value = [];
-        for (const rvalue of rValue) {
-            const evaluated = evaluateRValue(rvalue, scopeStack);
+        for (const item of rValue) {
+            const evaluated = evaluateRValue(item, scopeStack);
             result.value.push(evaluated.value);
             result.evaluatedVariables.push(...evaluated.evaluatedVariables);
             result.variableReferences.push(...evaluated.variableReferences);
@@ -465,7 +429,7 @@ function evaluateStringExpression(parts: (string | any)[], scopeStack: ScopeStac
     return result;
 }
 
-function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): EvaluatedStruct {
+function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): EvaluatedRValue {
     scopeStack.push();
     const evaluatedStatements = evaluateStatements(statements, scopeStack);
     const structScope: Scope = scopeStack.getCurrentScope();
@@ -478,9 +442,72 @@ function evaluateStruct(statements: Statement[], scopeStack: ScopeStack): Evalua
     }
 
     return {
-        evaluatedValue: evaluatedValue,
+        value: evaluatedValue,
         evaluatedVariables: evaluatedStatements.evaluatedVariables,
         variableReferences: evaluatedStatements.variableReferences,
         variableDefinitions: evaluatedStatements.variableDefinitions,
     };
+}
+
+function evaluateSum(summands: Value[], scopeStack: ScopeStack): EvaluatedRValue {
+    if (summands.length < 2) {
+        throw new EvaluationError("A sum must have at least 2 summands. Summands: ${summands}");
+    }
+
+    const result = evaluateRValue(summands[0], scopeStack);
+    // Copy the value so that we don't modify the EvaluatedVariable which references it when we add to it.
+    result.value = deepCopyValue(result.value);
+
+    for (const summand of summands.slice(1)) {
+        const evaluatedSummand = evaluateRValue(summand, scopeStack);
+        result.value = inPlaceAdd(result.value, evaluatedSummand.value);
+        result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
+        result.variableReferences.push(...evaluatedSummand.variableReferences);
+        for (const [varName, varDefinition] of evaluatedSummand.variableDefinitions) {
+            result.variableDefinitions.set(varName, varDefinition);
+        }
+    }
+
+    return result;
+}
+
+// In-place add summand to existingValue, and return it.
+function inPlaceAdd(existingValue: Value, summand: Value): Value {
+    if (existingValue instanceof Array) {
+        if (summand instanceof Array) {
+            existingValue.push(...summand);
+        } else {
+            existingValue.push(summand);
+        }
+    } else if ((existingValue instanceof Map) && (summand instanceof Map)) {
+        for (const [key, value] of summand.entries()) {
+            existingValue.set(key, value);
+        }
+    } else if ((typeof existingValue == 'string') && (typeof summand == 'string')) {
+        existingValue += summand;
+    } else if ((typeof existingValue == 'number') && (typeof summand == 'number')) {
+        existingValue += summand;
+    } else {
+        throw new EvaluationError(`Cannot add a ${typeof summand} (${JSON.stringify(summand)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
+    }
+
+    return existingValue;
+}
+
+function deepCopyValue(value: Value): Value {
+    if (value instanceof Array) {
+        const copy = [];
+        for (let i = 0, len = value.length; i < len; i++) {
+            copy[i] = deepCopyValue(value[i]);
+        }
+        return copy;
+    } else if (value instanceof Struct) {
+        const copy = new Struct();
+        for (const [itemKey, itemValue] of value.entries()) {
+            copy.set(itemKey, deepCopyValue(itemValue));
+        }
+        return copy;
+    } else {
+        return value;
+    }
 }

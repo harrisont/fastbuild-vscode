@@ -73,6 +73,5 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
     * `Settings`
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
-* Support `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
-* Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)).
+* Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)). This is low priority, since I have never seen it used.

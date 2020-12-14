@@ -1045,7 +1045,13 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
-                rhs: 'hello world'
+                rhs: {
+                    type: 'sum',
+                    summands: [
+                        'hello',
+                        ' world'
+                    ],
+                }
             }
         ]);
     });
@@ -1060,7 +1066,13 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(0, 0, 0, 10),
                 },
-                rhs: 'hello world'
+                rhs: {
+                    type: 'sum',
+                    summands: [
+                        'hello',
+                        ' world'
+                    ],
+                }
             }
         ]);
     });
@@ -1079,7 +1091,14 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
-                rhs: 'hello world!'
+                rhs: {
+                    type: 'sum',
+                    summands: [
+                        'hello',
+                        ' world',
+                        '!'
+                    ],
+                }
             }
         ]);
     });
@@ -1095,7 +1114,14 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'hello world!'
+                rhs: {
+                    type: 'sum',
+                    summands: [
+                        'hello',
+                        ' world',
+                        '!'
+                    ],
+                }
             }
         ]);
     });
@@ -1111,8 +1137,8 @@ describe('parser', () => {
                     range: createRange(0, 0, 0, 10),
                 },
                 rhs: {
-                    type: 'stringExpression',
-                    parts: [
+                    type: 'sum',
+                    summands: [
                         'hello ',
                         {
                             type: 'evaluatedVariable',
@@ -1120,7 +1146,7 @@ describe('parser', () => {
                             scope: 'current',
                             range: createRange(0, 24, 0, 30),
                         }
-                    ]
+                    ],
                 }
             }
         ]);
@@ -1137,8 +1163,8 @@ describe('parser', () => {
                     range: createRange(0, 0, 0, 10),
                 },
                 rhs: {
-                    type: 'stringExpression',
-                    parts: [
+                    type: 'sum',
+                    summands: [
                         'hello ',
                         {
                             type: 'evaluatedVariable',
@@ -1152,7 +1178,7 @@ describe('parser', () => {
                             scope: 'current',
                             range: createRange(0, 34, 0, 41),
                         }
-                    ]
+                    ],
                 }
             }
         ]);
@@ -1385,21 +1411,28 @@ describe('parser', () => {
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: [
-                    'a',
-                    {
-                        type: 'evaluatedVariable',
-                        name: 'B',
-                        scope: 'current',
-                        range: createRange(1, 31, 1, 33),
-                    },
-                    'c'
-                ]
+                rhs: {
+                    type: 'sum',
+                    summands: [
+                        [
+                            'a'
+                        ],
+                        [
+                            {
+                                type: 'evaluatedVariable',
+                                name: 'B',
+                                scope: 'current',
+                                range: createRange(1, 31, 1, 33),
+                            },
+                            'c'
+                        ]
+                    ]
+                }
             }
         ]);
     });
 
-    describe('functions', () => {
+    describe('Using', () => {
         it('Call Using outside a struct', () => {
             const input = `
                 .MyVar = [
