@@ -69,22 +69,11 @@ interface EvaluatedStringExpression {
     variableReferences: VariableReference[];
 }
 
-class EvaluatedEvaluatedVariable {
-    readonly evaluatedVariable: EvaluatedVariable;
-    readonly variableReference: VariableReference;
-
-    constructor(readonly scopeVariable: ScopeVariable, referenceRange: SourceRange) {
-        this.evaluatedVariable = {
-            value: scopeVariable.value,
-            range: referenceRange,
-        };
-
-        this.variableReference = {
-            definition: scopeVariable.definition,
-            usingRange: scopeVariable.usingRange,
-            range: referenceRange,
-        };
-    }
+interface EvaluatedEvaluatedVariable {
+    valueScopeVariable: ScopeVariable;
+    // Includes any evaluated variables/references in a an evaluated (dynamic) variable name.
+    evaluatedVariables: EvaluatedVariable[];
+    variableReferences: VariableReference[];
 }
 
 interface ScopeVariable {
@@ -262,12 +251,20 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 }
 
                 const lhs: VariableDefinitionLhs = statement.lhs;
+
+                const evaluatedLhsName = evaluateRValue(lhs.name, scopeStack);
+                if (typeof evaluatedLhsName.value !== 'string') {
+                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
+                result.variableReferences.push(...evaluatedLhsName.variableReferences);
+
                 let variable: ScopeVariable | null = null;
                 if (lhs.scope == 'current') {
                     const definition = scopeStack.createVariableDefinition(lhs.range);
-                    variable = scopeStack.setVariableInCurrentScope(lhs.name, evaluatedRhs.value, definition);
+                    variable = scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
                 } else {
-                    variable = scopeStack.updateExistingVariableInParentScope(lhs.name, evaluatedRhs.value);
+                    variable = scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value);
                 }
 
                 if (evaluatedRhs.value instanceof Struct) {
@@ -294,7 +291,14 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 
                 const lhs: VariableDefinitionLhs = statement.lhs;
 
-                const existingVariable = scopeStack.getVariableInScope(lhs.scope, lhs.name);
+                const evaluatedLhsName = evaluateRValue(lhs.name, scopeStack);
+                if (typeof evaluatedLhsName.value !== 'string') {
+                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
+                result.variableReferences.push(...evaluatedLhsName.variableReferences);
+
+                const existingVariable = scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value);
                 existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value);
 
                 // The addition's LHS is a variable reference.
@@ -317,15 +321,15 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                     throw new EvaluationError(`'Using' parameter must be an evaluated variable`);
                 }
                 const evaluated = evaluateEvaluatedVariable(statement.struct, scopeStack);
-                result.evaluatedVariables.push(evaluated.evaluatedVariable);
-                result.variableReferences.push(evaluated.variableReference);
+                result.evaluatedVariables.push(...evaluated.evaluatedVariables);
+                result.variableReferences.push(...evaluated.variableReferences);
 
-                const struct = evaluated.evaluatedVariable.value;
+                const struct = evaluated.valueScopeVariable.value;
                 if (!(struct instanceof Struct)) {
                     throw new EvaluationError(`'Using' parameter must be a struct`);
                 }
 
-                const structVariable = evaluated.scopeVariable;
+                const structVariable = evaluated.valueScopeVariable;
                 if (structVariable.structMemberDefinitions === null) {
                     throw new EvaluationError(`'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
                 }
@@ -362,9 +366,9 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
     } else if (rValue.type && rValue.type == 'evaluatedVariable') {
         const evaluated = evaluateEvaluatedVariable(rValue, scopeStack);
         return {
-            value: evaluated.evaluatedVariable.value,
-            evaluatedVariables: [evaluated.evaluatedVariable],
-            variableReferences: [evaluated.variableReference],
+            value: evaluated.valueScopeVariable.value,
+            evaluatedVariables: evaluated.evaluatedVariables,
+            variableReferences: evaluated.variableReferences,
             variableDefinitions: new Map<string, VariableDefinition>(),
         };
     } else if (rValue instanceof Array) {
@@ -397,13 +401,34 @@ function evaluateRValue(rValue: any, scopeStack: ScopeStack): EvaluatedRValue {
 }
 
 function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, scopeStack: ScopeStack): EvaluatedEvaluatedVariable {
-    const variableName: string = parsedEvaluatedVariable.name;
-    
-    const variable = (parsedEvaluatedVariable.scope == 'current')
-        ? scopeStack.getVariableStartingFromCurrentScope(variableName)
-        : scopeStack.getVariableInParentScope(variableName);
+    const evaluatedVariableName = evaluateRValue(parsedEvaluatedVariable.name, scopeStack);
+    if (typeof evaluatedVariableName.value !== 'string') {
+        throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedVariableName.value)}`);
+    }
 
-    return new EvaluatedEvaluatedVariable(variable, parsedEvaluatedVariable.range);
+    const evaluatedVariables = evaluatedVariableName.evaluatedVariables;
+    const variableReferences = evaluatedVariableName.variableReferences;
+    
+    const valueScopeVariable = (parsedEvaluatedVariable.scope == 'current')
+        ? scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value)
+        : scopeStack.getVariableInParentScope(evaluatedVariableName.value);
+
+    evaluatedVariables.push({
+        value: valueScopeVariable.value,
+        range: parsedEvaluatedVariable.range,
+    });
+
+    variableReferences.push({
+        definition: valueScopeVariable.definition,
+        usingRange: valueScopeVariable.usingRange,
+        range: parsedEvaluatedVariable.range,
+    });
+
+    return {
+        valueScopeVariable,
+        evaluatedVariables,
+        variableReferences,
+    };
 }
 
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
@@ -417,9 +442,9 @@ function evaluateStringExpression(parts: (string | any)[], scopeStack: ScopeStac
     for (const part of parts) {
         if (part.type && part.type == 'evaluatedVariable') {
             const evaluated = evaluateEvaluatedVariable(part, scopeStack);
-            result.evaluatedString += String(evaluated.evaluatedVariable.value);
-            result.evaluatedVariables.push(evaluated.evaluatedVariable);
-            result.variableReferences.push(evaluated.variableReference);
+            result.evaluatedString += String(evaluated.valueScopeVariable.value);
+            result.evaluatedVariables.push(...evaluated.evaluatedVariables);
+            result.variableReferences.push(...evaluated.variableReferences);
         } else {
             // Literal
             result.evaluatedString += part;

@@ -125,17 +125,23 @@ function createRange(tokenStart: Token, tokenEnd: Token): SourceRange {
 
 %}
 
+variableName ->
+    # Literal name
+    %variableName  {% ([nameToken]) => nameToken.value %}
+    # Evaluated (dynamic) name
+  | string  {% ([string]) => string %}
+
 lhsWithOperatorAssignment ->
-    %variableReferenceCurrentScope %variableName                     %operatorAssignment  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
-  | %variableReferenceCurrentScope %variableName whitespaceOrNewline %operatorAssignment  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
-  | %variableReferenceParentScope  %variableName                     %operatorAssignment  {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
-  | %variableReferenceParentScope  %variableName whitespaceOrNewline %operatorAssignment  {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
+    %variableReferenceCurrentScope variableName                     %operatorAssignment  {% ([scope, varName,        operator]) => { return { name: varName, scope: "current", range: createRange(scope, operator) }; } %}
+  | %variableReferenceCurrentScope variableName whitespaceOrNewline %operatorAssignment  {% ([scope, varName, space, operator]) => { return { name: varName, scope: "current", range: createRange(scope, space)    }; } %}
+  | %variableReferenceParentScope  variableName                     %operatorAssignment  {% ([scope, varName,        operator]) => { return { name: varName, scope: "parent",  range: createRange(scope, operator) }; } %}
+  | %variableReferenceParentScope  variableName whitespaceOrNewline %operatorAssignment  {% ([scope, varName, space, operator]) => { return { name: varName, scope: "parent",  range: createRange(scope, space)    }; } %}
 
 lhsWithOperatorAddition ->
-    %variableReferenceCurrentScope %variableName                     %operatorAddition    {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, operator) }; } %}
-  | %variableReferenceCurrentScope %variableName whitespaceOrNewline %operatorAddition    {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "current", range: createRange(scope, space)    }; } %}
-  | %variableReferenceParentScope  %variableName                     %operatorAddition    {% ([scope, variable,        operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, operator) }; } %}
-  | %variableReferenceParentScope  %variableName whitespaceOrNewline %operatorAddition    {% ([scope, variable, space, operator]) => { return { name: variable.value, scope: "parent",  range: createRange(scope, space)    }; } %}
+    %variableReferenceCurrentScope variableName                     %operatorAddition    {% ([scope, varName,        operator]) => { return { name: varName, scope: "current", range: createRange(scope, operator) }; } %}
+  | %variableReferenceCurrentScope variableName whitespaceOrNewline %operatorAddition    {% ([scope, varName, space, operator]) => { return { name: varName, scope: "current", range: createRange(scope, space)    }; } %}
+  | %variableReferenceParentScope  variableName                     %operatorAddition    {% ([scope, varName,        operator]) => { return { name: varName, scope: "parent",  range: createRange(scope, operator) }; } %}
+  | %variableReferenceParentScope  variableName whitespaceOrNewline %operatorAddition    {% ([scope, varName, space, operator]) => { return { name: varName, scope: "parent",  range: createRange(scope, space)    }; } %}
 
 variableDefinition ->
     lhsWithOperatorAssignment optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: "variableDefinition", lhs: lhs, rhs: rValue }, context ]; } %}
@@ -149,33 +155,6 @@ rValue ->
   # sum is the sum of 1 or more strings, evaluated variables, or arrays.
   | sum               {% ([valueWithContext]) => valueWithContext %}
   | struct            {% ([valueWithContext]) => valueWithContext %}
-
-@{%
-
-function createEvaluatedVariable(varNameToken: Token, startToken: Token, scope: ("current" | "parent")) {
-    const evaluatedVariable = {
-        type: "evaluatedVariable",
-        scope: scope,
-        name: varNameToken.value,
-        range: {
-            start: createLocation(startToken),
-            // Updated by the onNextToken callback
-            end: {
-                line: 0,
-                character: 0,
-            }
-        },
-    };
-
-    const context = new ParseContext();
-    context.onNextToken = (token: Token) => {
-        evaluatedVariable.range.end = createLocation(token);
-    };
-
-    return [evaluatedVariable, context];
-}
-
-%}
 
 bool ->
     "true"   {% () => true %}
@@ -206,11 +185,9 @@ summand ->
   | evaluatedVariable  {% ([[value, context]]) => [ [value], context] %}
   | array              {% ([[value, context]]) => [ [value], context] %}
 
-# Merges string literals.
-# e.g. ['hello', ' world'] becomes 'hello world'
-# e.g. [evaluatedVariable] becomes evaluatedVariable
-# e.g. ['hello', ' world', evaluatedVariable] becomes ['hello world', evaluatedVariable]
-string -> stringHelper  {% ([parts]) => {
+@{%
+
+function createString(parts: any[]) {
     if (parts.length == 0) {
         return '';
     } else if (parts.length == 1) {
@@ -222,11 +199,13 @@ string -> stringHelper  {% ([parts]) => {
         };
         return stringExpression;
     }
-} %}
+}
 
-stringHelper ->
-    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
-  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => content %}
+%}
+
+string ->
+    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
+  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringContents ->
@@ -266,9 +245,36 @@ stringContents ->
         }
     } %}
 
+@{%
+
+function createEvaluatedVariable(varName: any, startToken: Token, scope: ("current" | "parent")) {
+    const evaluatedVariable = {
+        type: "evaluatedVariable",
+        scope: scope,
+        name: varName,
+        range: {
+            start: createLocation(startToken),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        evaluatedVariable.range.end = createLocation(token);
+    };
+
+    return [evaluatedVariable, context];
+}
+
+%}
+
 evaluatedVariable ->
-    %variableReferenceCurrentScope %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "current") %}
-  | %variableReferenceParentScope  %variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "parent") %}
+    %variableReferenceCurrentScope variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "current") %}
+  | %variableReferenceParentScope  variableName  {% ([scopeSymbol, varName]) => createEvaluatedVariable(varName, scopeSymbol, "parent") %}
 
 array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [contents, context], braceClose]) => { callOnNextToken(context, braceClose); return [contents, context]; } %}
 

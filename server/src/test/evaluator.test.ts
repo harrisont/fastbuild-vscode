@@ -602,6 +602,59 @@ describe('evaluator', () => {
                 ]
             ]);
         });
+
+        it('should evaluate dynamic variable names on the RHS in the current scope', () => {
+            const input = `
+                .A_B_C = 'foo'
+                .Middle = 'B'
+                .MyVar = ."A_$Middle$_C"
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'B',
+                'foo'
+            ]);
+        });
+
+        it('should evaluate dynamic variable names on the RHS in the parent scope', () => {
+            const input = `
+                .A_B_C = 'foo'
+                .Middle = 'B'
+                {
+                    .MyVar = ^"A_$Middle$_C"
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'B',
+                'foo'
+            ]);
+        });
+
+        it('should evaluate dynamic variable names on the LHS in the current scope', () => {
+            const input = `
+                .Middle = 'B'
+                ."A_$Middle$_C" = 'foo'
+                .Copy = .A_B_C
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'B',
+                'foo'
+            ]);
+        });
+
+        it('should evaluate dynamic variable names on the LHS in the parent scope', () => {
+            const input = `
+                .A_B_C = ''
+                .Middle = 'B'
+                {
+                    ^"A_$Middle$_C" = 'foo'
+                }
+                .Copy = .A_B_C
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'B',
+                'foo'
+            ]);
+        });
     });
 
     describe('evaluatedVariables range', () => {
