@@ -87,7 +87,7 @@ statement ->
   | %scopeOrArrayEnd    {% () => [ { type: "scopeEnd"   }, new ParseContext() ] %}
   | variableDefinition  {% ([valueWithContext]) => valueWithContext %}
   | variableAddition    {% ([valueWithContext]) => valueWithContext %}
-  | functionUsing       {% ([valueWithContext]) => valueWithContext %}
+  | functionUsing       {% ([value]) => [ value, new ParseContext() ] %}
 
 @{%
 
@@ -120,6 +120,17 @@ function createRange(tokenStart: Token, tokenEnd: Token): SourceRange {
     return {
         start: createLocation(tokenStart),
         end: createLocation(tokenEnd)
+    };
+}
+
+// Creates a range from tokenStart's location (inclusive) to tokenEnd's location (inclusive).
+// tokenStart and tokenEnd must be lexer tokens.
+function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRange {
+    const end = createLocation(tokenEnd);
+    end.character += 1;
+    return {
+        start: createLocation(tokenStart),
+        end
     };
 }
 
@@ -337,33 +348,19 @@ statementAndOptionalComment ->
 
 @{%
 
-function createUsing(struct: object, statementStartToken: Token) {
-    const using = {
+function createUsing(struct: object, statementStartToken: Token, statementEndToken: Token) {
+    return {
         type: 'using',
         struct,
-        range: {
-            start: createLocation(statementStartToken),
-            // Updated by the onNextToken callback
-            end: {
-                line: 0,
-                character: 0,
-            }
-        },
+        range: createRangeEndInclusive(statementStartToken, statementEndToken)
     };
-
-    const context = new ParseContext();
-    context.onNextToken = (token: Token) => {
-        using.range.end = createLocation(token);
-    };
-
-    return [using, context];
 }
 
 %}
 
 functionUsing ->
-    %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName); } %}
-  | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName); } %}
+    %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName, braceClose); } %}
+  | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName, braceClose); } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
