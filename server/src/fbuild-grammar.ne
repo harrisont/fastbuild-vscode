@@ -16,6 +16,8 @@ const lexer = moo.states({
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
         variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, type: moo.keywords({
             'keywordUsing': 'Using',
+            'keywordForEach': 'ForEach',
+            'keywordIn': 'in',
         }) },
         variableReferenceCurrentScope: '.',
         variableReferenceParentScope: '^',
@@ -83,11 +85,13 @@ statementAndOrCommentAndNewline ->
   |                       %comment %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
 
 statement ->
-    %scopeOrArrayStart  {% () => [ { type: "scopeStart" }, new ParseContext() ] %}
-  | %scopeOrArrayEnd    {% () => [ { type: "scopeEnd"   }, new ParseContext() ] %}
+    scopedStatements    {% ([value]) => [ value, new ParseContext() ] %}
   | variableDefinition  {% ([valueWithContext]) => valueWithContext %}
   | variableAddition    {% ([valueWithContext]) => valueWithContext %}
   | functionUsing       {% ([value]) => [ value, new ParseContext() ] %}
+  | functionForEach     {% ([value]) => [ value, new ParseContext() ] %}
+
+scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
 @{%
 
@@ -361,6 +365,29 @@ function createUsing(struct: object, statementStartToken: Token, statementEndTok
 functionUsing ->
     %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context],         braceClose]) => { callOnNextToken(context, braceClose); return createUsing(evaluatedVariable, functionName, braceClose); } %}
   | %keywordUsing optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [evaluatedVariable, context], space3, braceClose]) => { callOnNextToken(context, space3);     return createUsing(evaluatedVariable, functionName, braceClose); } %}
+
+@{%
+
+function createForEach(loopVar: object, arrayToLoopOver: object, statements: Record<string, any>) {
+    return {
+        type: 'forEach',
+        loopVar,
+        arrayToLoopOver,
+        statements
+    };
+}
+
+%}
+
+functionForEach ->
+    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(forEachLoopVar, evaluatedVariable, statements); } %}
+  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context], space4, braceClose, statements]) => { callOnNextToken(context, space4);     return createForEach(forEachLoopVar, evaluatedVariable, statements); } %}
+
+forEachLoopVar ->
+    %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, varName,        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
+  | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, varName, space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
+
+functionBody -> optionalWhitespaceOrNewline %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, braceOpen, space2, statements, braceClose]) => statements %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

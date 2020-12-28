@@ -10,6 +10,7 @@ import {
 
 import {
     EvaluatedData,
+    EvaluatedVariable,
     Struct,
     Value,
 } from './evaluator';
@@ -55,28 +56,44 @@ export class HoverProvider {
     onHover(params: HoverParams): Hover | null {
         const position = params.position;
         const evaluatedVariables = this.evaluatedData?.evaluatedVariables ?? [];
+
+        const possibleValues: Set<Value> = new Set();
+        let evaluatedVariable: EvaluatedVariable | null = null;
     
-        for (let i = 0; i < evaluatedVariables.length; i++)
+        // Potential optmization: use a different data structure to allow for a more efficient search.
+        for (evaluatedVariable of evaluatedVariables)
         {
-            const evaluatedVariable = evaluatedVariables[i];
             // TODO: also match params.textDocument.uri
             if (isPositionInRange(position, evaluatedVariable.range))
             {
-                const value = evaluatedVariable.value;
-                const valueStr = valueToString(value);
-                const hoverText = '```' + FASTBUILD_LANGUAGE_ID + '\n' + valueStr + '\n```';
-    
-                const hover: Hover = {
-                    contents: {
-                        kind: MarkupKind.Markdown,
-                        value: hoverText
-                    },
-                    range: evaluatedVariable.range
-                };
-                return hover;
+                possibleValues.add(evaluatedVariable.value);
             }
         }
 
-        return null;
+        let valueStr = '';
+        if (possibleValues.size === 0) {
+            return null;
+        } else {
+            if (possibleValues.size === 1) {
+                const value = possibleValues.values().next().value;
+                valueStr = valueToString(value);
+            } else {
+                valueStr = 'Loop values:';
+                for (const value of possibleValues) {
+                    valueStr += '\n' + valueToString(value);
+                }
+            }
+    
+            const hoverText = '```' + FASTBUILD_LANGUAGE_ID + '\n' + valueStr + '\n```';
+    
+            const hover: Hover = {
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: hoverText
+                },
+                range: evaluatedVariable?.range
+            };
+            return hover;
+        }
     }
 }

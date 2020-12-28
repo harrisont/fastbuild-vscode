@@ -929,4 +929,82 @@ describe('evaluator', () => {
             ]);
         });
     });
+
+    describe('ForEach', () => {
+        it('iterates over an array of strings', () => {
+            const input = `
+                .MyArray = {'a', 'b', 'c'}
+                ForEach( .Item in .MyArray )
+                {
+                    .Copy = .Item
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
+                'a',
+                'b',
+                'c'
+            ]);
+        });
+
+        it('iterates over an empty array', () => {
+            const input = `
+                .MyArray = {}
+                ForEach( .Item in .MyArray )
+                {
+                    .Copy = .Item
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                []
+            ]);
+        });
+
+        it('iterates over an array of strings in a parent scope', () => {
+            const input = `
+                .MyArray = {'a', 'b', 'c'}
+                {
+                    ForEach( .Item in .MyArray )
+                    {
+                        .Copy = .Item
+                    }
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
+                'a',
+                'b',
+                'c'
+            ]);
+        });
+
+        it('iterates over an array of structs', () => {
+            const input = `
+                .MyArray = {
+                    [ .Value = 1 ]
+                    [ .Value = 2 ]
+                }
+                ForEach( .Item in .MyArray )
+                {
+                    .Copy = .Item
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                [
+                    new Struct(Object.entries({
+                        Value: 1
+                    })),
+                    new Struct(Object.entries({
+                        Value: 2
+                    }))
+                ],
+                new Struct(Object.entries({
+                    Value: 1
+                })),
+                new Struct(Object.entries({
+                    Value: 2
+                }))
+            ]);
+        });
+    });
 });

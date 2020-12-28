@@ -310,12 +310,21 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 
                 break;
             }
-            case 'scopeStart':
+            case 'scopedStatements': {
+                const statements: Statement[] = statement.statements;
+
                 scopeStack.push();
-                break;
-            case 'scopeEnd':
+                const evaluatedStatements = evaluateStatements(statements, scopeStack);
                 scopeStack.pop();
+
+                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                result.variableReferences.push(...evaluatedStatements.variableReferences);
+                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                    result.variableDefinitions.set(varName, varDefinition);
+                }
+                
                 break;
+            }
             case 'using': {
                 if (!statement.struct.type || statement.struct.type !== 'evaluatedVariable') {
                     throw new EvaluationError(`'Using' parameter must be an evaluated variable`);
@@ -344,6 +353,55 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
 
                 break;
             }
+            case 'forEach': {
+                if (!statement.arrayToLoopOver.type || statement.arrayToLoopOver.type !== 'evaluatedVariable') {
+                    throw new EvaluationError(`'ForEach' array to loop over must be an evaluated variable`);
+                }
+                const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
+                const evaluatedArrayToLoopOver = evaluateEvaluatedVariable(arrayToLoopOver, scopeStack);
+                result.evaluatedVariables.push(...evaluatedArrayToLoopOver.evaluatedVariables);
+                result.variableReferences.push(...evaluatedArrayToLoopOver.variableReferences);
+
+                const loopVar: Record<string, any> = statement.loopVar;
+                const statements: Statement[] = statement.statements;
+
+                const evaluatedLoopVarName = evaluateRValue(loopVar.name, scopeStack);
+                if (typeof evaluatedLoopVarName.value !== 'string') {
+                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLoopVarName.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
+                result.variableReferences.push(...evaluatedLoopVarName.variableReferences);
+
+                const definition = scopeStack.createVariableDefinition(loopVar.range);
+                const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
+                if (!(arrayItems instanceof Array)) {
+                    throw new EvaluationError(`'ForEach' variable to loop over must be an array`);
+                }
+
+                scopeStack.push();
+                for (const arrayItem of arrayItems) {
+                    const variable = scopeStack.setVariableInCurrentScope(evaluatedLoopVarName.value, arrayItem, definition);
+
+                    // The loop variable is a variable reference.
+                    result.variableReferences.push({
+                        definition: variable.definition,
+                        range: loopVar.range,
+                        usingRange: null,
+                    });
+
+                    const evaluatedStatements = evaluateStatements(statements, scopeStack);
+                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                    result.variableReferences.push(...evaluatedStatements.variableReferences);
+                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                        result.variableDefinitions.set(varName, varDefinition);
+                    }
+                }
+                scopeStack.pop();
+
+                break;
+            }
+            default:
+                throw new EvaluationError(`Unknown statement type '${statement.type}'`);
         }
     }
 

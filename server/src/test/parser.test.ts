@@ -889,10 +889,8 @@ describe('parser', () => {
         `;
         assertParseResultsEqual(input, [
             {
-                type: 'scopeStart'
-            },
-            {
-                type: 'scopeEnd'
+                type: 'scopedStatements',
+                statements: [],
             }
         ]);
     });
@@ -905,19 +903,18 @@ describe('parser', () => {
         `;
         assertParseResultsEqual(input, [
             {
-                type: 'scopeStart'
-            },
-            {
-                type: 'variableDefinition',
-                lhs: {
-                    name: 'MyVar',
-                    scope: 'current',
-                    range: createRange(2, 16, 2, 22),
-                },
-                rhs: 123
-            },
-            {
-                type: 'scopeEnd'
+                type: 'scopedStatements',
+                statements: [
+                    {
+                        type: 'variableDefinition',
+                        lhs: {
+                            name: 'MyVar',
+                            scope: 'current',
+                            range: createRange(2, 16, 2, 22),
+                        },
+                        rhs: 123
+                    }
+                ],
             }
         ]);
     });
@@ -967,20 +964,19 @@ describe('parser', () => {
                 rhs: 'hello'
             },
             {
-                type: 'scopeStart'
+                type: 'scopedStatements',
+                statements: [
+                    {
+                        type: 'variableAddition',
+                        lhs: {
+                            name: 'MyMessage',
+                            scope: 'parent',
+                            range: createRange(3, 16, 3, 26),
+                        },
+                        rhs: ' world'
+                    }
+                ],
             },
-            {
-                type: 'variableAddition',
-                lhs: {
-                    name: 'MyMessage',
-                    scope: 'parent',
-                    range: createRange(3, 16, 3, 26),
-                },
-                rhs: ' world'
-            },
-            {
-                type: 'scopeEnd'
-            }
         ]);
     });
 

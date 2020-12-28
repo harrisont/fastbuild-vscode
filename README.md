@@ -44,7 +44,7 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support functions that change how we evaluate:
-    * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html))
+    * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html)): Support iterating over multiple arrays at a time (single array iterating already supported).
     * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
 * Support functions that define aliases. We only need to support them to the extent that we detect the alias name and handle the function body's statements.
     * `Alias`
