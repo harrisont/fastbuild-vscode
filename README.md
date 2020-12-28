@@ -44,7 +44,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support functions that change how we evaluate:
-    * `ForEach` ([docs](https://www.fastbuild.org/docs/functions/foreach.html)): Support iterating over multiple arrays at a time (single array iterating already supported).
     * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
 * Support functions that define aliases. We only need to support them to the extent that we detect the alias name and handle the function body's statements.
     * `Alias`
@@ -73,4 +72,5 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
 * Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)). This is low priority, since I have never seen it used.
