@@ -47,10 +47,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support functions that change how we evaluate:
     * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
 * Support "go to definition" and "find references" for aliases.
-* Support functions that take immediate actions but do not change how we evaluate.
-    * `Error`
-    * `Print`
-    * `Settings`
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).

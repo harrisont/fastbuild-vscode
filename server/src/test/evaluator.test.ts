@@ -1080,4 +1080,33 @@ describe('evaluator', () => {
             });
         }
     });
+
+    describe('Functions with no effect for our evaluation', () => {
+        it('Error', () => {
+            const input = `
+                .Value = 1
+                Error('Value is $Value$')
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1]);
+        });
+        
+        it('Print', () => {
+            const input = `
+                .Value = 1
+                Print('Value is $Value$')
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1]);
+        });
+        
+        it('Settings', () => {
+            const input = `
+                .Value = 1
+                Settings
+                {
+                    .Copy = .Value
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1]);
+        });
+    });
 });

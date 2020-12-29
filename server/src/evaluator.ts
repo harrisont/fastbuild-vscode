@@ -311,10 +311,8 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 break;
             }
             case 'scopedStatements': {
-                const statements: Statement[] = statement.statements;
-
                 scopeStack.push();
-                const evaluatedStatements = evaluateStatements(statements, scopeStack);
+                const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
                 scopeStack.pop();
 
                 result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
@@ -364,7 +362,6 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 result.variableReferences.push(...evaluatedArrayToLoopOver.variableReferences);
 
                 const loopVar: Record<string, any> = statement.loopVar;
-                const statements: Statement[] = statement.statements;
 
                 // Evaluate the loop-variable name.
                 const evaluatedLoopVarName = evaluateRValue(loopVar.name, scopeStack);
@@ -393,7 +390,7 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                         usingRange: null,
                     });
 
-                    const evaluatedStatements = evaluateStatements(statements, scopeStack);
+                    const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
                     result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                     result.variableReferences.push(...evaluatedStatements.variableReferences);
                     for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
@@ -405,20 +402,18 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 break;
             }
             case 'genericFunction': {
-                const alias: any = statement.alias;
-                const statements: Statement[] = statement.statements;
-
                 // Evaluate the alias.
+                const alias: any = statement.alias;
                 const evaluatedAliasName = evaluateRValue(alias, scopeStack);
                 if (typeof evaluatedAliasName.value !== 'string') {
-                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
+                    throw new EvaluationError(`Alias must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedAliasName.variableReferences);
 
                 // Evaluate the function body.
                 scopeStack.push();
-                const evaluatedStatements = evaluateStatements(statements, scopeStack);
+                const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
                 result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                 result.variableReferences.push(...evaluatedStatements.variableReferences);
                 for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
@@ -426,6 +421,38 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 }
                 scopeStack.pop();
 
+                break;
+            }
+            case 'error': {
+                const value: any = statement.value;
+                const evaluatedValue = evaluateRValue(value, scopeStack);
+                if (typeof evaluatedValue.value !== 'string') {
+                    throw new EvaluationError(`Value must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
+                result.variableReferences.push(...evaluatedValue.variableReferences);
+                break;
+            }
+            case 'print': {
+                const value: any = statement.value;
+                const evaluatedValue = evaluateRValue(value, scopeStack);
+                if (typeof evaluatedValue.value !== 'string') {
+                    throw new EvaluationError(`Value must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
+                result.variableReferences.push(...evaluatedValue.variableReferences);
+                break;
+            }
+            case 'settings': {
+                // Evaluate the function body.
+                scopeStack.push();
+                const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
+                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                result.variableReferences.push(...evaluatedStatements.variableReferences);
+                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                    result.variableDefinitions.set(varName, varDefinition);
+                }
+                scopeStack.pop();
                 break;
             }
             default:

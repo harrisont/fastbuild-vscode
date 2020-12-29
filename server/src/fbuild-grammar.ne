@@ -38,13 +38,16 @@ const lexer = moo.states({
         keywordCopy: 'Copy',
         keywordCSAssembly: 'CSAssembly',
         keywordDLL: 'DLL',
+        keywordError: 'Error',
         // 'Executable' needs to come before 'Exec' so that it has priority when matching.
         keywordExecutable: 'Executable',
         keywordExec: 'Exec',
         keywordForEach: 'ForEach',
         keywordLibrary: 'Library',
         keywordObjectList: 'ObjectList',
+        keywordPrint: 'Print',
         keywordRemoveDir: 'RemoveDir',
+        keywordSettings: 'Settings',
         keywordTest: 'Test',
         keywordTextFile: 'TextFile',
         keywordUnity: 'Unity',
@@ -130,12 +133,15 @@ statementAndOrCommentAndNewline ->
   |                       %comment %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
 
 statement ->
-    scopedStatements    {% ([value]) => [ value, new ParseContext() ] %}
-  | variableDefinition  {% ([valueWithContext]) => valueWithContext %}
-  | variableAddition    {% ([valueWithContext]) => valueWithContext %}
-  | functionUsing       {% ([value]) => [ value, new ParseContext() ] %}
-  | functionForEach     {% ([value]) => [ value, new ParseContext() ] %}
-  | genericFunctionWithAlias   {% ([value]) => [ value, new ParseContext() ] %}
+    scopedStatements          {% ([value]) => [ value, new ParseContext() ] %}
+  | variableDefinition        {% ([valueWithContext]) => valueWithContext %}
+  | variableAddition          {% ([valueWithContext]) => valueWithContext %}
+  | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
+  | functionForEach           {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
+  | functionError             {% ([value]) => [ value, new ParseContext() ] %}
+  | functionPrint             {% ([value]) => [ value, new ParseContext() ] %}
+  | functionSettings          {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -474,6 +480,12 @@ genericFunctionNameWithAlias ->
 alias ->
     string             {% ([value]) => [ value, new ParseContext() ] %}
   | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+
+functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'error', value }; } %}
+
+functionPrint -> %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'print', value }; } %}
+
+functionSettings -> %keywordSettings functionBody  {% ([functionName, statements]) => { return { type: 'settings', statements }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
