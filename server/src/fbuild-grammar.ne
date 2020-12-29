@@ -23,11 +23,14 @@ const lexer = moo.states({
         structEnd: ']',
         functionParametersStart: '(',
         functionParametersEnd: ')',
+
         keywordTrue: 'true',
         keywordFalse: 'false',
-        keywordUsing: 'Using',
-        keywordForEach: 'ForEach',
+
         keywordIn: 'in',
+
+        // Function keywords.
+
         keywordAlias: 'Alias',
         keywordCompiler: 'Compiler',
         // 'CopyDir' needs to come before 'Copy' so that it has priority when matching.
@@ -38,12 +41,14 @@ const lexer = moo.states({
         // 'Executable' needs to come before 'Exec' so that it has priority when matching.
         keywordExecutable: 'Executable',
         keywordExec: 'Exec',
+        keywordForEach: 'ForEach',
         keywordLibrary: 'Library',
         keywordObjectList: 'ObjectList',
         keywordRemoveDir: 'RemoveDir',
         keywordTest: 'Test',
         keywordTextFile: 'TextFile',
         keywordUnity: 'Unity',
+        keywordUsing: 'Using',
         keywordVCXProject: 'VCXProject',
         keywordVSProjectExternal: 'VSProjectExternal',
         keywordVSSolution: 'VSSolution',
