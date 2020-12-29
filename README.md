@@ -41,6 +41,7 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 ## TODO
 
+* Support listing document symbols, including alias names.
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support functions that change how we evaluate:
