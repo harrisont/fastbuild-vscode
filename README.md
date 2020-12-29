@@ -45,25 +45,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support functions that change how we evaluate:
     * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
-* Support functions that define aliases. We only need to support them to the extent that we detect the alias name and handle the function body's statements.
-    * `Alias`
-    * `Compiler`
-    * `Copy`
-    * `CopyDir`
-    * `CSAssembly`
-    * `DLL`
-    * `Exec`
-    * `Executable`
-    * `Library`
-    * `ObjectList`
-    * `RemoveDir`
-    * `Test`
-    * `TextFile`
-    * `Unity`
-    * `VCXProject`
-    * `VSProjectExternal`
-    * `VSSolution`
-    * `XCodeProject`
 * Support "go to definition" and "find references" for aliases.
 * Support functions that take immediate actions but do not change how we evaluate.
     * `Error`

@@ -28,6 +28,26 @@ const lexer = moo.states({
         keywordUsing: 'Using',
         keywordForEach: 'ForEach',
         keywordIn: 'in',
+        keywordAlias: 'Alias',
+        keywordCompiler: 'Compiler',
+        // 'CopyDir' needs to come before 'Copy' so that it has priority when matching.
+        keywordCopyDir: 'CopyDir',
+        keywordCopy: 'Copy',
+        keywordCSAssembly: 'CSAssembly',
+        keywordDLL: 'DLL',
+        // 'Executable' needs to come before 'Exec' so that it has priority when matching.
+        keywordExecutable: 'Executable',
+        keywordExec: 'Exec',
+        keywordLibrary: 'Library',
+        keywordObjectList: 'ObjectList',
+        keywordRemoveDir: 'RemoveDir',
+        keywordTest: 'Test',
+        keywordTextFile: 'TextFile',
+        keywordUnity: 'Unity',
+        keywordVCXProject: 'VCXProject',
+        keywordVSProjectExternal: 'VSProjectExternal',
+        keywordVSSolution: 'VSSolution',
+        keywordXCodeProject: 'XCodeProject',
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -110,6 +130,7 @@ statement ->
   | variableAddition    {% ([valueWithContext]) => valueWithContext %}
   | functionUsing       {% ([value]) => [ value, new ParseContext() ] %}
   | functionForEach     {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithAlias   {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -406,6 +427,48 @@ forEachLoopVar ->
   | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, varName, space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
 functionBody -> optionalWhitespaceOrNewline %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, braceOpen, space2, statements, braceClose]) => statements %}
+
+@{%
+
+function createGenericFunction(alias: any, statements: Record<string, any>) {
+    return {
+        type: 'genericFunction',
+        alias,
+        statements
+    };
+}
+
+%}
+
+# Functions that we don't care about handling except for the function's alias parameter.
+genericFunctionWithAlias ->
+    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements); } %}
+  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements); } %}
+
+# Function names of functions that we don't care about handling except for the function's alias parameter.
+genericFunctionNameWithAlias ->
+    %keywordAlias
+  | %keywordCompiler
+  | %keywordCopy
+  | %keywordCopyDir
+  | %keywordCSAssembly
+  | %keywordDLL
+  | %keywordExec
+  | %keywordExecutable
+  | %keywordLibrary
+  | %keywordObjectList
+  | %keywordRemoveDir
+  | %keywordTest
+  | %keywordTextFile
+  | %keywordUnity
+  | %keywordVCXProject
+  | %keywordVSProjectExternal
+  | %keywordVSSolution
+  | %keywordXCodeProject
+
+alias ->
+    string             {% ([value]) => [ value, new ParseContext() ] %}
+  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

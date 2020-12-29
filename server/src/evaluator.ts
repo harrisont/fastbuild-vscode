@@ -354,6 +354,7 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 break;
             }
             case 'forEach': {
+                // Evaluate the array to loop over.
                 if (!statement.arrayToLoopOver.type || statement.arrayToLoopOver.type !== 'evaluatedVariable') {
                     throw new EvaluationError(`'ForEach' array to loop over must be an evaluated variable`);
                 }
@@ -365,12 +366,15 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 const loopVar: Record<string, any> = statement.loopVar;
                 const statements: Statement[] = statement.statements;
 
+                // Evaluate the loop-variable name.
                 const evaluatedLoopVarName = evaluateRValue(loopVar.name, scopeStack);
                 if (typeof evaluatedLoopVarName.value !== 'string') {
                     throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLoopVarName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLoopVarName.variableReferences);
+
+                // Evaluate the function body.
 
                 const definition = scopeStack.createVariableDefinition(loopVar.range);
                 const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
@@ -395,6 +399,30 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                     for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
                         result.variableDefinitions.set(varName, varDefinition);
                     }
+                }
+                scopeStack.pop();
+
+                break;
+            }
+            case 'genericFunction': {
+                const alias: any = statement.alias;
+                const statements: Statement[] = statement.statements;
+
+                // Evaluate the alias.
+                const evaluatedAliasName = evaluateRValue(alias, scopeStack);
+                if (typeof evaluatedAliasName.value !== 'string') {
+                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
+                }
+                result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
+                result.variableReferences.push(...evaluatedAliasName.variableReferences);
+
+                // Evaluate the function body.
+                scopeStack.push();
+                const evaluatedStatements = evaluateStatements(statements, scopeStack);
+                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                result.variableReferences.push(...evaluatedStatements.variableReferences);
+                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                    result.variableDefinitions.set(varName, varDefinition);
                 }
                 scopeStack.pop();
 

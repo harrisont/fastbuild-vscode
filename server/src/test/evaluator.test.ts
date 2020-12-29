@@ -1007,4 +1007,77 @@ describe('evaluator', () => {
             ]);
         });
     });
+
+    // Functions that we don't care about handling, but we just need to make sure that their statements are evaluated.
+    describe('Generic functions', () => {
+        const genericFunctionNames = [
+            'Alias',
+            'Compiler',
+            'Copy',
+            'CopyDir',
+            'CSAssembly',
+            'DLL',
+            'Exec',
+            'Executable',
+            'Library',
+            'ObjectList',
+            'RemoveDir',
+            'Test',
+            'TextFile',
+            'Unity',
+            'VCXProject',
+            'VSProjectExternal',
+            'VSSolution',
+            'XCodeProject',
+        ];
+
+        for (const functionName of genericFunctionNames) {
+            describe(functionName, () => {
+                it('handles a literal alias name', () => {
+                    const input = `
+                        ${functionName}('MyAliasName')
+                        {
+                        }
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, []);
+                });
+        
+                it('handles an evaluated variable alias name', () => {
+                    const input = `
+                        .MyAliasName = 'SomeName'
+                        ${functionName}(.MyAliasName)
+                        {
+                        }
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['SomeName']);
+                });
+        
+                it('handles a dynamic-variable alias name', () => {
+                    const input = `
+                        .MyAliasName = 'SomeName'
+                        .AliasNameVariable = 'MyAliasName'
+                        ${functionName}(.'$AliasNameVariable$')
+                        {
+                        }
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'MyAliasName',
+                        'SomeName'
+                    ]);
+                });
+        
+                it('evaluates body statements', () => {
+                    const input = `
+                        .MyVar = 1
+                        ${functionName}('MyAliasName')
+                        {
+                            .Copy = .MyVar
+                            .Copy = ^MyVar
+                        }
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1]);
+                });
+            });
+        }
+    });
 });
