@@ -12,15 +12,10 @@ const lexer = moo.states({
         scopeOrArrayStart: '{',
         scopeOrArrayEnd: '}',
         integer: { match: /0|[1-9][0-9]*/, value: (s: string) => parseInt(s) },
-        singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBody' },
-        doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBody' },
-        variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, type: moo.keywords({
-            'keywordUsing': 'Using',
-            'keywordForEach': 'ForEach',
-            'keywordIn': 'in',
-        }) },
-        variableReferenceCurrentScope: '.',
-        variableReferenceParentScope: '^',
+        singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBodyThenPop' },
+        doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenPop' },
+        variableReferenceCurrentScope: { match: '.', push: 'variableReferenceName' },
+        variableReferenceParentScope:  { match: '^', push: 'variableReferenceName' },
         operatorAssignment: '=',
         operatorAddition: '+',
         arrayOrStructItemSeparator: ',',
@@ -28,23 +23,48 @@ const lexer = moo.states({
         structEnd: ']',
         functionParametersStart: '(',
         functionParametersEnd: ')',
+        keywordTrue: 'true',
+        keywordFalse: 'false',
+        keywordUsing: 'Using',
+        keywordForEach: 'ForEach',
+        keywordIn: 'in',
     },
-    singleQuotedStringBody: {
+    singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         stringEnd: { match: "'", pop: 1 },
         // Handle escaping ', $, ^ with ^
         stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
     },
-    doubleQuotedStringBody: {
+    doubleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         stringEnd: { match: '"', pop: 1 },
+        // Handle escaping ", $, ^ with ^
+        stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
+    },
+    // Same as "...ThenPop" but instead of popping, goes to "main".
+    singleQuotedStringBodyThenMain: {
+        startTemplatedVariable: { match: '$', push: 'templatedVariable' },
+        stringEnd: { match: "'", next: 'main' },
+        // Handle escaping ', $, ^ with ^
+        stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
+    },
+    doubleQuotedStringBodyThenMain: {
+        startTemplatedVariable: { match: '$', push: 'templatedVariable' },
+        stringEnd: { match: '"', next: 'main' },
         // Handle escaping ", $, ^ with ^
         stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
     },
     templatedVariable: {
         endTemplatedVariable: { match: '$', pop: 1 },
         variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
-    }
+    },
+    variableReferenceName: {
+        // Literal variable name
+        variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, pop: 1 },
+        // Dynamic variable name
+        singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBodyThenMain' },
+        doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenMain' },
+    },
 });
 %}
 
@@ -172,8 +192,8 @@ rValue ->
   | struct            {% ([valueWithContext]) => valueWithContext %}
 
 bool ->
-    "true"   {% () => true %}
-  | "false"  {% () => false %}
+    %keywordTrue   {% () => true %}
+  | %keywordFalse  {% () => false %}
 
 # A single item or multiple items added together.
 sum -> sumHelper  {% ([[parts, context]]) => {
