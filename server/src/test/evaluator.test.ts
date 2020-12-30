@@ -1109,4 +1109,1024 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
     });
+
+    describe('If', () => {
+        describe('Boolean expression', () => {
+            it('evaluates a true boolean variable to true', () => {
+                const input = `
+                    .Value = true
+                    .Result = false
+                    If( .Value )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true, true]);
+            });
+            
+            it('evaluates a false boolean variable to false', () => {
+                const input = `
+                    .Value = false
+                    .Result = false
+                    If( .Value )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false, false]);
+            });
+
+            it('evaluates the inversion of a true boolean variable to false', () => {
+                const input = `
+                    .Value = true
+                    .Result = false
+                    If( !.Value )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true, false]);
+            });
+            
+            it('evaluates the inversion of a false boolean variable to true', () => {
+                const input = `
+                    .Value = false
+                    .Result = false
+                    If( !.Value )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false, true]);
+            });
+        });
+        
+        describe('Comparison', () => {
+            describe('boolean', () => {
+                it('"true == true" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Value2 = true
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
+                });
+
+                it('"false == false" evaluates to true', () => {
+                    const input = `
+                        .Value1 = false
+                        .Value2 = false
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false, false, true]);
+                });
+                
+                it('"true == false" evaluates to false', () => {
+                    const input = `
+                        .Value1 = true
+                        .Value2 = false
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, false, false]);
+                });
+                
+                it('"false == true" evaluates to false', () => {
+                    const input = `
+                        .Value1 = false
+                        .Value2 = true
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false]);
+                });
+
+                it('"true != true" evaluates to false', () => {
+                    const input = `
+                        .Value1 = true
+                        .Value2 = true
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true, false]);
+                });
+                
+                it('"false != false" evaluates to false', () => {
+                    const input = `
+                        .Value1 = false
+                        .Value2 = false
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false]);
+                });
+                
+                it('"true != false" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Value2 = false
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true]);
+                });
+                
+                it('"false != true" evaluates to true', () => {
+                    const input = `
+                        .Value1 = false
+                        .Value2 = true
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false, true, true]);
+                });
+            });
+
+            describe('integer', () => {
+                it('"1 == 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                });
+                
+                it('"1 == 0" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                });
+                
+                it('"1 != 1" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                });
+                
+                it('"1 != 0" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                });
+
+                it('"0 < 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                });
+
+                it('"1 < 0" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                });
+
+                it('"1 < 1" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                });
+
+                it('"0 <= 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                });
+
+                it('"1 <= 0" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                });
+
+                it('"1 <= 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                });
+
+                it('"0 > 1" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                });
+
+                it('"1 > 0" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                });
+
+                it('"1 > 1" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                });
+
+                it('"0 >= 1" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                });
+
+                it('"1 >= 0" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 0
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                });
+
+                it('"1 >= 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Value2 = 1
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                });
+            });
+
+            describe('string', () => {
+                it('"cat == cat" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
+                });
+
+                it('"cat == Cat" (different case) evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'Cat'
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false]);
+                });
+                
+                it('"cat == dog" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 == .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                });
+                
+                it('"cat != cat" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false]);
+                });
+                
+                it('"cat != Cat" (different case) evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'Cat'
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', true]);
+                });
+                
+                it('"cat != dog" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 != .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                });
+
+                it('"cat < dog" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                });
+
+                it('"dog < cat" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                });
+
+                it('"dog < dog" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                });
+
+                it('"Dog < dog" (different case) evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'Dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                });
+
+                it('"dog < Dog" (different case) evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'Dog'
+                        .Result = false
+                        If( .Value1 < .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                });
+
+                it('"cat <= dog" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                });
+
+                it('"dog <= cat" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                });
+
+                it('"dog <= dog" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                });
+
+                it('"Dog <= dog" (different case) evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'Dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                });
+
+                it('"dog <= Dog" (different case) evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'Dog'
+                        .Result = false
+                        If( .Value1 <= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                });
+
+                it('"cat > dog" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                });
+
+                it('"dog > cat" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                });
+
+                it('"dog > dog" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                });
+
+                it('"Dog > dog" (different case) evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'Dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                });
+
+                it('"dog > Dog" (different case) evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'Dog'
+                        .Result = false
+                        If( .Value1 > .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                });
+
+                it('"cat >= dog" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                });
+
+                it('"dog >= cat" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'cat'
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                });
+
+                it('"dog >= dog" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                });
+
+                it('"Dog >= dog" (different case) evaluates to false', () => {
+                    const input = `
+                        .Value1 = 'Dog'
+                        .Value2 = 'dog'
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                });
+
+                it('"dog >= Dog" (different case) evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'dog'
+                        .Value2 = 'Dog'
+                        .Result = false
+                        If( .Value1 >= .Value2 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                });
+            });
+        });
+        
+        describe('Presence in ArrayOfStrings', () => {
+            it('present-string "in" array of strings evaluates to true', () => {
+                const input = `
+                    .Needle = 'b'
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    ['a', 'b', 'c'],
+                    true
+                ]);
+            });
+
+            it('not-present-string "in" array of strings evaluates to false', () => {
+                const input = `
+                    .Needle = 'd'
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'd',
+                    ['a', 'b', 'c'],
+                    false
+                ]);
+            });
+
+            it('string "in" empty array evaluates to false', () => {
+                const input = `
+                    .Needle = 'b'
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    [],
+                    false
+                ]);
+            });
+            
+            it('present-string "not in" array of strings evaluates to false', () => {
+                const input = `
+                    .Needle = 'b'
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    ['a', 'b', 'c'],
+                    false
+                ]);
+            });
+
+            it('not-present-string "not in" array of strings evaluates to true', () => {
+                const input = `
+                    .Needle = 'd'
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'd',
+                    ['a', 'b', 'c'],
+                    true
+                ]);
+            });
+
+            it('string "not in" empty array evaluates to true', () => {
+                const input = `
+                    .Needle = 'b'
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    [],
+                    true
+                ]);
+            });
+            
+            it('present-array-of-strings "in" array of strings evaluates to true', () => {
+                const input = `
+                    .Needle = {'d', 'b'}
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
+                    true
+                ]);
+            });
+
+            it('not-present-array-of-strings "in" array of strings evaluates to false', () => {
+                const input = `
+                    .Needle = {'d'}
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['d'],
+                    ['a', 'b', 'c'],
+                    false
+                ]);
+            });
+            
+            it('array of strings "in" empty array evaluates to false', () => {
+                const input = `
+                    .Needle = {'b'}
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['b'],
+                    [],
+                    false
+                ]);
+            });
+            
+            it('empty array "in" empty array evaluates to false', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    [],
+                    [],
+                    false
+                ]);
+            });
+
+            ///////////
+            
+            it('present-array-of-strings "not in" array of strings evaluates to false', () => {
+                const input = `
+                    .Needle = {'d', 'b'}
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
+                    false
+                ]);
+            });
+
+            it('not-present-array-of-strings "not in" array of strings evaluates to true', () => {
+                const input = `
+                    .Needle = {'d'}
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['d'],
+                    ['a', 'b', 'c'],
+                    true
+                ]);
+            });
+            
+            it('array of strings "not in" empty array evaluates to true', () => {
+                const input = `
+                    .Needle = {'b'}
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['b'],
+                    [],
+                    true
+                ]);
+            });
+            
+            it('empty array "not in" empty array evaluates to true', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = {}
+                    .Result = false
+                    If( .Needle not in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    [],
+                    [],
+                    true
+                ]);
+            });
+        });
+    });
 });

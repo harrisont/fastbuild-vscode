@@ -16,8 +16,22 @@ const lexer = moo.states({
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenPop' },
         variableReferenceCurrentScope: { match: '.', push: 'variableReferenceName' },
         variableReferenceParentScope:  { match: '^', push: 'variableReferenceName' },
+        
+        // '==' needs to come before '=' so that it has priority when matching.
+        operatorEqual: '==',
+        // '!=' needs to come before '!' so that it has priority when matching.
+        operatorNotEqual: '!=',
+        // '<=' needs to come before '<' so that it has priority when matching.
+        operatorLessOrEqual: '<=',
+        operatorLess: '<',
+        // '>=' needs to come before '>' so that it has priority when matching.
+        operatorGreaterOrEqual: '>=',
+        operatorGreater: '>',
+        operatorNot: '!',
+
         operatorAssignment: '=',
         operatorAddition: '+',
+
         arrayOrStructItemSeparator: ',',
         structStart: '[',
         structEnd: ']',
@@ -28,6 +42,7 @@ const lexer = moo.states({
         keywordFalse: 'false',
 
         keywordIn: 'in',
+        keywordNot: 'not',
 
         // Function keywords.
 
@@ -43,6 +58,7 @@ const lexer = moo.states({
         keywordExecutable: 'Executable',
         keywordExec: 'Exec',
         keywordForEach: 'ForEach',
+        keywordIf: 'If',
         keywordLibrary: 'Library',
         keywordObjectList: 'ObjectList',
         keywordPrint: 'Print',
@@ -136,12 +152,13 @@ statement ->
     scopedStatements          {% ([value]) => [ value, new ParseContext() ] %}
   | variableDefinition        {% ([valueWithContext]) => valueWithContext %}
   | variableAddition          {% ([valueWithContext]) => valueWithContext %}
-  | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
-  | functionForEach           {% ([value]) => [ value, new ParseContext() ] %}
-  | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
   | functionError             {% ([value]) => [ value, new ParseContext() ] %}
+  | functionForEach           {% ([value]) => [ value, new ParseContext() ] %}
+  | functionIf                {% ([value]) => [ value, new ParseContext() ] %}
   | functionPrint             {% ([value]) => [ value, new ParseContext() ] %}
   | functionSettings          {% ([value]) => [ value, new ParseContext() ] %}
+  | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -486,6 +503,40 @@ functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersSt
 functionPrint -> %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'print', value }; } %}
 
 functionSettings -> %keywordSettings functionBody  {% ([functionName, statements]) => { return { type: 'settings', statements }; } %}
+
+functionIf ->
+    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements }; } %}
+  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements }; } %}
+
+ifCondition ->
+    # Boolean expression: .Value
+                                             evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
+    # Boolean expression: ! .Value 
+  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', value, invert: true  }, context ] %}
+    # Comparison: .Value1 == .Value2
+  | evaluatedVariable                     %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Comparison: .Value1 != .Value2
+  | evaluatedVariable                     %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Comparison: .Value1 < .Value2
+  | evaluatedVariable                     %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Comparison: .Value1 <= .Value2
+  | evaluatedVariable                     %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Comparison: .Value1 > .Value2
+  | evaluatedVariable                     %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Comparison: .Value1 >= .Value2
+  | evaluatedVariable                     %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+    # Presence in ArrayOfStrings: .Value1 in .Value2
+  | evaluatedVariable                                                             %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
+    # Presence in ArrayOfStrings: .Value1 not in .Value2
+  | evaluatedVariable                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
