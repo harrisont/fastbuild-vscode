@@ -41,26 +41,28 @@ export class ReferenceProvider {
         // Search algorithm: for each variable references, check if the variable definition is the same as this one.
         // This is not very optimized.
 
-        const locations: Location[] = [];
+        // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+        const locations = new Map<string, Location>();
 
         for (const variableReference of variableReferences)
         {
-            // TODO: deduplicate references in order to handle references in a 'ForEach' loop.
             if (variableReference.definition.id === variableReferenceAtPosition.definition.id) {
-                locations.push({
+                const location: Location = {
                     uri: variableReference.range.uri,
                     range: variableReference.range
-                });
+                };
+                locations.set(JSON.stringify(location), location);
             }
         }
 
         if (variableReferenceAtPosition.usingRange) {
-            locations.push({
+            const location: Location = {
                 uri: variableReferenceAtPosition.usingRange.uri,
                 range: variableReferenceAtPosition.usingRange
-            });
+            };
+            locations.set(JSON.stringify(location), location);
         }
 
-        return locations;
+        return [...locations.values()];
     }
 }
