@@ -54,6 +54,7 @@ export class HoverProvider {
     }
     
     onHover(params: HoverParams): Hover | null {
+        const uri = params.textDocument.uri;
         const position = params.position;
         const evaluatedVariables = this.evaluatedData?.evaluatedVariables ?? [];
 
@@ -61,10 +62,9 @@ export class HoverProvider {
         let evaluatedVariable: EvaluatedVariable | null = null;
     
         // Potential optmization: use a different data structure to allow for a more efficient search.
-        for (evaluatedVariable of evaluatedVariables)
-        {
-            // TODO: also match params.textDocument.uri
-            if (isPositionInRange(position, evaluatedVariable.range))
+        for (evaluatedVariable of evaluatedVariables) {
+            if (uri == evaluatedVariable.range.uri
+                && isPositionInRange(position, evaluatedVariable.range))
             {
                 possibleValues.add(evaluatedVariable.value);
             }

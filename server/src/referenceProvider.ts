@@ -18,22 +18,23 @@ import {
 } from './evaluator';
 
 export class ReferenceProvider {
-    private evaluatedData: EvaluatedData | null = null;
-    private uri: DocumentUri | null = null;
+    private evaluatedData = new Map<DocumentUri, EvaluatedData>();
 
     onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
-        this.evaluatedData = newEvaluatedData;
-        this.uri = uri;
+        this.evaluatedData.set(uri, newEvaluatedData);
     }
 
     onReferences(params: ReferenceParams): Location[] | null {
-        if (!this.uri) {
+        const uri = params.textDocument.uri;
+        const position = params.position;
+        const evaluatedData = this.evaluatedData.get(uri);
+        if (evaluatedData === undefined) {
             return null;
         }
+        const variableReferences = evaluatedData.variableReferences;
 
-        // TODO: also match params.textDocument.uri
-        const variableReferenceAtPosition = this.getVariableReferenceAtPosition(params.position);
-        if (variableReferenceAtPosition === null) {
+        const variableReferenceAtPosition = variableReferences.find(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)));
+        if (variableReferenceAtPosition === undefined) {
             return null;
         }
 
@@ -42,12 +43,12 @@ export class ReferenceProvider {
 
         const locations: Location[] = [];
 
-        const variableReferences = this.evaluatedData?.variableReferences ?? [];
         for (const variableReference of variableReferences)
         {
+            // TODO: deduplicate references in order to handle references in a 'ForEach' loop.
             if (variableReference.definition.id === variableReferenceAtPosition.definition.id) {
                 locations.push({
-                    uri: this.uri,
+                    uri: variableReference.range.uri,
                     range: variableReference.range
                 });
             }
@@ -55,26 +56,11 @@ export class ReferenceProvider {
 
         if (variableReferenceAtPosition.usingRange) {
             locations.push({
-                uri: this.uri,
+                uri: variableReferenceAtPosition.usingRange.uri,
                 range: variableReferenceAtPosition.usingRange
             });
         }
 
         return locations;
-    }
-
-    private getVariableReferenceAtPosition(position: Position): VariableReference | null {
-        const variableReferences = this.evaluatedData?.variableReferences ?? [];
-    
-        for (let i = 0; i < variableReferences.length; i++)
-        {
-            const variableReference = variableReferences[i];
-            if (isPositionInRange(position, variableReference.range))
-            {
-                return variableReference;
-            }
-        }
-
-        return null;
     }
 }

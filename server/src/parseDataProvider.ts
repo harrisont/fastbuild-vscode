@@ -1,3 +1,6 @@
+// Used to manipulate URIs.
+import * as vscodeUri from 'vscode-uri';
+
 import { IFileContentProvider } from './fileContentProvider';
 
 import {
@@ -6,24 +9,24 @@ import {
     ParseOptions,
 } from './parser';
 
-export type Uri = string;
+export type UriStr = string;
 
 // Calculates and caches parse data.
 export class ParseDataProvider {
-    private data = new Map<Uri, ParseData>();
+    private data = new Map<UriStr, ParseData>();
 
     constructor(private readonly fileContentProvider: IFileContentProvider, private readonly parseOptions: ParseOptions) {
     }
     
-    updateParseData(uri: Uri): ParseData {
+    updateParseData(uri: vscodeUri.URI): ParseData {
         const text = this.fileContentProvider.getFileContents(uri);
         const parseData = parse(text, this.parseOptions);
-        this.data.set(uri, parseData);
+        this.data.set(uri.toString(), parseData);
         return parseData;
     }
 
-    getParseData(uri: Uri): ParseData {
-        const cachedData = this.data.get(uri);
+    getParseData(uri: vscodeUri.URI): ParseData {
+        const cachedData = this.data.get(uri.toString());
         if (cachedData === undefined) {
             return this.updateParseData(uri);
         } else {

@@ -16,33 +16,31 @@ import {
 } from './evaluator';
 
 export class DefinitionProvider {
-    private evaluatedData: EvaluatedData | null = null;
-    private uri: DocumentUri | null = null;
+    private evaluatedData = new Map<DocumentUri, EvaluatedData>();
 
     onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
-        this.evaluatedData = newEvaluatedData;
-        this.uri = uri;
+        this.evaluatedData.set(uri, newEvaluatedData);
     }
 
     onDefinition(params: DefinitionParams): DefinitionLink[] | null {
-        if (!this.uri) {
+        const uri = params.textDocument.uri;
+        const position = params.position;
+        const evaluatedData = this.evaluatedData.get(uri);
+        if (evaluatedData === undefined) {
             return null;
         }
-
-        const position = params.position;
-        const variableReferences = this.evaluatedData?.variableReferences ?? [];
+        const variableReferences = evaluatedData.variableReferences;
     
-        for (let i = 0; i < variableReferences.length; i++)
-        {
+        for (let i = 0; i < variableReferences.length; i++) {
             const variableReference = variableReferences[i];
-            // TODO: also match params.textDocument.uri
-            if (isPositionInRange(position, variableReference.range))
+            if (uri == variableReference.range.uri
+                && isPositionInRange(position, variableReference.range))
             {
                 const definition = variableReference.definition;
 
                 const definitionLink: DefinitionLink = {
                     originSelectionRange: variableReference.range,
-                    targetUri: this.uri,
+                    targetUri: definition.range.uri,
                     targetRange: definition.range,
                     targetSelectionRange: definition.range,
                 };

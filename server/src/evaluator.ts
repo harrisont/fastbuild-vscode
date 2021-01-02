@@ -5,7 +5,7 @@ import {
     Statement,
 } from './parser';
 
-import { ParseDataProvider, Uri } from './parseDataProvider';
+import { ParseDataProvider, UriStr } from './parseDataProvider';
 
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
@@ -27,7 +27,7 @@ export class SourceRange {
     readonly start: SourcePosition;
     readonly end: SourcePosition;
 
-    constructor(readonly uri: Uri, parseSourceRange: ParseSourceRange) {
+    constructor(readonly uri: UriStr, parseSourceRange: ParseSourceRange) {
         this.start = parseSourceRange.start;
         this.end = parseSourceRange.end;
     }
@@ -637,16 +637,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 break;
             }
             case 'include': {
-                const includeRelativePath: Uri = statement.path;
+                const includeRelativePath: UriStr = statement.path;
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
-                const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, includeRelativePath).toString();
+                const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, includeRelativePath);
                 const includeParseData = context.parseDataProvider.getParseData(includeUri);
 
                 const evaluatedStatements = evaluateStatements(
                     includeParseData.statements,
                     {
                         scopeStack: context.scopeStack,
-                        thisFbuildUri: includeUri,
+                        thisFbuildUri: includeUri.toString(),
                         parseDataProvider: context.parseDataProvider,
                     }
                 );

@@ -1,5 +1,8 @@
 import * as assert from 'assert';
 
+// Used to manipulate URIs.
+import * as vscodeUri from 'vscode-uri';
+
 import {
     evaluate,
     EvaluatedData,
@@ -14,15 +17,15 @@ import {
 import { IFileContentProvider } from '../fileContentProvider';
 import { ParseDataProvider } from '../parseDataProvider';
 
-type Uri = string;
+type UriStr = string;
 type FileContents = string;
 
 class MockFileContentProvider implements IFileContentProvider {
-    constructor(private readonly fileContents: Map<Uri, FileContents>) {
+    constructor(private readonly fileContents: Map<UriStr, FileContents>) {
     }
 
-    getFileContents(uri: Uri): FileContents {
-        const contents = this.fileContents.get(uri);
+    getFileContents(uri: vscodeUri.URI): FileContents {
+        const contents = this.fileContents.get(uri.toString());
         if (contents === undefined) {
             throw new Error(`MockFileContentProvider has no data for URI '${uri}'`);
         }
@@ -34,7 +37,7 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
     return createFileRange('file:///dummy.bff', startLine, startCharacter, endLine, endCharacter);
 }
 
-function createFileRange(uri: Uri, startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+function createFileRange(uri: UriStr, startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
     return new SourceRange(
         uri,
         {
@@ -50,18 +53,19 @@ function createFileRange(uri: Uri, startLine: number, startCharacter: number, en
     );
 }
     
-function evaluateInputs(thisFbuildUri: Uri, inputs: Map<Uri, FileContents>): EvaluatedData {
+function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>): EvaluatedData {
     const parseDataProvider = new ParseDataProvider(
         new MockFileContentProvider(inputs),
         { enableDiagnostics: true }
     );
+    const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const parseData = parseDataProvider.getParseData(thisFbuildUri);
-    return evaluate(parseData, thisFbuildUri, parseDataProvider);
+    return evaluate(parseData, thisFbuildUriStr, parseDataProvider);
 }
 
 function evaluateInput(input: FileContents): EvaluatedData {
     const thisFbuildUri = 'file:///dummy.bff';
-    return evaluateInputs(thisFbuildUri, new Map<Uri, FileContents>([[thisFbuildUri, input]]));
+    return evaluateInputs(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]));
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
@@ -2176,7 +2180,7 @@ describe('evaluator', () => {
 
     describe('#include', () => {
         it('basic include', () => {
-            const result = evaluateInputs('file:///fbuild.bff', new Map<Uri, FileContents>([
+            const result = evaluateInputs('file:///fbuild.bff', new Map<UriStr, FileContents>([
                 [
                     'file:///fbuild.bff',
                     `
@@ -2254,7 +2258,7 @@ describe('evaluator', () => {
         });
 
         it('include with ".."', () => {
-            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<Uri, FileContents>([
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
                 [
                     'file:///some/path/fbuild.bff',
                     `
