@@ -1090,12 +1090,20 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
         
-        it('Print', () => {
+        it('Print string', () => {
             const input = `
                 .Value = 1
                 Print('Value is $Value$')
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
+        });
+        
+        it('Print evaluated variable', () => {
+            const input = `
+                .Value = 'hello'
+                Print(.Value)
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello']);
         });
         
         it('Settings', () => {
