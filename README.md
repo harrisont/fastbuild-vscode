@@ -42,8 +42,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 ## TODO
 
 Support full FASTBuild syntax:
-* Support functions that change how we evaluate:
-    * `If` ([docs](https://www.fastbuild.org/docs/functions/if.html))
 * Support multiple documents. Right now everything assumes a single document.
 * Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).

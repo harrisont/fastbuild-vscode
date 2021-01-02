@@ -324,8 +324,8 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 break;
             }
             case 'using': {
-                if (!statement.struct.type || statement.struct.type !== 'evaluatedVariable') {
-                    throw new EvaluationError(`'Using' parameter must be an evaluated variable`);
+                if (statement.struct.type !== 'evaluatedVariable') {
+                    throw new EvaluationError(`'Using' parameter must be an evaluated variable but instead is '${statement.struct.type}'`);
                 }
                 const evaluated = evaluateEvaluatedVariable(statement.struct, scopeStack);
                 result.evaluatedVariables.push(...evaluated.evaluatedVariables);
@@ -353,8 +353,8 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
             }
             case 'forEach': {
                 // Evaluate the array to loop over.
-                if (!statement.arrayToLoopOver.type || statement.arrayToLoopOver.type !== 'evaluatedVariable') {
-                    throw new EvaluationError(`'ForEach' array to loop over must be an evaluated variable`);
+                if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
+                    throw new EvaluationError(`'ForEach' array to loop over must be an evaluated variable but instead is '${statement.arrayToLoopOver.type}'`);
                 }
                 const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
                 const evaluatedArrayToLoopOver = evaluateEvaluatedVariable(arrayToLoopOver, scopeStack);
@@ -443,7 +443,7 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                 result.variableReferences.push(...evaluatedValue.variableReferences);
                 break;
             }
-            case 'settings': {
+            case 'settings': {                
                 // Evaluate the function body.
                 scopeStack.push();
                 const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
@@ -453,6 +453,157 @@ function evaluateStatements(statements: Statement[], scopeStack: ScopeStack): Ev
                     result.variableDefinitions.set(varName, varDefinition);
                 }
                 scopeStack.pop();
+                break;
+            }
+            case 'if': {
+                // Evaluate the condition.
+                const condition = statement.condition;
+                let evaluatedConditionBool = false;
+                switch (condition.type) {
+                    case 'boolean': {
+                        if (condition.value.type !== 'evaluatedVariable') {
+                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.value.type}'`);
+                        }
+                        const conditionValue: ParsedEvaluatedVariable = condition.value;
+                        const evaluatedCondition = evaluateEvaluatedVariable(conditionValue, scopeStack);
+                        const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
+                        if (typeof evaluatedConditionValue !== 'boolean') {
+                            throw new EvaluationError(`Condition must evaluate to a boolean, but was ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
+                        }
+                        result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
+                        result.variableReferences.push(...evaluatedCondition.variableReferences);
+
+                        evaluatedConditionBool = condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
+                        break;
+                    }
+                    case 'comparison': {
+                        // Evaluate LHS.
+                        if (condition.lhs.type !== 'evaluatedVariable') {
+                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                        }
+                        const lhs: ParsedEvaluatedVariable = condition.lhs;
+                        const evaluatedLhs = evaluateEvaluatedVariable(lhs, scopeStack);
+                        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+                        result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
+                        result.variableReferences.push(...evaluatedLhs.variableReferences);
+                        
+                        // Evaluate RHS.
+                        if (condition.rhs.type !== 'evaluatedVariable') {
+                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                        }
+                        const rhs: ParsedEvaluatedVariable = condition.rhs;
+                        const evaluatedRhs = evaluateEvaluatedVariable(rhs, scopeStack);
+                        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+                        result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
+                        result.variableReferences.push(...evaluatedRhs.variableReferences);
+
+                        if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
+                            throw new EvaluationError(`'If' condition comparison must compare variables of the same type, but got '${typeof evaluatedLhsValue}' and '${typeof evaluatedRhsValue}'`);
+                        }
+
+                        const operator: string = condition.operator;
+                        
+                        // Only allow '==' and '!=' operators for booleans, since {'>', '>=', '<', '<='} don't make sense.
+                        // Checking the LHS type also implicitly checks the RHS type since above we checked that the LHS and RHS types are equal.
+                        if (typeof evaluatedLhsValue === 'boolean'
+                            && operator !== '=='
+                            && operator !== '!=')
+                        {
+                            throw new EvaluationError(`'If' comparison of booleans only supports '==' and '!=', but '${operator}' was used`);
+                        }
+
+                        switch (operator) {
+                            case '==':
+                                evaluatedConditionBool = evaluatedLhsValue == evaluatedRhsValue;
+                                break;
+                            case '!=':
+                                evaluatedConditionBool = evaluatedLhsValue != evaluatedRhsValue;
+                                break;
+                            case '<':
+                                evaluatedConditionBool = evaluatedLhsValue < evaluatedRhsValue;
+                                break;
+                            case '<=':
+                                evaluatedConditionBool = evaluatedLhsValue <= evaluatedRhsValue;
+                                break;
+                            case '>':
+                                evaluatedConditionBool = evaluatedLhsValue > evaluatedRhsValue;
+                                break;
+                            case '>=':
+                                evaluatedConditionBool = evaluatedLhsValue >= evaluatedRhsValue;
+                                break;
+                            default:
+                                throw new EvaluationError(`Unknown 'If' comparison operator '${operator}'`);
+                        }
+                        break;
+                    }
+                    case 'in': {
+                        // Evaluate LHS.
+                        if (condition.lhs.type !== 'evaluatedVariable') {
+                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                        }
+                        const lhs: ParsedEvaluatedVariable = condition.lhs;
+                        const evaluatedLhs = evaluateEvaluatedVariable(lhs, scopeStack);
+                        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+                        result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
+                        result.variableReferences.push(...evaluatedLhs.variableReferences);
+                        
+                        // Evaluate RHS.
+                        if (condition.rhs.type !== 'evaluatedVariable') {
+                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                        }
+                        const rhs: ParsedEvaluatedVariable = condition.rhs;
+                        const evaluatedRhs = evaluateEvaluatedVariable(rhs, scopeStack);
+                        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+                        result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
+                        result.variableReferences.push(...evaluatedRhs.variableReferences);
+
+                        // Check presence.
+                        if (evaluatedRhsValue instanceof Array) {
+                            if (evaluatedRhsValue.length === 0) {
+                                evaluatedConditionBool = false;
+                            } else if (typeof evaluatedRhsValue[0] === 'string') {
+                                if (typeof evaluatedLhsValue === 'string') {
+                                    evaluatedConditionBool = evaluatedRhsValue.includes(evaluatedLhsValue);
+                                } else if (evaluatedLhsValue instanceof Array) {
+                                    if (evaluatedLhsValue.length === 0) {
+                                        evaluatedConditionBool = false;
+                                    } else if (typeof evaluatedLhsValue[0] === 'string') {
+                                        evaluatedConditionBool = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
+                                    } else {
+                                        throw new EvaluationError(`'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got an array of '${typeof evaluatedLhsValue[0]}'`);
+                                    }
+                                } else {
+                                    throw new EvaluationError(`'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got '${JSON.stringify(evaluatedLhsValue)}'`);
+                                }
+                            } else {
+                                throw new EvaluationError(`'If' 'in' condition right-hand-side variable must be an array of strings, but got an array of '${typeof evaluatedRhsValue[0]}'`);
+                            }
+                        } else {
+                            throw new EvaluationError(`'If' 'in' condition right-hand-side variable must be an array of strings, but got '${JSON.stringify(evaluatedRhsValue)}'`);
+                        }
+
+                        const invert: boolean = condition.invert;
+                        if (invert) {
+                            evaluatedConditionBool = !evaluatedConditionBool;
+                        }
+
+                        break;
+                    }
+                    default:
+                        throw new EvaluationError(`Unknown condition type '${condition.type}'`);
+                }
+
+                // Evaluate the function body if the condition was true.
+                if (evaluatedConditionBool === true) {
+                    scopeStack.push();
+                    const evaluatedStatements = evaluateStatements(statement.statements, scopeStack);
+                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                    result.variableReferences.push(...evaluatedStatements.variableReferences);
+                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                        result.variableDefinitions.set(varName, varDefinition);
+                    }
+                    scopeStack.pop();
+                }
                 break;
             }
             default:
