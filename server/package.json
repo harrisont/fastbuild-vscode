@@ -14,6 +14,7 @@
 	"dependencies": {
 		"vscode-languageserver": "^6.1.1",
 		"vscode-languageserver-textdocument": "^1.0.1",
+		"vscode-uri": "3.0.1",
 		"nearley": "2.19.7",
 		"@types/nearley": "2.11.1",
 		"moo": "0.5.1"

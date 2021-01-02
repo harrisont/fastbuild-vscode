@@ -2,10 +2,10 @@ import * as assert from 'assert';
 
 import {
     parse,
-    SourceRange,
+    ParseSourceRange,
 } from '../parser';
 
-function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): ParseSourceRange {
     return {
         start: {
             line: startLine,
@@ -20,7 +20,7 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
     const result = parse(input, { enableDiagnostics: true} );
-    assert.deepStrictEqual(result, expectedResult);
+    assert.deepStrictEqual(result.statements, expectedResult);
 }
 
 describe('parser', () => {

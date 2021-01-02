@@ -43,13 +43,14 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 Support full FASTBuild syntax:
 * Support multiple documents. Right now everything assumes a single document.
-* Support `#include` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#include)).
 * Support the `_CURRENT_BFF_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `#once` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#once)).
 
 Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
 * Support "go to definition" and "find references" for aliases.
+* Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
 * Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
 * Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)). This is low priority, since I have never seen it used.

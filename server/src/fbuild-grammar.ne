@@ -72,6 +72,8 @@ const lexer = moo.states({
         keywordVSProjectExternal: 'VSProjectExternal',
         keywordVSSolution: 'VSSolution',
         keywordXCodeProject: 'XCodeProject',
+
+        keywordInclude: '#include',
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -159,6 +161,7 @@ statement ->
   | functionSettings          {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
+  | include                   {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -542,6 +545,8 @@ ifCondition ->
     # Presence in ArrayOfStrings: .Value1 not in .Value2
   | evaluatedVariable                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
   | evaluatedVariable whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
+
+include -> %keywordInclude optionalWhitespaceOrNewline string  {% ([include, space, path]) => { return { type: 'include', path }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

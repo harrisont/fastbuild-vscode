@@ -1,34 +1,72 @@
 import * as assert from 'assert';
 
 import {
-    SourceRange,
-} from '../parser';
-
-import {
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
+    SourceRange,
     Struct,
     Value,
+    VariableDefinition,
     VariableReference,
 } from '../evaluator';
 
-function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
-    return {
-        start: {
-            line: startLine,
-            character: startCharacter
-        },
-        end: {
-            line: endLine,
-            character: endCharacter
+import { IFileContentProvider } from '../fileContentProvider';
+import { ParseDataProvider } from '../parseDataProvider';
+
+type Uri = string;
+type FileContents = string;
+
+class MockFileContentProvider implements IFileContentProvider {
+    constructor(private readonly fileContents: Map<Uri, FileContents>) {
+    }
+
+    getFileContents(uri: Uri): FileContents {
+        const contents = this.fileContents.get(uri);
+        if (contents === undefined) {
+            throw new Error(`MockFileContentProvider has no data for URI '${uri}'`);
         }
-    };
+        return contents;
+    }
+}
+
+function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+    return createFileRange('file:///dummy.bff', startLine, startCharacter, endLine, endCharacter);
+}
+
+function createFileRange(uri: Uri, startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+    return new SourceRange(
+        uri,
+        {
+            start: {
+                line: startLine,
+                character: startCharacter
+            },
+            end: {
+                line: endLine,
+                character: endCharacter
+            }
+        }
+    );
+}
+    
+function evaluateInputs(thisFbuildUri: Uri, inputs: Map<Uri, FileContents>): EvaluatedData {
+    const parseDataProvider = new ParseDataProvider(
+        new MockFileContentProvider(inputs),
+        { enableDiagnostics: true }
+    );
+    const parseData = parseDataProvider.getParseData(thisFbuildUri);
+    return evaluate(parseData, thisFbuildUri, parseDataProvider);
+}
+
+function evaluateInput(input: FileContents): EvaluatedData {
+    const thisFbuildUri = 'file:///dummy.bff';
+    return evaluateInputs(thisFbuildUri, new Map<Uri, FileContents>([[thisFbuildUri, input]]));
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
-function assertEvaluatedVariablesValueEqual(input: string, expectedValues: Value[]): void {
-    const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues: Value[]): void {
+    const result = evaluateInput(input);
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
 }
@@ -126,7 +164,7 @@ describe('evaluator', () => {
                 .Var2 = .Var1
             `;
             assert.throws(
-                () => evaluate(input, { enableDiagnostics: true }),
+                () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
@@ -152,7 +190,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input, { enableDiagnostics: true }),
+                () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
                     message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -170,7 +208,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input, { enableDiagnostics: true }),
+                () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
                     message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
@@ -288,7 +326,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input, { enableDiagnostics: true }),
+                () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
@@ -303,7 +341,7 @@ describe('evaluator', () => {
                 }
             `;
             assert.throws(
-                () => evaluate(input, { enableDiagnostics: true }),
+                () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
                     message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
@@ -664,7 +702,7 @@ describe('evaluator', () => {
                 .MyVar2 = 'MyValue2'
                 .Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue1',
@@ -683,7 +721,7 @@ describe('evaluator', () => {
                 .MyVar = 'MyValue'
                 .Copy = .MyVar
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue',
@@ -699,7 +737,7 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = 1
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -718,7 +756,7 @@ describe('evaluator', () => {
                 .MyVar = 1
                 .MyVar + 2
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -745,7 +783,7 @@ describe('evaluator', () => {
                 .MyVar1 = 1
                 .MyVar2 = .MyVar1
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -780,7 +818,7 @@ describe('evaluator', () => {
                 .MyVar1 = 'hello'
                 .MyVar2 = '$MyVar1$ world'
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -819,7 +857,7 @@ describe('evaluator', () => {
                 Using( .MyStruct )
                 .Copy = .StructVar
             `;
-            const result: EvaluatedData = evaluate(input, { enableDiagnostics: true });
+            const result = evaluateInput(input);
             const expectedReferences: VariableReference[] = [
                 // .StructVar = 1
                 {
@@ -2061,8 +2099,6 @@ describe('evaluator', () => {
                     false
                 ]);
             });
-
-            ///////////
             
             it('present-array-of-strings "not in" array of strings evaluates to false', () => {
                 const input = `
@@ -2135,6 +2171,139 @@ describe('evaluator', () => {
                     true
                 ]);
             });
+        });
+    });
+
+    describe('#include', () => {
+        it('basic include', () => {
+            const result = evaluateInputs('file:///fbuild.bff', new Map<Uri, FileContents>([
+                [
+                    'file:///fbuild.bff',
+                    `
+                        #include 'helper.bff'
+                        .Copy = .FromHelper
+                    `
+                ],
+                [
+                    'file:///helper.bff',
+                    `
+                        .FromHelper = 1
+                        .Copy = .FromHelper
+                    `
+                ]
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 1,
+                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
+                },
+                {
+                    value: 1,
+                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
+                }
+            ]);
+    
+            const definitionFromHelper: VariableDefinition = {
+                id: 1,
+                range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
+            };
+    
+            const definitionCopy: VariableDefinition = {
+                id: 2,
+                range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
+            };
+    
+            assert.deepStrictEqual(result.variableDefinitions, new Map<string, VariableDefinition>([
+                ['FromHelper', definitionFromHelper],
+                ['Copy', definitionCopy],
+            ]));
+    
+            assert.deepStrictEqual(result.variableReferences, [
+                // helper.bff ".FromHelper = 1" LHS
+                {
+                    definition: definitionFromHelper,
+                    range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
+                    usingRange: null,
+                },
+                // helper.bff ".Copy = .FromHelper" RHS
+                {
+                    definition: definitionFromHelper,
+                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
+                    usingRange: null,
+                },
+                // helper.bff ".Copy = .FromHelper" LHS
+                {
+                    definition: definitionCopy,
+                    range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
+                    usingRange: null,
+                },
+                // fbuild.bff ".Copy = .FromHelper" RHS
+                {
+                    definition: definitionFromHelper,
+                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
+                    usingRange: null,
+                },
+                // fbuild.bff ".Copy = .FromHelper" LHS
+                {
+                    definition: definitionCopy,
+                    range: createFileRange('file:///fbuild.bff', 2, 24, 2, 29),
+                    usingRange: null,
+                },
+            ]);
+        });
+
+        it('include with ".."', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<Uri, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        #include 'animals/dog.bff'
+                        #include 'animals/cat.bff'
+                    `
+                ],
+                [
+                    'file:///some/path/greetings.bff',
+                    `
+                        .Message = 'Hello $Name$'
+                    `
+                ],
+                [
+                    'file:///some/path/animals/dog.bff',
+                    `
+                        .Name = 'dog'
+                        #include '../greetings.bff'
+                        Print( .Message )
+                    `
+                ],
+                [
+                    'file:///some/path/animals/cat.bff',
+                    `
+                        .Name = 'cat'
+                        #include '../greetings.bff'
+                        Print( .Message )
+                    `
+                ]
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello dog',
+                    range: createFileRange('file:///some/path/animals/dog.bff', 3, 31, 3, 39),
+                },
+                {
+                    value: 'cat',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello cat',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 3, 31, 3, 39),
+                },
+            ]);
         });
     });
 });

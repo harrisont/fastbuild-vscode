@@ -6,12 +6,12 @@ export interface SourcePosition {
     character: number;
 }
 
-export interface SourceRange {
+export interface ParseSourceRange {
     start: SourcePosition;
     end: SourcePosition;
 }
 
-export function isPositionInRange(position: SourcePosition, range: SourceRange): boolean {
+export function isPositionInRange(position: SourcePosition, range: ParseSourceRange): boolean {
     return position.line >= range.start.line
         && position.line <= range.end.line
         && position.character >= range.start.character
@@ -49,8 +49,12 @@ export interface ParseOptions {
     enableDiagnostics: boolean
 }
 
+export interface ParseData {
+    statements: Statement[];
+}
+
 // Parse the input and return the statements.
-export function parse(input: string, options: ParseOptions): Statement[] {
+export function parse(input: string, options: ParseOptions): ParseData {
     // Make the input always end in a newline in order to make parsing easier.
     // This lets the grammar assume that statements always end in a newline.
     const modifiedInput = input + '\n';
@@ -77,5 +81,7 @@ export function parse(input: string, options: ParseOptions): Statement[] {
         throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
     }
     const statements = parser.results[0];
-    return statements;
+    return {
+        statements
+    };
 }
