@@ -6,14 +6,14 @@ import {
 
 import {
     isPositionInRange,
-} from './parser';
+} from '../parser';
 
 import {
     EvaluatedData,
     EvaluatedVariable,
     Struct,
     Value,
-} from './evaluator';
+} from '../evaluator';
 
 const FASTBUILD_LANGUAGE_ID = 'fastbuild';
 const INDENTATION = ' '.repeat(4);

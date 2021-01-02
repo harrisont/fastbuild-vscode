@@ -16,10 +16,10 @@ import * as vscodeUri from 'vscode-uri';
 
 import * as evaluator from './evaluator';
 
-import { HoverProvider } from './hoversProvider';
-import { DefinitionProvider } from './definitionProvider';
-import { DiagnosticProvider } from './diagnosticProvider';
-import { ReferenceProvider } from './referenceProvider';
+import { HoverProvider } from './features/hoversProvider';
+import { DefinitionProvider } from './features/definitionProvider';
+import { DiagnosticProvider } from './features/diagnosticProvider';
+import { ReferenceProvider } from './features/referenceProvider';
 import { FileContentProvider } from './fileContentProvider';
 import { ParseDataProvider } from './parseDataProvider';
 

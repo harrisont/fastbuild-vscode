@@ -1,5 +1,4 @@
 import {
-    Position,
     ReferenceParams,
 } from 'vscode-languageserver-protocol';
 
@@ -10,12 +9,11 @@ import {
 
 import {
     isPositionInRange,
-} from './parser';
+} from '../parser';
 
 import {
     EvaluatedData,
-    VariableReference,
-} from './evaluator';
+} from '../evaluator';
 
 export class ReferenceProvider {
     private evaluatedData = new Map<DocumentUri, EvaluatedData>();

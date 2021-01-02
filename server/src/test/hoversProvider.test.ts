@@ -7,7 +7,7 @@ import {
 
 import {
     valueToString,
-} from '../hoversProvider';
+} from '../features/hoversProvider';
 
 describe('hoversProvider', () => {
     describe('valueToString', () => {

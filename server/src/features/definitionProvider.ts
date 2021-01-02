@@ -9,11 +9,11 @@ import {
 
 import {
     isPositionInRange,
-} from './parser';
+} from '../parser';
 
 import {
     EvaluatedData,
-} from './evaluator';
+} from '../evaluator';
 
 export class DefinitionProvider {
     private evaluatedData = new Map<DocumentUri, EvaluatedData>();
