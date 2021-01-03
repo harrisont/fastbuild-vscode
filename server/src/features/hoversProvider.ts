@@ -42,7 +42,8 @@ export function valueToString(value: Value, indentation = ''): string {
         ];
         return lines.join('\n');
     } else {
-        return JSON.stringify(value);
+        // Handle JSON.stringify doubling raw escape characters.
+        return JSON.stringify(value).replace(/\\\\/g, '\\');
     }
 }
 

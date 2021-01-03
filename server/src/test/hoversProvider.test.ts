@@ -26,6 +26,11 @@ describe('hoversProvider', () => {
             assert.strictEqual('"Hello world"', str);
         });
         
+        it('works for a string with escape characters', () => {
+            const str = valueToString('a \\ b');
+            assert.strictEqual('"a \\ b"', str);
+        });
+        
         it('works for an empty array', () => {
             const value: Value = [];
             const str = valueToString(value);
