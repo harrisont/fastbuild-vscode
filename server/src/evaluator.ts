@@ -264,6 +264,8 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
 
     scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, dummyVariableDefinition);
     scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', dummyVariableDefinition);
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', dummyVariableDefinition);
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, dummyVariableDefinition);
 
     const context = {
         scopeStack,

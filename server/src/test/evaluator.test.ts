@@ -784,7 +784,9 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('_WORKING_DIR_  is a builtin variable that evaluates to the absolute path to the directory of the root bff file', () => {
+        // _WORKING_DIR_ is supposed to evaluate to the working directory when fbuild was launched, but since we cannot know that,
+        // we use the directory of the root bff file as a likely proxy.
+        it('_WORKING_DIR_ is a builtin variable that evaluates to the absolute path to the directory of the root bff file', () => {
             const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
                 [
                     'file:///some/path/fbuild.bff',
@@ -818,6 +820,22 @@ describe('evaluator', () => {
                     range: createFileRange('file:///some/path/fbuild.bff', 3, 31, 3, 45),
                 },
             ]);
+        });
+
+        // We need to use a placeholder because we don't know the actual version of FASTBuild being run.
+        it('_FASTBUILD_VERSION_STRING_ is a builtin variable that evaluates to (a placeholder for) the current FASTBuild version as a string', () => {
+            const input = `
+                Print( ._FASTBUILD_VERSION_STRING_ )
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['vPlaceholderFastBuildVersionString']);
+        });
+
+        // We need to use a placeholder because we don't know the actual version of FASTBuild being run.
+        it('_FASTBUILD_VERSION_ is a builtin variable that evaluates to (a placeholder for) the current FASTBuild version as an integer', () => {
+            const input = `
+                Print( ._FASTBUILD_VERSION_ )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [-1]);
         });
     });
 
