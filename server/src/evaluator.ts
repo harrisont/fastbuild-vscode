@@ -270,6 +270,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
         rootFbuildDirUri: rootFbuildDirUri.toString(),
         thisFbuildUri,
         parseDataProvider,
+        onceIncludeUrisAlreadyIncluded: [],
     };
     return evaluateStatements(parseData.statements, context);
 }
@@ -279,6 +280,7 @@ interface EvaluationContext {
     rootFbuildDirUri: string,
     thisFbuildUri: string,
     parseDataProvider: ParseDataProvider,
+    onceIncludeUrisAlreadyIncluded: string[];
 }
 
 function evaluateStatements(statements: Statement[], context: EvaluationContext): EvaluatedData {
@@ -673,30 +675,36 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const includeRelativePath: UriStr = statement.path;
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, includeRelativePath);
-                const includeParseData = context.parseDataProvider.getParseData(includeUri);
+                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
+                    const includeParseData = context.parseDataProvider.getParseData(includeUri);
                 
-                const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_').value;
-                const include_dir_relative_to_root = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
-                context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root);
-
-                const evaluatedStatements = evaluateStatements(
-                    includeParseData.statements,
-                    {
-                        scopeStack: context.scopeStack,
-                        rootFbuildDirUri: context.rootFbuildDirUri,
-                        thisFbuildUri: includeUri.toString(),
-                        parseDataProvider: context.parseDataProvider,
+                    const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_').value;
+                    const include_dir_relative_to_root = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root);
+    
+                    const evaluatedStatements = evaluateStatements(
+                        includeParseData.statements,
+                        {
+                            scopeStack: context.scopeStack,
+                            rootFbuildDirUri: context.rootFbuildDirUri,
+                            thisFbuildUri: includeUri.toString(),
+                            parseDataProvider: context.parseDataProvider,
+                            onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+                        }
+                    );
+    
+                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                    result.variableReferences.push(...evaluatedStatements.variableReferences);
+                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                        result.variableDefinitions.set(varName, varDefinition);
                     }
-                );
-
-                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                result.variableReferences.push(...evaluatedStatements.variableReferences);
-                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                    result.variableDefinitions.set(varName, varDefinition);
+                    
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root);
                 }
-                
-                context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root);
-
+                break;
+            }
+            case 'once': {
+                context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
                 break;
             }
             default:

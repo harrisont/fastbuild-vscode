@@ -43,7 +43,6 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 
 Support full FASTBuild syntax:
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
-* Support `#once` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#once)).
 * Support the `_FASTBUILD_VERSION_STRING_` and `_FASTBUILD_VERSION_` built in variables ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 
 Add more language server provider features:

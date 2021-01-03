@@ -74,6 +74,7 @@ const lexer = moo.states({
         keywordXCodeProject: 'XCodeProject',
 
         keywordInclude: '#include',
+        keywordOnce: '#once',
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -162,6 +163,7 @@ statement ->
   | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
   | include                   {% ([value]) => [ value, new ParseContext() ] %}
+  | once                      {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -547,6 +549,8 @@ ifCondition ->
   | evaluatedVariable whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
 
 include -> %keywordInclude optionalWhitespaceOrNewline string  {% ([include, space, path]) => { return { type: 'include', path }; } %}
+
+once -> %keywordOnce  {% () => { return { type: 'once' }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

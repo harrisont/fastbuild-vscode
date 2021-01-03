@@ -2462,4 +2462,73 @@ describe('evaluator', () => {
             ]);
         });
     });
+    
+    describe('#once', () => {
+        it('include the same file-with-#once multiple times from the same file', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        .Name = 'Bobo'
+                        #include 'greetings.bff'
+                        #include 'greetings.bff'
+                    `
+                ],
+                [
+                    'file:///some/path/greetings.bff',
+                    `
+                        #once
+                        Print( 'Hello $Name$' )
+                    `
+                ],
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/greetings.bff', 2, 38, 2, 44),
+                },
+            ]);
+        });
+
+        it('include the same file-with-#once multiple times from different files', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        #include 'animals/dog.bff'
+                        #include 'animals/cat.bff'
+                    `
+                ],
+                [
+                    'file:///some/path/greetings.bff',
+                    `
+                        #once
+                        .Message = 'Hello $Name$'
+                    `
+                ],
+                [
+                    'file:///some/path/animals/dog.bff',
+                    `
+                        .Name = 'dog'
+                        #include '../greetings.bff'
+                    `
+                ],
+                [
+                    'file:///some/path/animals/cat.bff',
+                    `
+                        .Name = 'cat'
+                        #include '../greetings.bff'
+                    `
+                ]
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 2, 42, 2, 48),
+                },
+            ]);
+        });
+    });
 });
