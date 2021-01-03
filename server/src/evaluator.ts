@@ -346,12 +346,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.variableReferences.push(...evaluatedLhsName.variableReferences);
 
                 const existingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value);
+                const previousValue = deepCopyValue(existingVariable.value);
                 existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value);
 
-                // The addition's LHS is a variable reference.
+                const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
+
+                // The addition's LHS is an evaluated variable and is a variable reference.
+                result.evaluatedVariables.push({
+                    value: previousValue,
+                    range: lhsRange,
+                });
                 result.variableReferences.push({
                     definition: existingVariable.definition,
-                    range: new SourceRange(context.thisFbuildUri, lhs.range),
+                    range: lhsRange,
                     usingRange: null,
                 });
 

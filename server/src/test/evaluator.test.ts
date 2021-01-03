@@ -228,7 +228,10 @@ describe('evaluator', () => {
                 .MySum + 2
                 .Evaluated = .MySum
             `;
-            assertEvaluatedVariablesValueEqual(input, [3]);
+            assertEvaluatedVariablesValueEqual(input, [
+                1,
+                3
+            ]);
         });
 
         it('should work on adding a string literal', () => {
@@ -237,7 +240,10 @@ describe('evaluator', () => {
                 .MyMessage + ' world'
                 .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world'
+            ]);
         });
 
         it('should work on adding a string literal to a variable in the parent scope', () => {
@@ -248,7 +254,10 @@ describe('evaluator', () => {
                 }
                 .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world'
+            ]);
         });
 
         it('should work on adding a string with a variable', () => {
@@ -258,7 +267,11 @@ describe('evaluator', () => {
                 .MyMessage + .MyName
                 .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['Bobo', 'helloBobo']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bobo',
+                'hello',
+                'helloBobo'
+            ]);
         });
 
         it('should work on adding a string with a string template', () => {
@@ -268,7 +281,11 @@ describe('evaluator', () => {
                 .MyMessage + ' $MyName$'
                 .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['Bobo', 'hello Bobo']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bobo',
+                'hello',
+                'hello Bobo'
+            ]);
         });
 
         it('adding a string literal should use the last referenced variable if none is specified', () => {
@@ -321,7 +338,11 @@ describe('evaluator', () => {
                 }
                 .Evaluated2 = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world', 'hello world']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world',
+                'hello world'
+            ]);
         });
 
         it('should fail when adding a string to a variable not in scope (current scope)', () => {
@@ -361,7 +382,10 @@ describe('evaluator', () => {
                 .MyVar + 'cow'
                 .Result = .MyVar
             `;
-            assertEvaluatedVariablesValueEqual(input, [['cow']]);
+            assertEvaluatedVariablesValueEqual(input, [
+                [],
+                ['cow']
+            ]);
         });
 
         it('should work on inline adding an item to an array', () => {
@@ -378,7 +402,10 @@ describe('evaluator', () => {
                 .MyVar + {'b'}
                 .Result = .MyVar
             `;
-            assertEvaluatedVariablesValueEqual(input, [['a', 'b']]);
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a'],
+                ['a', 'b']
+            ]);
         });
 
         it('should work on inline adding an array to an array', () => {
@@ -396,7 +423,11 @@ describe('evaluator', () => {
                 .MyVar + {.B, 'c'}
                 .Result = .MyVar
             `;
-            assertEvaluatedVariablesValueEqual(input, ['b', ['a', 'b', 'c']]);
+            assertEvaluatedVariablesValueEqual(input, [
+                'b',
+                ['a'],
+                ['a', 'b', 'c']
+            ]);
         });
 
         it('should work on inline adding an array with an evaluated variable to an array', () => {
@@ -405,7 +436,10 @@ describe('evaluator', () => {
                 .MyVar = {'a'} + { .B , 'c'}
                 .Result = .MyVar
             `;
-            assertEvaluatedVariablesValueEqual(input, ['b', ['a', 'b', 'c']]);
+            assertEvaluatedVariablesValueEqual(input, [
+                'b',
+                ['a', 'b', 'c']
+            ]);
         });
 
         it('should work on adding a struct to a struct', () => {
