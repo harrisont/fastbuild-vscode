@@ -59,13 +59,16 @@ export class HoverProvider {
         const evaluatedVariables = this.evaluatedData?.evaluatedVariables ?? [];
 
         const possibleValues: Set<Value> = new Set();
-        let evaluatedVariable: EvaluatedVariable | null = null;
+        let firstEvaluatedVariable: EvaluatedVariable | null = null;
     
         // Potential optmization: use a different data structure to allow for a more efficient search.
-        for (evaluatedVariable of evaluatedVariables) {
+        for (const evaluatedVariable of evaluatedVariables) {
             if (uri == evaluatedVariable.range.uri
                 && isPositionInRange(position, evaluatedVariable.range))
             {
+                if (firstEvaluatedVariable === null) {
+                    firstEvaluatedVariable = evaluatedVariable;
+                }
                 possibleValues.add(evaluatedVariable.value);
             }
         }
@@ -91,7 +94,7 @@ export class HoverProvider {
                     kind: MarkupKind.Markdown,
                     value: hoverText
                 },
-                range: evaluatedVariable?.range
+                range: firstEvaluatedVariable?.range
             };
             return hover;
         }
