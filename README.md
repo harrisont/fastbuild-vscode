@@ -1,33 +1,45 @@
-# FASTBuild Language Server and VS Code Client
+# FASTBuild Language Server and Visual Studio Code Client Extension
 
 Contains a language server and Visual Studio Code client for the [FASTBuild](https://www.fastbuild.org/) language.
 
 This provides the following functionality:
 * Go to definition of a variable.
 * Find references of a variable.
-* Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluation `Location` variable in `.Message = 'Hello $Location$` or `.Message = .Location`).
+* Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$` or `.Message = .Location`).
 
 It does not yet provide syntax highlighting. For that, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 
 ## Compatibility
 
-Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.02.
+Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.03 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
 
-Note that much of the language is not yet implemented. See [TODO](#todo) for details.
+It may be compatible with a newer version of FASTBuild, but this was the latest version tested.
 
-## Running
+Note that some of the language is not yet implemented. See [TODO](#todo) for details.
+
+## Installing the Visual Studio Code Extension
+
+TODO
+
+## Contributing
+
+### Running
 
 1. Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder.
 2. Open VS Code on this folder.
 3. Run the `compile` task, which compiles the client and server. Alternatively, run the `watch-compile` task to watch for changes and automatically compile.
 4. Run the `Launch Client` launch configuration. If you want to debug the server as well, use `Launch Client + Server` instead.
 
-## Testing
+### Testing
 
 * Run the `test` task. Alternatively, run the `watch-test` task to watch for changes and automatically run tests.
 * Debug the tests by running the `Run Tests` launch configuration.
 
-## Implementation Notes
+### Releasing the Visual Studio Code Extension
+
+TODO
+
+### Implementation Notes
 
 * Parses using [Nearley](https://nearley.js.org/), which lexes using [moo](https://github.com/no-context/moo).
     * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
@@ -39,13 +51,19 @@ Note that much of the language is not yet implemented. See [TODO](#todo) for det
 * Other resources:
     * [RegEx101](https://regex101.com/): regex playgound
 
-## TODO
+### TODO
 
 Support full FASTBuild syntax:
 * Support `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)).
 * Support `exists` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `file_exists` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
+* Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
+
+Release a Visual Studio Code extension ([docs](https://code.visualstudio.com/api/get-started/wrapping-up#testing-and-publishing)).
+* Update the [README's release instructions](#releasing-the-visual-studio-code-extension).
+* Update the [README's install instructions](#installing-the-visual-studio-code-extension).
 
 Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
