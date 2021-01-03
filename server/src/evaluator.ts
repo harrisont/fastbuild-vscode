@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import {
     ParseData,
     ParseSourceRange,
@@ -241,8 +243,28 @@ class ScopeStack {
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
 export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataProvider: ParseDataProvider): EvaluatedData {
+    const scopeStack = new ScopeStack();
+
+    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', {
+        id: -1,
+        range: {
+            uri: '',
+            start: {
+                line: -1,
+                character: -1
+            },
+            end: {
+                line: -1,
+                character: -1
+            }
+        }
+    });
+
+    const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri)).toString();
+
     const context = {
-        scopeStack: new ScopeStack(),
+        scopeStack,
+        rootFbuildDirUri,
         thisFbuildUri,
         parseDataProvider,
     };
@@ -251,6 +273,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
 
 interface EvaluationContext {
     scopeStack: ScopeStack,
+    rootFbuildDirUri: string,
     thisFbuildUri: string,
     parseDataProvider: ParseDataProvider,
 }
@@ -641,11 +664,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, includeRelativePath);
                 const includeParseData = context.parseDataProvider.getParseData(includeUri);
+                
+                const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_').value;
+                const include_dir_relative_to_root = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
+                context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root);
 
                 const evaluatedStatements = evaluateStatements(
                     includeParseData.statements,
                     {
                         scopeStack: context.scopeStack,
+                        rootFbuildDirUri: context.rootFbuildDirUri,
                         thisFbuildUri: includeUri.toString(),
                         parseDataProvider: context.parseDataProvider,
                     }
@@ -656,6 +684,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
                     result.variableDefinitions.set(varName, varDefinition);
                 }
+                
+                context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root);
 
                 break;
             }

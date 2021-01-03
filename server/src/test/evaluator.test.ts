@@ -3,6 +3,8 @@ import * as assert from 'assert';
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
+import * as path from 'path';
+
 import {
     evaluate,
     EvaluatedData,
@@ -695,6 +697,56 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 'B',
                 'foo'
+            ]);
+        });
+
+        it('_CURRENT_BFF_DIR_ is a builtin variable that evaluates to the relative path to the directory containing the current bff file being parsed', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        Print( ._CURRENT_BFF_DIR_ )
+                        #include 'animals.bff'
+                        Print( ._CURRENT_BFF_DIR_ )
+                    `
+                ],
+                [
+                    'file:///some/path/animals.bff',
+                    `
+                        Print( ._CURRENT_BFF_DIR_ )
+                        #include 'animals/mammals/dog.bff'
+                        Print( ._CURRENT_BFF_DIR_ )
+                    `
+                ],
+                [
+                    'file:///some/path/animals/mammals/dog.bff',
+                    `
+                        Print( ._CURRENT_BFF_DIR_ )
+                    `
+                ],
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: '',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 31, 1, 49),
+                },
+                {
+                    value: '',
+                    range: createFileRange('file:///some/path/animals.bff', 1, 31, 1, 49),
+                },
+                {
+                    value: `animals${path.sep}mammals`,
+                    range: createFileRange('file:///some/path/animals/mammals/dog.bff', 1, 31, 1, 49),
+                },
+                {
+                    value: '',
+                    range: createFileRange('file:///some/path/animals.bff', 3, 31, 3, 49),
+                },
+                {
+                    value: '',
+                    range: createFileRange('file:///some/path/fbuild.bff', 3, 31, 3, 49),
+                },
             ]);
         });
     });
