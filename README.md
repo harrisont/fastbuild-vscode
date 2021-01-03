@@ -46,6 +46,7 @@ Support full FASTBuild syntax:
 * Support the `_WORKING_DIR_` built in variable ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 * Support `#define` / `#undef` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#define)) and `#if` / `#else` / `#endif` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#once` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#once)).
+* Support the `_FASTBUILD_VERSION_STRING_` and `_FASTBUILD_VERSION_` built in variables ([docs](https://www.fastbuild.org/docs/syntaxguide.html#builtin)).
 
 Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
