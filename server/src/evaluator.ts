@@ -243,9 +243,11 @@ class ScopeStack {
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
 export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataProvider: ParseDataProvider): EvaluatedData {
+    const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+
     const scopeStack = new ScopeStack();
 
-    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', {
+    const dummyVariableDefinition: VariableDefinition = {
         id: -1,
         range: {
             uri: '',
@@ -258,13 +260,14 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
                 character: -1
             }
         }
-    });
+    };
 
-    const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri)).toString();
+    scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, dummyVariableDefinition);
+    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', dummyVariableDefinition);
 
     const context = {
         scopeStack,
-        rootFbuildDirUri,
+        rootFbuildDirUri: rootFbuildDirUri.toString(),
         thisFbuildUri,
         parseDataProvider,
     };

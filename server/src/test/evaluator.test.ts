@@ -783,6 +783,42 @@ describe('evaluator', () => {
                 },
             ]);
         });
+
+        it('_WORKING_DIR_  is a builtin variable that evaluates to the absolute path to the directory of the root bff file', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        Print( ._WORKING_DIR_ )
+                        #include 'animals.bff'
+                        Print( ._WORKING_DIR_ )
+                    `
+                ],
+                [
+                    'file:///some/path/animals.bff',
+                    `
+                        Print( ._WORKING_DIR_ )
+                    `
+                ],
+            ]));
+
+            const root_fbuild_dir = `${path.sep}some${path.sep}path`;
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: root_fbuild_dir,
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 31, 1, 45),
+                },
+                {
+                    value: root_fbuild_dir,
+                    range: createFileRange('file:///some/path/animals.bff', 1, 31, 1, 45),
+                },
+                {
+                    value: root_fbuild_dir,
+                    range: createFileRange('file:///some/path/fbuild.bff', 3, 31, 3, 45),
+                },
+            ]);
+        });
     });
 
     describe('evaluatedVariables range', () => {
