@@ -2379,6 +2379,36 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('include the same file multiple times in a row', () => {
+            const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///some/path/fbuild.bff',
+                    `
+                        .Name = 'Bobo'
+                        #include 'greetings.bff'
+                        #include 'greetings.bff'
+                    `
+                ],
+                [
+                    'file:///some/path/greetings.bff',
+                    `
+                        Print( 'Hello $Name$' )
+                    `
+                ],
+            ]));
+    
+            assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 38, 1, 44),
+                },
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 38, 1, 44),
+                },
+            ]);
+        });
+
         it('include with ".."', () => {
             const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
                 [
