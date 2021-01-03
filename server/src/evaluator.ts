@@ -494,7 +494,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const value: any = statement.value;
                 const evaluatedValue = evaluateRValue(value, context);
                 if (typeof evaluatedValue.value !== 'string') {
-                    throw new EvaluationError(`Value must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                    throw new EvaluationError(`'Error' argument must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -503,8 +503,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             case 'print': {
                 const value: any = statement.value;
                 const evaluatedValue = evaluateRValue(value, context);
-                if (typeof evaluatedValue.value !== 'string') {
-                    throw new EvaluationError(`Value must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                const isValueEvaluatedVariable = value.type && value.type == 'evaluatedVariable';
+                if (!isValueEvaluatedVariable && typeof evaluatedValue.value !== 'string') {
+                    throw new EvaluationError(`'Print' argument must either be a variable or evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);

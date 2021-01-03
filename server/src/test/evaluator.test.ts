@@ -1280,12 +1280,20 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
         
-        it('Print evaluated variable', () => {
+        it('Print string variable', () => {
             const input = `
                 .Value = 'hello'
                 Print(.Value)
             `;
             assertEvaluatedVariablesValueEqual(input, ['hello']);
+        });
+        
+        it('Print integer variable', () => {
+            const input = `
+                .Value = 123
+                Print(.Value)
+            `;
+            assertEvaluatedVariablesValueEqual(input, [123]);
         });
         
         it('Settings', () => {
