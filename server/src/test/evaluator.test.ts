@@ -3,6 +3,7 @@ import * as assert from 'assert';
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
+import * as os from 'os';
 import * as path from 'path';
 
 import {
@@ -2556,5 +2557,195 @@ describe('evaluator', () => {
                 },
             ]);
         });
+
+    });
+
+    describe('#if / #else / #endif', () => {
+        const platformSpecificDefine = getPlatformSpecificDefineName();
+
+        it('A platform-specific symbol is defined', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"!DEFINE" on a defined symbol evaluates to false', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('"!DEFINE" on an undefined symbol evaluates to true', () => {
+            const input = `
+                .Value = false
+                #if ! NON_EXISTENT_SYMBOL
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('true && true evaulates to true', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine} && ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('true && false evaulates to false', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine} && !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('false && true evaulates to false', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine} && ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('false && false evaulates to false', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine} && !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('true || true evaulates to true', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine} || ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('true || false evaulates to true', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine} || !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('false || true evaulates to true', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine} || ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('false || false evaulates to false', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine} || !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('false && false || true evaulates to true (&& takes precedence over ||) variation 1', () => {
+            const input = `
+                .Value = false
+                #if !${platformSpecificDefine} && !${platformSpecificDefine} || ${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('true || false && false evaulates to true (&& takes precedence over ||) variation 1', () => {
+            const input = `
+                .Value = false
+                #if ${platformSpecificDefine} || !${platformSpecificDefine} && !${platformSpecificDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('#else body is evaluated when the #if condition is false', () => {
+            const input = `
+                .Value = ''
+                #if !${platformSpecificDefine}
+                    .Value = 'if'
+                #else
+                    .Value = 'else'
+                #endif
+                Print( .Value )
+            `;
+            
+            assertEvaluatedVariablesValueEqual(input, ['else']);
+        });
+
+        it('#if with comments', () => {
+            const input = `
+                .Value = ''
+                #if ${platformSpecificDefine} // My comment 1
+                    .Value = 'if' // My comment 2
+                #else // My comment 3
+                    .Value = 'else' // My comment 4
+                #endif// My comment 5
+                Print( .Value )
+            `;
+            
+            assertEvaluatedVariablesValueEqual(input, ['if']);
+        });
     });
 });
+
+function getPlatformSpecificDefineName(): string {
+    const platform = os.platform();
+    switch(platform) {
+        case 'linux':
+            return '__LINUX__';
+        case 'darwin':
+            return '__OSX__';
+        case 'win32':
+            return '__WINDOWS__';
+        default:
+            throw new Error(`Unsupported platform '${platform}`);
+    }
+}

@@ -73,8 +73,12 @@ const lexer = moo.states({
         keywordVSSolution: 'VSSolution',
         keywordXCodeProject: 'XCodeProject',
 
-        keywordInclude: '#include',
-        keywordOnce: '#once',
+        directiveInclude: '#include',
+        directiveOnce: '#once',
+
+        directiveIf: { match: '#if', push: 'directiveIfCondition' },
+        directiveElse: '#else',
+        directiveEndIf: '#endif',
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -112,6 +116,15 @@ const lexer = moo.states({
         singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBodyThenMain' },
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenMain' },
     },
+    directiveIfCondition: {
+        operatorNot: '!',
+        operatorAnd: '&&',
+        operatorOr: '||',
+        variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
+        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true, pop: 1 },
+        whitespace: /[ \t]+/,
+        comment: /(?:;|\/\/).*/,
+    }
 });
 %}
 
@@ -162,8 +175,9 @@ statement ->
   | functionSettings          {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
-  | include                   {% ([value]) => [ value, new ParseContext() ] %}
-  | once                      {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveInclude          {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveOnce             {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -548,9 +562,31 @@ ifCondition ->
   | evaluatedVariable                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
   | evaluatedVariable whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
 
-include -> %keywordInclude optionalWhitespaceOrNewline string  {% ([include, space, path]) => { return { type: 'include', path }; } %}
+directiveInclude -> %directiveInclude optionalWhitespaceOrNewline string  {% ([include, space, path]) => { return { type: 'include', path }; } %}
 
-once -> %keywordOnce  {% () => { return { type: 'once' }; } %}
+directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
+
+directiveIf ->
+    %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines                                                                                                %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements,                                                          directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [] }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveElse optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements, directiveElse, space4, comment2, space5, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements     }; } %}
+
+directiveIfConditionOrExpression ->
+    # Single item
+    directiveIfConditionAndExpression  {% ([value]) => [value] %}
+    # Multiple items ||'d together
+  | directiveIfConditionAndExpression optionalWhitespace %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([lhsValue, space1, or, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+
+directiveIfConditionAndExpression ->
+    # Single item
+    evaluatedDefineExpression  {% ([value]) => [value] %}
+    # Multiple items &&'d together
+  | evaluatedDefineExpression optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+
+evaluatedDefineExpression ->
+    # DEFINE
+                                    variableName  {% ([            define]) => { return { define, invert: false }; } %}
+    # ! DEFINE
+  | %operatorNot optionalWhitespace variableName  {% ([not, space, define]) => { return { define, invert: true  }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
@@ -559,3 +595,11 @@ whitespaceOrNewline ->
 optionalWhitespaceOrNewline ->
     null                 {% () => null %}
   | whitespaceOrNewline  {% () => null %}
+
+optionalWhitespace ->
+    null         {% () => null %}
+  | %whitespace  {% () => null %}
+
+optionalComment ->
+    null      {% () => null %}
+  | %comment  {% () => null %}

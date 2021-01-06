@@ -1,3 +1,4 @@
+import * as os from 'os';
 import * as path from 'path';
 
 import {
@@ -241,6 +242,20 @@ class ScopeStack {
     }
 }
 
+function getPlatformSpecificDefineName(): string {
+    const platform = os.platform();
+    switch(platform) {
+        case 'linux':
+            return '__LINUX__';
+        case 'darwin':
+            return '__OSX__';
+        case 'win32':
+            return '__WINDOWS__';
+        default:
+            throw new Error(`Unsupported platform '${platform}`);
+    }
+}
+
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
 export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataProvider: ParseDataProvider): EvaluatedData {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
@@ -267,8 +282,12 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', dummyVariableDefinition);
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, dummyVariableDefinition);
 
+    const defines = new Set<string>();
+    defines.add(getPlatformSpecificDefineName());
+
     const context = {
         scopeStack,
+        defines,
         rootFbuildDirUri: rootFbuildDirUri.toString(),
         thisFbuildUri,
         parseDataProvider,
@@ -279,6 +298,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
 
 interface EvaluationContext {
     scopeStack: ScopeStack,
+    defines: Set<string>,
     rootFbuildDirUri: string,
     thisFbuildUri: string,
     parseDataProvider: ParseDataProvider,
@@ -689,6 +709,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         includeParseData.statements,
                         {
                             scopeStack: context.scopeStack,
+                            defines: context.defines,
                             rootFbuildDirUri: context.rootFbuildDirUri,
                             thisFbuildUri: includeUri.toString(),
                             parseDataProvider: context.parseDataProvider,
@@ -708,6 +729,48 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             }
             case 'once': {
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
+                break;
+            }
+            // #if
+            case 'directiveIf': {
+                // Evaluate the condition, which is an array of AND statements OR'd together.
+                const orExpressions: Array<Array<Record<string, any>>> = statement.condition;
+                let orExpressionResult = false;
+                for (const andExpressions of orExpressions) {
+                    let andExpressionResult = true;
+                    for (const evaluatedDefineExpression of andExpressions) {
+                        const define: string = evaluatedDefineExpression.define;
+                        const invert: boolean = evaluatedDefineExpression.invert;
+
+                        let value = context.defines.has(define);
+                        if (invert) {
+                            value = !value;
+                        }
+
+                        // All parts of the AND expression must be true for the expression to be true.
+                        if (!value) {
+                            andExpressionResult = false;
+                            break;
+                        }
+                    }
+
+                    // Any part of the OR expression must be true for the expression to be true.
+                    if (andExpressionResult) {
+                        orExpressionResult = true;
+                        break;
+                    }
+                }
+
+                // Evaluate the '#if' body statements if the condition was true.
+                // Otherwise, evaluate the '#else' body statements.
+                const statements = orExpressionResult ? statement.ifStatements : statement.elseStatements;
+                const evaluatedStatements = evaluateStatements(statements, context);
+                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
+                result.variableReferences.push(...evaluatedStatements.variableReferences);
+                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
+                    result.variableDefinitions.set(varName, varDefinition);
+                }
+
                 break;
             }
             default:
