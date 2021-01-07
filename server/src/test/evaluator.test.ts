@@ -108,9 +108,9 @@ describe('evaluator', () => {
         it('should be detected in the RHS when assigning the value of another variable in the parent scope', () => {
             const input = `
                 .MyVar = 1
-                {
+                { // Start scope
                     .Copy = ^MyVar
-                }
+                } // End scope
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
@@ -118,9 +118,9 @@ describe('evaluator', () => {
         it('should be able to read a variable in a direct parent scope', () => {
             const input = `
                 .Var1 = 1
-                {
+                {// Start scope
                     .Var2 = .Var1
-                }
+                }// End scope
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
@@ -1117,10 +1117,10 @@ describe('evaluator', () => {
         it('iterates over an array of strings', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
-                ForEach( .Item in .MyArray )
-                {
+                ForEach( .Item in .MyArray ) // Comment 1
+                { // Comment 2
                     .Copy = .Item
-                }
+                } // Comment 3
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
@@ -1133,10 +1133,10 @@ describe('evaluator', () => {
         it('iterates over an empty array', () => {
             const input = `
                 .MyArray = {}
-                ForEach( .Item in .MyArray )
-                {
+                ForEach( .Item in .MyArray )// Comment 1
+                {// Comment 2
                     .Copy = .Item
-                }
+                }// Comment 3
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 []
@@ -1218,9 +1218,9 @@ describe('evaluator', () => {
             describe(functionName, () => {
                 it('handles a literal alias name', () => {
                     const input = `
-                        ${functionName}('MyAliasName')
-                        {
-                        }
+                        ${functionName}('MyAliasName') // Comment 1
+                        { // Comment 2
+                        } // Comment 3
                     `;
                     assertEvaluatedVariablesValueEqual(input, []);
                 });
@@ -1228,9 +1228,9 @@ describe('evaluator', () => {
                 it('handles an evaluated variable alias name', () => {
                     const input = `
                         .MyAliasName = 'SomeName'
-                        ${functionName}(.MyAliasName)
-                        {
-                        }
+                        ${functionName}(.MyAliasName)// Comment 1
+                        {// Comment 2
+                        }// Comment 3
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['SomeName']);
                 });
@@ -1307,6 +1307,17 @@ describe('evaluator', () => {
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
+        
+        it('Settings with comments', () => {
+            const input = `
+                .Value = 1
+                Settings // Comment 1
+                { // Comment 2
+                    .Copy = .Value
+                } // Comment 3
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1]);
+        });
     });
 
     describe('If', () => {
@@ -1315,10 +1326,10 @@ describe('evaluator', () => {
                 const input = `
                     .Value = true
                     .Result = false
-                    If( .Value )
-                    {
+                    If( .Value ) // Comment 1
+                    { // Comment 2
                         ^Result = true
-                    }
+                    } // Comment 3
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [true, true]);
@@ -1328,10 +1339,10 @@ describe('evaluator', () => {
                 const input = `
                     .Value = false
                     .Result = false
-                    If( .Value )
-                    {
+                    If( .Value )// Comment 1
+                    {// Comment 2
                         ^Result = true
-                    }
+                    }// Comment 3
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false, false]);

@@ -179,7 +179,7 @@ statement ->
   | directiveOnce             {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
 
-scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
+scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
 @{%
 
@@ -473,7 +473,9 @@ forEachLoopVar ->
     %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, varName,        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
   | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, varName, space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
-functionBody -> optionalWhitespaceOrNewline %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, braceOpen, space2, statements, braceClose]) => statements %}
+functionBody ->
+                                optionalWhitespaceOrNewline            %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([                  space2, braceOpen, space3, comment2, space4, statements, braceClose]) => statements %}
+  | optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, comment1, space2, braceOpen, space3, comment2, space4, statements, braceClose]) => statements %}
 
 @{%
 
