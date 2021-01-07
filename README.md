@@ -54,8 +54,9 @@ TODO
 ### TODO
 
 Support full FASTBuild syntax:
-* Support `exists` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
-* Support `file_exists` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `#if file_exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
+* Support `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
 
