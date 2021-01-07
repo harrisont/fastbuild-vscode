@@ -738,17 +738,32 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 let orExpressionResult = false;
                 for (const andExpressions of orExpressions) {
                     let andExpressionResult = true;
-                    for (const definedExpression of andExpressions) {
-                        const symbol: string = definedExpression.symbol;
-                        const invert: boolean = definedExpression.invert;
+                    for (const conditionTerm of andExpressions) {
+                        const term: Record<string, any> = conditionTerm.term;
+                        const invert: boolean = conditionTerm.invert;
+                        let evaulatedTerm = false;
+                        switch (term.type) {
+                            case 'isSymbolDefined': {
+                                const symbol: string = term.symbol;
+                                evaulatedTerm = context.defines.has(symbol);
+                                break;
+                            }
+                            case 'envVarExists': {
+                                // The language server cannot know what environment variables will exist when FASTBuild is run,
+                                // so always assume "exists(...)" evaluates to false.
+                                evaulatedTerm = false;
+                                break;
+                            }
+                            default:
+                                throw new EvaluationError(`Unknown '#if' term type '${term.type}' from statement ${JSON.stringify(statement)}`);
+                        }
 
-                        let value = context.defines.has(symbol);
                         if (invert) {
-                            value = !value;
+                            evaulatedTerm = !evaulatedTerm;
                         }
 
                         // All parts of the AND expression must be true for the expression to be true.
-                        if (!value) {
+                        if (!evaulatedTerm) {
                             andExpressionResult = false;
                             break;
                         }

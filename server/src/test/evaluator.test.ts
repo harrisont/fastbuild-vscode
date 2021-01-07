@@ -2746,6 +2746,54 @@ describe('evaluator', () => {
         });
     });
 
+    describe('#if exists', () => {
+        const builtInDefine = getPlatformSpecificDefineSymbol();
+
+        it('"#if exists(...)" always evaluates to false', () => {
+            const input = `
+                .Value = false
+                #if exists(MY_ENV_VAR)
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('"#if !exists(...)" always evaluates to true', () => {
+            const input = `
+                .Value = false
+                #if !exists( MY_ENV_VAR )
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"#if exists" can be combined with ||', () => {
+            const input = `
+                .Value = false
+                #if exists(MY_ENV_VAR) || ${builtInDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"#if exists" can be combined with &&', () => {
+            const input = `
+                .Value = false
+                #if ${builtInDefine} && !exists(MY_ENV_VAR)
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+    });
+
     describe('#define', () => {
         it('basic', () => {
             const input = `

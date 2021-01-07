@@ -122,10 +122,15 @@ const lexer = moo.states({
         operatorNot: '!',
         operatorAnd: '&&',
         operatorOr: '||',
-        variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
+        variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, type: moo.keywords({
+          exists: 'exists',
+          fileExists: 'file_exists',
+        })},
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true, pop: 1 },
         whitespace: /[ \t]+/,
         comment: /(?:;|\/\/).*/,
+        parametersStart: '(',
+        parametersEnd: ')',
     },
     directiveDefineSymbol: {
         whitespace: /[ \t]+/,
@@ -588,15 +593,19 @@ directiveIfConditionOrExpression ->
 
 directiveIfConditionAndExpression ->
     # Single item
-    evaluatedDefineExpression  {% ([value]) => [value] %}
+    directiveIfConditionTermOrNot  {% ([value]) => [value] %}
     # Multiple items &&'d together
-  | evaluatedDefineExpression optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+  | directiveIfConditionTermOrNot optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
 
-evaluatedDefineExpression ->
+directiveIfConditionTermOrNot ->
     # SYMBOL
-                                    variableName  {% ([            symbol]) => { return { symbol, invert: false }; } %}
+                                    directiveIfConditionTerm  {% ([            term]) => { return { term, invert: false }; } %}
     # ! SYMBOL
-  | %operatorNot optionalWhitespace variableName  {% ([not, space, symbol]) => { return { symbol, invert: true  }; } %}
+  | %operatorNot optionalWhitespace directiveIfConditionTerm  {% ([not, space, term]) => { return { term, invert: true  }; } %}
+
+directiveIfConditionTerm ->
+    variableName  {% ([symbol]) => { return { type: 'isSymbolDefined', symbol }; } %}
+  | %exists optionalWhitespace %parametersStart optionalWhitespace variableName optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, envVar, space3, closeBrace]) => { return { type: 'envVarExists' }; } %}
 
 directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define, space, symbol]) => { return { type: 'define', symbol }; } %}
 

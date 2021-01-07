@@ -9,6 +9,12 @@ This provides the following functionality:
 
 It does not yet provide syntax highlighting. For that, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 
+## Limitations
+
+* The language server cannot know what environment variables will exist when FASTBuild is run, so:
+	* `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
+	* `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) has no effect.
+
 ## Compatibility
 
 Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.03 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
@@ -54,7 +60,6 @@ TODO
 ### TODO
 
 Support full FASTBuild syntax:
-* Support `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#if file_exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
