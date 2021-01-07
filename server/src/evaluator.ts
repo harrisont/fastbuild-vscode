@@ -242,7 +242,7 @@ class ScopeStack {
     }
 }
 
-function getPlatformSpecificDefineName(): string {
+function getPlatformSpecificDefineSymbol(): string {
     const platform = os.platform();
     switch(platform) {
         case 'linux':
@@ -283,7 +283,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, dummyVariableDefinition);
 
     const defines = new Set<string>();
-    defines.add(getPlatformSpecificDefineName());
+    defines.add(getPlatformSpecificDefineSymbol());
 
     const context = {
         scopeStack,
@@ -738,11 +738,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 let orExpressionResult = false;
                 for (const andExpressions of orExpressions) {
                     let andExpressionResult = true;
-                    for (const evaluatedDefineExpression of andExpressions) {
-                        const define: string = evaluatedDefineExpression.define;
-                        const invert: boolean = evaluatedDefineExpression.invert;
+                    for (const definedExpression of andExpressions) {
+                        const symbol: string = definedExpression.symbol;
+                        const invert: boolean = definedExpression.invert;
 
-                        let value = context.defines.has(define);
+                        let value = context.defines.has(symbol);
                         if (invert) {
                             value = !value;
                         }
@@ -771,6 +771,27 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     result.variableDefinitions.set(varName, varDefinition);
                 }
 
+                break;
+            }
+            // #define
+            case 'define': {
+                const symbol: string = statement.symbol;
+                if (context.defines.has(symbol)) {
+                    throw new EvaluationError(`Cannot #define already defined symbol "${symbol}".`);
+                }
+                context.defines.add(symbol);
+                break;
+            }
+            // #undef
+            case 'undefine': {
+                const symbol: string = statement.symbol;
+                if (symbol === getPlatformSpecificDefineSymbol()) {
+                    throw new EvaluationError(`Cannot #undef built-in symbol "${symbol}".`);
+                }
+                if (!context.defines.has(symbol)) {
+                    throw new EvaluationError(`Cannot #undef undefined symbol "${symbol}".`);
+                }
+                context.defines.delete(symbol);
                 break;
             }
             default:

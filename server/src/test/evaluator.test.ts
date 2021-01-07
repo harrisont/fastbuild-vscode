@@ -2572,12 +2572,12 @@ describe('evaluator', () => {
     });
 
     describe('#if / #else / #endif', () => {
-        const platformSpecificDefine = getPlatformSpecificDefineName();
+        const builtInDefine = getPlatformSpecificDefineSymbol();
 
         it('A platform-specific symbol is defined', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine}
+                #if ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2588,7 +2588,7 @@ describe('evaluator', () => {
         it('"!DEFINE" on a defined symbol evaluates to false', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine}
+                #if !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2610,7 +2610,7 @@ describe('evaluator', () => {
         it('true && true evaulates to true', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine} && ${platformSpecificDefine}
+                #if ${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2621,7 +2621,7 @@ describe('evaluator', () => {
         it('true && false evaulates to false', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine} && !${platformSpecificDefine}
+                #if ${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2632,7 +2632,7 @@ describe('evaluator', () => {
         it('false && true evaulates to false', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine} && ${platformSpecificDefine}
+                #if !${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2643,7 +2643,7 @@ describe('evaluator', () => {
         it('false && false evaulates to false', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine} && !${platformSpecificDefine}
+                #if !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2654,7 +2654,7 @@ describe('evaluator', () => {
         it('true || true evaulates to true', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine} || ${platformSpecificDefine}
+                #if ${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2665,7 +2665,7 @@ describe('evaluator', () => {
         it('true || false evaulates to true', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine} || !${platformSpecificDefine}
+                #if ${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2676,7 +2676,7 @@ describe('evaluator', () => {
         it('false || true evaulates to true', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine} || ${platformSpecificDefine}
+                #if !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2687,7 +2687,7 @@ describe('evaluator', () => {
         it('false || false evaulates to false', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine} || !${platformSpecificDefine}
+                #if !${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2698,7 +2698,7 @@ describe('evaluator', () => {
         it('false && false || true evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
                 .Value = false
-                #if !${platformSpecificDefine} && !${platformSpecificDefine} || ${platformSpecificDefine}
+                #if !${builtInDefine} && !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2709,7 +2709,7 @@ describe('evaluator', () => {
         it('true || false && false evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
                 .Value = false
-                #if ${platformSpecificDefine} || !${platformSpecificDefine} && !${platformSpecificDefine}
+                #if ${builtInDefine} || !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
                 Print( .Value )
@@ -2720,7 +2720,7 @@ describe('evaluator', () => {
         it('#else body is evaluated when the #if condition is false', () => {
             const input = `
                 .Value = ''
-                #if !${platformSpecificDefine}
+                #if !${builtInDefine}
                     .Value = 'if'
                 #else
                     .Value = 'else'
@@ -2734,7 +2734,7 @@ describe('evaluator', () => {
         it('#if with comments', () => {
             const input = `
                 .Value = ''
-                #if ${platformSpecificDefine} // My comment 1
+                #if ${builtInDefine} // My comment 1
                     .Value = 'if' // My comment 2
                 #else // My comment 3
                     .Value = 'else' // My comment 4
@@ -2745,9 +2745,79 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['if']);
         });
     });
+
+    describe('#define', () => {
+        it('basic', () => {
+            const input = `
+                #define MY_DEFINE
+                .Value = false
+                #if MY_DEFINE
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('defining an already defined symbol is an error', () => {
+            const input = `
+                #define MY_DEFINE
+                #define MY_DEFINE
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `Cannot #define already defined symbol "MY_DEFINE".`
+                }
+            );
+        });
+    });
+
+    describe('#undef', () => {
+        it('basic', () => {
+            const input = `
+                #define MY_DEFINE
+                #undef MY_DEFINE
+                .Value = false
+                #if MY_DEFINE
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('undefining an undefined symbol is an error', () => {
+            const input = `
+                #undef MY_UNDEFINED_DEFINE
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`
+                }
+            );
+        });
+
+        it('undefining a built-in symbol is an error', () => {
+            const builtInDefine = getPlatformSpecificDefineSymbol();
+            const input = `
+                #undef ${builtInDefine}
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `Cannot #undef built-in symbol "${builtInDefine}".`
+                }
+            );
+        });
+    });
 });
 
-function getPlatformSpecificDefineName(): string {
+function getPlatformSpecificDefineSymbol(): string {
     const platform = os.platform();
     switch(platform) {
         case 'linux':

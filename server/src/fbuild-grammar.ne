@@ -79,6 +79,8 @@ const lexer = moo.states({
         directiveIf: { match: '#if', push: 'directiveIfCondition' },
         directiveElse: '#else',
         directiveEndIf: '#endif',
+        directiveDefine: { match: '#define', push: 'directiveDefineSymbol' },
+        directiveUndefine: { match: '#undef', push: 'directiveDefineSymbol' },
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -124,7 +126,11 @@ const lexer = moo.states({
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true, pop: 1 },
         whitespace: /[ \t]+/,
         comment: /(?:;|\/\/).*/,
-    }
+    },
+    directiveDefineSymbol: {
+        whitespace: /[ \t]+/,
+        variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, pop: 1 }
+    },
 });
 %}
 
@@ -178,6 +184,8 @@ statement ->
   | directiveInclude          {% ([value]) => [ value, new ParseContext() ] %}
   | directiveOnce             {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveDefine           {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveUndefine         {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -585,10 +593,14 @@ directiveIfConditionAndExpression ->
   | evaluatedDefineExpression optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
 
 evaluatedDefineExpression ->
-    # DEFINE
-                                    variableName  {% ([            define]) => { return { define, invert: false }; } %}
-    # ! DEFINE
-  | %operatorNot optionalWhitespace variableName  {% ([not, space, define]) => { return { define, invert: true  }; } %}
+    # SYMBOL
+                                    variableName  {% ([            symbol]) => { return { symbol, invert: false }; } %}
+    # ! SYMBOL
+  | %operatorNot optionalWhitespace variableName  {% ([not, space, symbol]) => { return { symbol, invert: true  }; } %}
+
+directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define, space, symbol]) => { return { type: 'define', symbol }; } %}
+
+directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, symbol]) => { return { type: 'undefine', symbol }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
