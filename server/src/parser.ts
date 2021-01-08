@@ -21,10 +21,17 @@ export function isPositionInRange(position: SourcePosition, range: ParseSourceRa
 export type Statement = Record<string, any>;
 
 export class ParseError extends Error {
+    private filePath = '';
+
     constructor(message?: string) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseError.name;
+    }
+
+    setFilePath(path: string): void {
+        this.filePath = path;
+        this.message = `${path}: ${this.message}`;
     }
 }
 
@@ -70,7 +77,7 @@ export function parse(input: string, options: ParseOptions): ParseData {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw error;
+        throw new ParseError(error);
     }
 
     const numResults = parser.results.length;

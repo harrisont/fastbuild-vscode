@@ -6,6 +6,7 @@ import { IFileSystem } from './fileSystem';
 import {
     parse,
     ParseData,
+    ParseError,
     ParseOptions,
 } from './parser';
 
@@ -20,9 +21,16 @@ export class ParseDataProvider {
     
     updateParseData(uri: vscodeUri.URI): ParseData {
         const text = this.fileContentProvider.getFileContents(uri);
-        const parseData = parse(text, this.parseOptions);
-        this.data.set(uri.toString(), parseData);
-        return parseData;
+        try {
+            const parseData = parse(text, this.parseOptions);
+            this.data.set(uri.toString(), parseData);
+            return parseData;
+        } catch (error) {
+            if (error instanceof ParseError) {
+                error.setFilePath(uri.fsPath);
+            }
+            throw error;
+        }
     }
 
     getParseData(uri: vscodeUri.URI): ParseData {
