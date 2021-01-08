@@ -298,7 +298,7 @@ describe('evaluator', () => {
         it('adding a string literal should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyMessage = 'hello'
-                            + ' world'
+                           + ' world'
                 .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
@@ -307,8 +307,8 @@ describe('evaluator', () => {
         it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyMessage = 'hello'
-                        + ' world'
-                        + '!'
+                           + ' world'
+                           + '!'
                 .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['hello world!']);
@@ -318,7 +318,7 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = 'world'
                 .MyMessage = 'hello '
-                        + .MyVar
+                           + .MyVar
                 .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['world', 'hello world']);
@@ -329,8 +329,8 @@ describe('evaluator', () => {
                 .MyVar1 = 'world'
                 .MyVar2 = '!'
                 .MyMessage = 'hello '
-                        + .MyVar1
-                        + .MyVar2
+                           + .MyVar1
+                           + .MyVar2
                 .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
