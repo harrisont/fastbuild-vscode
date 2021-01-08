@@ -11,9 +11,9 @@ It does not yet provide syntax highlighting. For that, I recommend the FASTBuild
 
 ## Limitations
 
-* The language server cannot know what environment variables will exist when FASTBuild is run, so:
+* The language server cannot know what environment variables will exist when FASTBuild is run, since they might be different than the environment variables that exist when the language server runs, so:
 	* `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
-	* `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) has no effect.
+	* `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
 
 ## Compatibility
 
@@ -60,7 +60,6 @@ TODO
 ### TODO
 
 Support full FASTBuild syntax:
-* Support `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
 

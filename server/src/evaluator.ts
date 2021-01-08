@@ -820,6 +820,30 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 context.defines.delete(symbol);
                 break;
             }
+            // #import
+            case 'importEnvVar': {
+                // We cannot know what environment variables will exist when FASTBuild is run,
+                // since they might be different than the environment variables that exist now.
+                // So use a placeholder value instead of reading the actual environement variable value.
+                const symbol: string = statement.symbol;
+                const value = `placeholder-${symbol}-value`;
+                const dummyVariableDefinition: VariableDefinition = {
+                    id: -1,
+                    range: {
+                        uri: '',
+                        start: {
+                            line: -1,
+                            character: -1
+                        },
+                        end: {
+                            line: -1,
+                            character: -1
+                        }
+                    }
+                };
+                context.scopeStack.setVariableInCurrentScope(symbol, value, dummyVariableDefinition);
+                break;
+            }
             default:
                 throw new EvaluationError(`Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
         }

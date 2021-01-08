@@ -79,8 +79,10 @@ const lexer = moo.states({
         directiveIf: { match: '#if', push: 'directiveIfCondition' },
         directiveElse: '#else',
         directiveEndIf: '#endif',
+
         directiveDefine: { match: '#define', push: 'directiveDefineSymbol' },
         directiveUndefine: { match: '#undef', push: 'directiveDefineSymbol' },
+        directiveImport: { match: '#import', push: 'directiveDefineSymbol' },
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
@@ -193,6 +195,7 @@ statement ->
   | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
   | directiveDefine           {% ([value]) => [ value, new ParseContext() ] %}
   | directiveUndefine         {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveImport           {% ([value]) => [ value, new ParseContext() ] %}
 
 scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
 
@@ -621,6 +624,8 @@ directiveIfConditionTerm ->
 directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define, space, symbol]) => { return { type: 'define', symbol }; } %}
 
 directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, symbol]) => { return { type: 'undefine', symbol }; } %}
+
+directiveImport -> %directiveImport %whitespace variableName  {% ([undefine, space, symbol]) => { return { type: 'importEnvVar', symbol }; } %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}

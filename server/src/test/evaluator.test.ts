@@ -3001,6 +3001,19 @@ describe('evaluator', () => {
             );
         });
     });
+
+    describe('#import', () => {
+        // The language server cannot know what environment variables will exist when FASTBuild is run,
+        // since they might be different than the environment variables that exist when the language server runs.
+        // So '#import' uses a placeholder value instead of reading the actual environement variable value.
+        it('#import uses a placeholder value', () => {
+            const input = `
+                #import MY_ENV_VAR
+                Print( .MY_ENV_VAR )
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['placeholder-MY_ENV_VAR-value']);
+        });
+    });
 });
 
 function getPlatformSpecificDefineSymbol(): string {
