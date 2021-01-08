@@ -17,20 +17,25 @@ import {
     VariableReference,
 } from '../evaluator';
 
-import { IFileContentProvider } from '../fileContentProvider';
+import { IFileSystem } from '../fileSystem';
 import { ParseDataProvider } from '../parseDataProvider';
 
 type UriStr = string;
 type FileContents = string;
 
-class MockFileContentProvider implements IFileContentProvider {
+class MockFileSystem implements IFileSystem {
     constructor(private readonly fileContents: Map<UriStr, FileContents>) {
+    }
+    
+    fileExists(uri: vscodeUri.URI): boolean
+    {
+        return this.fileContents.has(uri.toString());
     }
 
     getFileContents(uri: vscodeUri.URI): FileContents {
         const contents = this.fileContents.get(uri.toString());
         if (contents === undefined) {
-            throw new Error(`MockFileContentProvider has no data for URI '${uri}'`);
+            throw new Error(`MockFileSystem has no data for URI '${uri}'`);
         }
         return contents;
     }
@@ -57,13 +62,14 @@ function createFileRange(uri: UriStr, startLine: number, startCharacter: number,
 }
     
 function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>): EvaluatedData {
+    const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
-        new MockFileContentProvider(inputs),
+        fileSystem,
         { enableDiagnostics: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const parseData = parseDataProvider.getParseData(thisFbuildUri);
-    return evaluate(parseData, thisFbuildUriStr, parseDataProvider);
+    return evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
 }
 
 function evaluateInput(input: FileContents): EvaluatedData {
@@ -2771,7 +2777,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('"#if exists" can be combined with ||', () => {
+        it('"exists" can be combined with ||', () => {
             const input = `
                 .Value = false
                 #if exists(MY_ENV_VAR) || ${builtInDefine}
@@ -2782,7 +2788,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('"#if exists" can be combined with &&', () => {
+        it('"exists" can be combined with &&', () => {
             const input = `
                 .Value = false
                 #if ${builtInDefine} && !exists(MY_ENV_VAR)
@@ -2791,6 +2797,138 @@ describe('evaluator', () => {
                 Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+    });
+    
+    describe('#if file_exists', () => {
+        const builtInDefine = getPlatformSpecificDefineSymbol();
+
+        it('"#if file_exists(...)" evaluates to true for a relative path that exists', () => {
+            const result = evaluateInputs('file:///base/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///base/fbuild.bff',
+                    `
+                        .Value = false
+                        #if file_exists('sibling.txt')
+                            .Value = true
+                        #endif
+                        Print( .Value )
+                    `
+                ],
+                [
+                    'file:///base/sibling.txt',
+                    ''
+                ],
+            ]));
+            const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualValues, [true]);
+        });
+
+        it('"#if file_exists(...)" evaluates to true for a relative path above the root FASTBuild file that exists', () => {
+            const result = evaluateInputs('file:///base/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///base/fbuild.bff',
+                    `
+                        .Value = false
+                        #if file_exists('../uncle.txt')
+                            .Value = true
+                        #endif
+                        Print( .Value )
+                    `
+                ],
+                [
+                    'file:///uncle.txt',
+                    ''
+                ],
+            ]));
+            const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualValues, [true]);
+        });
+
+        it('"#if file_exists(...)" evaluates to true for an absolute path that exists', () => {
+            const result = evaluateInputs('file:///base/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///base/fbuild.bff',
+                    `
+                        .Value = false
+                        #if file_exists('/base/sibling.txt')
+                            .Value = true
+                        #endif
+                        Print( .Value )
+                    `
+                ],
+                [
+                    'file:///base/sibling.txt',
+                    ''
+                ],
+            ]));
+            const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualValues, [true]);
+        });
+
+        it('"#if file_exists(...)" evaluates to false for a path that does not exist', () => {
+            const input = `
+                .Value = false
+                #if file_exists('path/that/does/not/exist.txt')
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
+        });
+
+        it('"#if !file_exists(...)" evaluates to false for a path that exists', () => {
+            const result = evaluateInputs('file:///base/fbuild.bff', new Map<UriStr, FileContents>([
+                [
+                    'file:///base/fbuild.bff',
+                    `
+                        .Value = false
+                        #if !file_exists('sibling.txt')
+                            .Value = true
+                        #endif
+                        Print( .Value )
+                    `
+                ],
+                [
+                    'file:///base/sibling.txt',
+                    ''
+                ],
+            ]));
+            const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualValues, [false]);
+        });
+
+        it('"#if !file_exists(...)" evaluates to true for a path that does not exist', () => {
+            const input = `
+                .Value = false
+                #if !file_exists('path/that/does/not/exist.txt')
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"file_exists" can be combined with ||', () => {
+            const input = `
+                .Value = false
+                #if file_exists('path/that/does/not/exist.txt') || ${builtInDefine}
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"file_exists" can be combined with &&', () => {
+            const input = `
+                .Value = false
+                #if ${builtInDefine} && file_exists('path/that/does/not/exist.txt')
+                    .Value = true
+                #endif
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [false]);
         });
     });
 

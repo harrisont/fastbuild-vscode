@@ -60,7 +60,6 @@ TODO
 ### TODO
 
 Support full FASTBuild syntax:
-* Support `#if file_exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)).
 * Support `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
@@ -68,6 +67,8 @@ Support full FASTBuild syntax:
 Release a Visual Studio Code extension ([docs](https://code.visualstudio.com/api/get-started/wrapping-up#testing-and-publishing)).
 * Update the [README's release instructions](#releasing-the-visual-studio-code-extension).
 * Update the [README's install instructions](#installing-the-visual-studio-code-extension).
+
+Either remove the placeholder diagnostic provider or replace it with one that provides real diagnostics (e.g. showing `ParseError`s and `EvaluationError`s).
 
 Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).

@@ -11,15 +11,26 @@ import * as vscodeUri from 'vscode-uri';
 
 import * as fs from 'fs';
 
-export interface IFileContentProvider {
+export interface IFileSystem {
+    fileExists(uri: vscodeUri.URI): boolean;
     getFileContents(uri: vscodeUri.URI): string;
 }
 
 // Provides an abstraction over reading file contents from either:
 //  * disk
 //  * a document manager (vscode-languageserver's TextDocuments)
-export class FileContentProvider implements IFileContentProvider {
+export class DiskFileSystem implements IFileSystem {
     constructor(private readonly documents: TextDocuments<TextDocument>) {
+    }
+    
+    fileExists(uri: vscodeUri.URI): boolean
+    {
+        const hasCachedDocument = this.documents.get(uri.toString()) !== undefined;
+        if (hasCachedDocument) {
+            return true;
+        } else {
+            return fs.existsSync(uri.fsPath);
+        }
     }
 
     // If the file contents already exist in the document manager, return the results from there.

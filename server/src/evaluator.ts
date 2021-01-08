@@ -8,6 +8,8 @@ import {
     Statement,
 } from './parser';
 
+import { IFileSystem } from './fileSystem';
+
 import { ParseDataProvider, UriStr } from './parseDataProvider';
 
 // Used to manipulate URIs.
@@ -257,7 +259,7 @@ function getPlatformSpecificDefineSymbol(): string {
 }
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataProvider: ParseDataProvider): EvaluatedData {
+export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): EvaluatedData {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
 
     const scopeStack = new ScopeStack();
@@ -290,6 +292,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, parseDataP
         defines,
         rootFbuildDirUri: rootFbuildDirUri.toString(),
         thisFbuildUri,
+        fileSystem,
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
     };
@@ -300,7 +303,8 @@ interface EvaluationContext {
     scopeStack: ScopeStack,
     defines: Set<string>,
     rootFbuildDirUri: string,
-    thisFbuildUri: string,
+    thisFbuildUri: UriStr,
+    fileSystem: IFileSystem,
     parseDataProvider: ParseDataProvider,
     onceIncludeUrisAlreadyIncluded: string[];
 }
@@ -695,7 +699,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 break;
             }
             case 'include': {
-                const includeRelativePath: UriStr = statement.path;
+                const includeRelativePath: string = statement.path;
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, includeRelativePath);
                 if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
@@ -712,6 +716,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             defines: context.defines,
                             rootFbuildDirUri: context.rootFbuildDirUri,
                             thisFbuildUri: includeUri.toString(),
+                            fileSystem: context.fileSystem,
                             parseDataProvider: context.parseDataProvider,
                             onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
                         }
@@ -752,6 +757,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                 // The language server cannot know what environment variables will exist when FASTBuild is run,
                                 // so always assume "exists(...)" evaluates to false.
                                 evaulatedTerm = false;
+                                break;
+                            }
+                            case 'fileExists': {
+                                const filePath: string = term.filePath;
+                                const fileUri = convertFileSystemPathToUri(filePath, context.thisFbuildUri);
+                                evaulatedTerm = context.fileSystem.fileExists(fileUri);
                                 break;
                             }
                             default:
@@ -1003,5 +1014,14 @@ function deepCopyValue(value: Value): Value {
         return copy;
     } else {
         return value;
+    }
+}
+
+function convertFileSystemPathToUri(filePath: string, thisFbuildUri: UriStr): vscodeUri.URI {
+    if (path.isAbsolute(filePath)) {
+        return vscodeUri.URI.file(filePath);
+    } else {
+        const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+        return vscodeUri.Utils.resolvePath(thisFbuildUriDir, filePath);
     }
 }

@@ -131,6 +131,8 @@ const lexer = moo.states({
         comment: /(?:;|\/\/).*/,
         parametersStart: '(',
         parametersEnd: ')',
+        singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBodyThenPop' },
+        doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenPop' },
     },
     directiveDefineSymbol: {
         whitespace: /[ \t]+/,
@@ -303,6 +305,10 @@ summand ->
 
 @{%
 
+function unescapeString(escapedString: string): string {
+    return escapedString.replace(/\^(.)/g, '$1');
+}
+
 function createString(parts: any[]) {
     if (parts.length == 0) {
         return '';
@@ -319,6 +325,10 @@ function createString(parts: any[]) {
 
 %}
 
+stringLiteral ->
+    %singleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => unescapeString(content.value) %}
+  | %doubleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => unescapeString(content.value) %}
+
 string ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
   | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
@@ -329,12 +339,12 @@ stringContents ->
     # String literal
   | %stringLiteral stringContents  {% ([literal, rest]) => {
         // Handle escaped characters.
-        const escapedValue = literal.value.replace(/\^(.)/g, '$1');
+        const unescapedValue = unescapeString(literal.value);
 
         if (rest.length > 0) {
-            return [escapedValue, ...rest];
+            return [unescapedValue, ...rest];
         } else {
-            return [escapedValue];
+            return [unescapedValue];
         }
     } %}
     # Templated string
@@ -577,7 +587,7 @@ ifCondition ->
   | evaluatedVariable                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
   | evaluatedVariable whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
 
-directiveInclude -> %directiveInclude optionalWhitespaceOrNewline string  {% ([include, space, path]) => { return { type: 'include', path }; } %}
+directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => { return { type: 'include', path }; } %}
 
 directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
 
@@ -605,7 +615,8 @@ directiveIfConditionTermOrNot ->
 
 directiveIfConditionTerm ->
     variableName  {% ([symbol]) => { return { type: 'isSymbolDefined', symbol }; } %}
-  | %exists optionalWhitespace %parametersStart optionalWhitespace variableName optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, envVar, space3, closeBrace]) => { return { type: 'envVarExists' }; } %}
+  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, envVar,   space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
+  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath, space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
 
 directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define, space, symbol]) => { return { type: 'define', symbol }; } %}
 

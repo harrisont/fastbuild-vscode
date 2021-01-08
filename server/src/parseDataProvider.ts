@@ -1,7 +1,7 @@
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
-import { IFileContentProvider } from './fileContentProvider';
+import { IFileSystem } from './fileSystem';
 
 import {
     parse,
@@ -15,7 +15,7 @@ export type UriStr = string;
 export class ParseDataProvider {
     private data = new Map<UriStr, ParseData>();
 
-    constructor(private readonly fileContentProvider: IFileContentProvider, private readonly parseOptions: ParseOptions) {
+    constructor(private readonly fileContentProvider: IFileSystem, private readonly parseOptions: ParseOptions) {
     }
     
     updateParseData(uri: vscodeUri.URI): ParseData {

@@ -20,7 +20,7 @@ import { HoverProvider } from './features/hoversProvider';
 import { DefinitionProvider } from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
 import { ReferenceProvider } from './features/referenceProvider';
-import { FileContentProvider } from './fileContentProvider';
+import { DiskFileSystem } from './fileSystem';
 import { ParseDataProvider } from './parseDataProvider';
 
 import * as fs from 'fs';
@@ -54,8 +54,10 @@ class State {
 
     readonly documents = new TextDocuments(TextDocument);
 
+    fileSystem = new DiskFileSystem(this.documents);
+
     parseDataProvider = new ParseDataProvider(
-        new FileContentProvider(this.documents),
+        this.fileSystem,
         {
             enableDiagnostics: false
         }
@@ -120,7 +122,7 @@ state.documents.onDidChangeContent(change => {
     // A future optimization would be to support incremental evaluation.
     const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
     const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
-    const evaluatedData = evaluator.evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.parseDataProvider);
+    const evaluatedData = evaluator.evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
 
     state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
     state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
