@@ -16,7 +16,7 @@ import { ParseDataProvider, UriStr } from './parseDataProvider';
 import * as vscodeUri from 'vscode-uri';
 
 export class EvaluationError extends Error {
-    constructor(message?: string) {
+    constructor(readonly fileUri: UriStr, message: string) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = EvaluationError.name;
@@ -126,16 +126,16 @@ class ScopeStack {
         this.stack.push(scope);
     }
 
-    pop() {
+    pop(context: EvaluationContext) {
         if (this.stack.length < 2) {
-            throw new EvaluationError('Cannot pop scope because there is no parent scope.');
+            throw new EvaluationError(context.thisFbuildUri, 'Cannot pop scope because there is no parent scope.');
         }
         this.stack.pop();
     }
 
     // Get a variable, searching from the current scope to its parents.
     // Throw EvaluationError if the variable is not defined.
-    getVariableStartingFromCurrentScope(variableName: string): ScopeVariable {
+    getVariableStartingFromCurrentScope(variableName: string, context: EvaluationContext): ScopeVariable {
         for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
             const scope = this.stack[scopeIndex];
             const maybeVariable = scope.variables.get(variableName);
@@ -143,37 +143,37 @@ class ScopeStack {
                 return maybeVariable;
             }
         }
-        throw new EvaluationError(`Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
+        throw new EvaluationError(context.thisFbuildUri, `Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInCurrentScope(variableName: string): ScopeVariable {
+    getVariableInCurrentScope(variableName: string, context: EvaluationContext): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const maybeVariable = currentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the current scope.`);
+            throw new EvaluationError(context.thisFbuildUri, `Referencing varable "${variableName}" that is undefined in the current scope.`);
         } else {
             return maybeVariable;
         }
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInParentScope(variableName: string): ScopeVariable {
-        const parentScope = this.getParentScope();
+    getVariableInParentScope(variableName: string, context: EvaluationContext): ScopeVariable {
+        const parentScope = this.getParentScope(context);
         const maybeVariable = parentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(`Referencing varable "${variableName}" that is undefined in the parent scope.`);
+            throw new EvaluationError(context.thisFbuildUri, `Referencing varable "${variableName}" that is undefined in the parent scope.`);
         } else {
             return maybeVariable;
         }
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInScope(scope: ScopeLocation, variableName: string): ScopeVariable {
+    getVariableInScope(scope: ScopeLocation, variableName: string, context: EvaluationContext): ScopeVariable {
         if (scope == 'current') {
-            return this.getVariableInCurrentScope(variableName);
+            return this.getVariableInCurrentScope(variableName, context);
         } else {
-            return this.getVariableInParentScope(variableName);
+            return this.getVariableInParentScope(variableName, context);
         }
     }
 
@@ -195,31 +195,31 @@ class ScopeStack {
         }
     }
 
-    updateExistingVariableInCurrentScope(name: string, value: Value): ScopeVariable {
+    updateExistingVariableInCurrentScope(name: string, value: Value, context: EvaluationContext): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
-            throw new EvaluationError(`Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`);
+            throw new EvaluationError(context.thisFbuildUri, `Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`);
         }
         existingVariable.value = value;
         return existingVariable;
     }
 
-    updateExistingVariableInParentScope(name: string, value: Value): ScopeVariable {
-        const parentScope = this.getParentScope();
+    updateExistingVariableInParentScope(name: string, value: Value, context: EvaluationContext): ScopeVariable {
+        const parentScope = this.getParentScope(context);
         const existingVariable = parentScope.variables.get(name);
         if (existingVariable === undefined) {
-            throw new EvaluationError(`Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
+            throw new EvaluationError(context.thisFbuildUri, `Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
         }
         existingVariable.value = value;
         return existingVariable;
     }
 
-    updateExistingVariableInScope(scope: ScopeLocation, name: string, value: Value): ScopeVariable {
+    updateExistingVariableInScope(scope: ScopeLocation, name: string, value: Value, context: EvaluationContext): ScopeVariable {
         if (scope == 'current') {
-            return this.updateExistingVariableInCurrentScope(name, value);
+            return this.updateExistingVariableInCurrentScope(name, value, context);
         } else {
-            return this.updateExistingVariableInParentScope(name, value);
+            return this.updateExistingVariableInParentScope(name, value, context);
         }
     }
 
@@ -227,9 +227,9 @@ class ScopeStack {
         return this.stack[this.stack.length - 1];
     }
 
-    private getParentScope(): Scope {
+    private getParentScope(context: EvaluationContext): Scope {
         if (this.stack.length < 2) {
-            throw new EvaluationError(`Cannot access parent scope because there is no parent scope.`);
+            throw new EvaluationError(context.thisFbuildUri, `Cannot access parent scope because there is no parent scope.`);
         }
         return this.stack[this.stack.length - 2];
     }
@@ -330,7 +330,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 const evaluatedLhsName = evaluateRValue(lhs.name, context);
                 if (typeof evaluatedLhsName.value !== 'string') {
-                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLhsName.variableReferences);
@@ -342,7 +342,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
                 } else {
-                    variable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value);
+                    variable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, context);
                 }
 
                 if (evaluatedRhs.value instanceof Struct) {
@@ -371,14 +371,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 const evaluatedLhsName = evaluateRValue(lhs.name, context);
                 if (typeof evaluatedLhsName.value !== 'string') {
-                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLhsName.variableReferences);
 
-                const existingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value);
+                const existingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value, context);
                 const previousValue = deepCopyValue(existingVariable.value);
-                existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value);
+                existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value, context);
 
                 const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
 
@@ -398,7 +398,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             case 'scopedStatements': {
                 context.scopeStack.push();
                 const evaluatedStatements = evaluateStatements(statement.statements, context);
-                context.scopeStack.pop();
+                context.scopeStack.pop(context);
 
                 result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                 result.variableReferences.push(...evaluatedStatements.variableReferences);
@@ -410,7 +410,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             }
             case 'using': {
                 if (statement.struct.type !== 'evaluatedVariable') {
-                    throw new EvaluationError(`'Using' parameter must be an evaluated variable but instead is '${statement.struct.type}'`);
+                    throw new EvaluationError(context.thisFbuildUri, `'Using' parameter must be an evaluated variable but instead is '${statement.struct.type}'`);
                 }
                 const evaluated = evaluateEvaluatedVariable(statement.struct, context);
                 result.evaluatedVariables.push(...evaluated.evaluatedVariables);
@@ -418,17 +418,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 const struct = evaluated.valueScopeVariable.value;
                 if (!(struct instanceof Struct)) {
-                    throw new EvaluationError(`'Using' parameter must be a struct`);
+                    throw new EvaluationError(context.thisFbuildUri, `'Using' parameter must be a struct`);
                 }
 
                 const structVariable = evaluated.valueScopeVariable;
                 if (structVariable.structMemberDefinitions === null) {
-                    throw new EvaluationError(`'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
+                    throw new EvaluationError(context.thisFbuildUri, `'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
                 }
                 for (const [varName, varValue] of struct) {
                     const definition = structVariable.structMemberDefinitions.get(varName);
                     if (definition === undefined) {
-                        throw new EvaluationError(`'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
+                        throw new EvaluationError(context.thisFbuildUri, `'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
                     }
                     const variable = context.scopeStack.setVariableInCurrentScope(varName, varValue, definition);
                     const statementRange: ParseSourceRange = statement.range;
@@ -440,7 +440,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             case 'forEach': {
                 // Evaluate the array to loop over.
                 if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
-                    throw new EvaluationError(`'ForEach' array to loop over must be an evaluated variable but instead is '${statement.arrayToLoopOver.type}'`);
+                    throw new EvaluationError(context.thisFbuildUri, `'ForEach' array to loop over must be an evaluated variable but instead is '${statement.arrayToLoopOver.type}'`);
                 }
                 const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
                 const evaluatedArrayToLoopOver = evaluateEvaluatedVariable(arrayToLoopOver, context);
@@ -457,7 +457,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the loop-variable name.
                 const evaluatedLoopVarName = evaluateRValue(loopVar.name, context);
                 if (typeof evaluatedLoopVarName.value !== 'string') {
-                    throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLoopVarName.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLoopVarName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLoopVarName.variableReferences);
@@ -467,7 +467,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const definition = context.scopeStack.createVariableDefinition(loopVarRange);
                 const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
                 if (!(arrayItems instanceof Array)) {
-                    throw new EvaluationError(`'ForEach' variable to loop over must be an array`);
+                    throw new EvaluationError(context.thisFbuildUri, `'ForEach' variable to loop over must be an array`);
                 }
 
                 context.scopeStack.push();
@@ -488,7 +488,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableDefinitions.set(varName, varDefinition);
                     }
                 }
-                context.scopeStack.pop();
+                context.scopeStack.pop(context);
 
                 break;
             }
@@ -497,7 +497,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const alias: any = statement.alias;
                 const evaluatedAliasName = evaluateRValue(alias, context);
                 if (typeof evaluatedAliasName.value !== 'string') {
-                    throw new EvaluationError(`Alias must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `Alias must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedAliasName.variableReferences);
@@ -510,7 +510,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
                     result.variableDefinitions.set(varName, varDefinition);
                 }
-                context.scopeStack.pop();
+                context.scopeStack.pop(context);
 
                 break;
             }
@@ -518,7 +518,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const value: any = statement.value;
                 const evaluatedValue = evaluateRValue(value, context);
                 if (typeof evaluatedValue.value !== 'string') {
-                    throw new EvaluationError(`'Error' argument must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `'Error' argument must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -529,7 +529,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedValue = evaluateRValue(value, context);
                 const isValueEvaluatedVariable = value.type && value.type == 'evaluatedVariable';
                 if (!isValueEvaluatedVariable && typeof evaluatedValue.value !== 'string') {
-                    throw new EvaluationError(`'Print' argument must either be a variable or evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                    throw new EvaluationError(context.thisFbuildUri, `'Print' argument must either be a variable or evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -544,7 +544,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
                     result.variableDefinitions.set(varName, varDefinition);
                 }
-                context.scopeStack.pop();
+                context.scopeStack.pop(context);
                 break;
             }
             case 'if': {
@@ -554,13 +554,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 switch (condition.type) {
                     case 'boolean': {
                         if (condition.value.type !== 'evaluatedVariable') {
-                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.value.type}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition must be an evaluated variable but instead is '${condition.value.type}'`);
                         }
                         const conditionValue: ParsedEvaluatedVariable = condition.value;
                         const evaluatedCondition = evaluateEvaluatedVariable(conditionValue, context);
                         const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
                         if (typeof evaluatedConditionValue !== 'boolean') {
-                            throw new EvaluationError(`Condition must evaluate to a boolean, but was ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
+                            throw new EvaluationError(context.thisFbuildUri, `Condition must evaluate to a boolean, but was ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
                         }
                         result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
                         result.variableReferences.push(...evaluatedCondition.variableReferences);
@@ -571,7 +571,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     case 'comparison': {
                         // Evaluate LHS.
                         if (condition.lhs.type !== 'evaluatedVariable') {
-                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
                         }
                         const lhs: ParsedEvaluatedVariable = condition.lhs;
                         const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
@@ -581,7 +581,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         
                         // Evaluate RHS.
                         if (condition.rhs.type !== 'evaluatedVariable') {
-                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
                         }
                         const rhs: ParsedEvaluatedVariable = condition.rhs;
                         const evaluatedRhs = evaluateEvaluatedVariable(rhs, context);
@@ -590,7 +590,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableReferences.push(...evaluatedRhs.variableReferences);
 
                         if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
-                            throw new EvaluationError(`'If' condition comparison must compare variables of the same type, but got '${typeof evaluatedLhsValue}' and '${typeof evaluatedRhsValue}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition comparison must compare variables of the same type, but got '${typeof evaluatedLhsValue}' and '${typeof evaluatedRhsValue}'`);
                         }
 
                         const operator: string = condition.operator;
@@ -601,7 +601,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             && operator !== '=='
                             && operator !== '!=')
                         {
-                            throw new EvaluationError(`'If' comparison of booleans only supports '==' and '!=', but '${operator}' was used`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' comparison of booleans only supports '==' and '!=', but '${operator}' was used`);
                         }
 
                         switch (operator) {
@@ -624,14 +624,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                 evaluatedConditionBool = evaluatedLhsValue >= evaluatedRhsValue;
                                 break;
                             default:
-                                throw new EvaluationError(`Unknown 'If' comparison operator '${operator}'`);
+                                throw new EvaluationError(context.thisFbuildUri, `Unknown 'If' comparison operator '${operator}'`);
                         }
                         break;
                     }
                     case 'in': {
                         // Evaluate LHS.
                         if (condition.lhs.type !== 'evaluatedVariable') {
-                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
                         }
                         const lhs: ParsedEvaluatedVariable = condition.lhs;
                         const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
@@ -641,7 +641,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         
                         // Evaluate RHS.
                         if (condition.rhs.type !== 'evaluatedVariable') {
-                            throw new EvaluationError(`'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
                         }
                         const rhs: ParsedEvaluatedVariable = condition.rhs;
                         const evaluatedRhs = evaluateEvaluatedVariable(rhs, context);
@@ -662,16 +662,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                     } else if (typeof evaluatedLhsValue[0] === 'string') {
                                         evaluatedConditionBool = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                                     } else {
-                                        throw new EvaluationError(`'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got an array of '${typeof evaluatedLhsValue[0]}'`);
+                                        throw new EvaluationError(context.thisFbuildUri, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got an array of '${typeof evaluatedLhsValue[0]}'`);
                                     }
                                 } else {
-                                    throw new EvaluationError(`'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got '${JSON.stringify(evaluatedLhsValue)}'`);
+                                    throw new EvaluationError(context.thisFbuildUri, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got '${JSON.stringify(evaluatedLhsValue)}'`);
                                 }
                             } else {
-                                throw new EvaluationError(`'If' 'in' condition right-hand-side variable must be an array of strings, but got an array of '${typeof evaluatedRhsValue[0]}'`);
+                                throw new EvaluationError(context.thisFbuildUri, `'If' 'in' condition right-hand-side variable must be an array of strings, but got an array of '${typeof evaluatedRhsValue[0]}'`);
                             }
                         } else {
-                            throw new EvaluationError(`'If' 'in' condition right-hand-side variable must be an array of strings, but got '${JSON.stringify(evaluatedRhsValue)}'`);
+                            throw new EvaluationError(context.thisFbuildUri, `'If' 'in' condition right-hand-side variable must be an array of strings, but got '${JSON.stringify(evaluatedRhsValue)}'`);
                         }
 
                         const invert: boolean = condition.invert;
@@ -682,7 +682,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         break;
                     }
                     default:
-                        throw new EvaluationError(`Unknown condition type '${condition.type}'`);
+                        throw new EvaluationError(context.thisFbuildUri, `Unknown condition type '${condition.type}'`);
                 }
 
                 // Evaluate the function body if the condition was true.
@@ -694,7 +694,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
                         result.variableDefinitions.set(varName, varDefinition);
                     }
-                    context.scopeStack.pop();
+                    context.scopeStack.pop(context);
                 }
                 break;
             }
@@ -705,9 +705,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
                     const includeParseData = context.parseDataProvider.getParseData(includeUri);
                 
-                    const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_').value;
+                    const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_', context).value;
                     const include_dir_relative_to_root = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root);
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root, context);
     
                     const evaluatedStatements = evaluateStatements(
                         includeParseData.statements,
@@ -728,7 +728,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableDefinitions.set(varName, varDefinition);
                     }
                     
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root);
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root, context);
                 }
                 break;
             }
@@ -766,7 +766,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                 break;
                             }
                             default:
-                                throw new EvaluationError(`Unknown '#if' term type '${term.type}' from statement ${JSON.stringify(statement)}`);
+                                throw new EvaluationError(context.thisFbuildUri, `Unknown '#if' term type '${term.type}' from statement ${JSON.stringify(statement)}`);
                         }
 
                         if (invert) {
@@ -803,7 +803,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             case 'define': {
                 const symbol: string = statement.symbol;
                 if (context.defines.has(symbol)) {
-                    throw new EvaluationError(`Cannot #define already defined symbol "${symbol}".`);
+                    throw new EvaluationError(context.thisFbuildUri, `Cannot #define already defined symbol "${symbol}".`);
                 }
                 context.defines.add(symbol);
                 break;
@@ -812,10 +812,10 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             case 'undefine': {
                 const symbol: string = statement.symbol;
                 if (symbol === getPlatformSpecificDefineSymbol()) {
-                    throw new EvaluationError(`Cannot #undef built-in symbol "${symbol}".`);
+                    throw new EvaluationError(context.thisFbuildUri, `Cannot #undef built-in symbol "${symbol}".`);
                 }
                 if (!context.defines.has(symbol)) {
-                    throw new EvaluationError(`Cannot #undef undefined symbol "${symbol}".`);
+                    throw new EvaluationError(context.thisFbuildUri, `Cannot #undef undefined symbol "${symbol}".`);
                 }
                 context.defines.delete(symbol);
                 break;
@@ -845,7 +845,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 break;
             }
             default:
-                throw new EvaluationError(`Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
+                throw new EvaluationError(context.thisFbuildUri, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
         }
     }
 
@@ -905,15 +905,15 @@ function evaluateRValue(rValue: any, context: EvaluationContext): EvaluatedRValu
 function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): EvaluatedEvaluatedVariable {
     const evaluatedVariableName = evaluateRValue(parsedEvaluatedVariable.name, context);
     if (typeof evaluatedVariableName.value !== 'string') {
-        throw new EvaluationError(`Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedVariableName.value)}`);
+        throw new EvaluationError(context.thisFbuildUri, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedVariableName.value)}`);
     }
 
     const evaluatedVariables = evaluatedVariableName.evaluatedVariables;
     const variableReferences = evaluatedVariableName.variableReferences;
     
     const valueScopeVariable = (parsedEvaluatedVariable.scope == 'current')
-        ? context.scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value)
-        : context.scopeStack.getVariableInParentScope(evaluatedVariableName.value);
+        ? context.scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value, context)
+        : context.scopeStack.getVariableInParentScope(evaluatedVariableName.value, context);
 
     const parsedEvaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
 
@@ -962,7 +962,7 @@ function evaluateStruct(statements: Statement[], context: EvaluationContext): Ev
     context.scopeStack.push();
     const evaluatedStatements = evaluateStatements(statements, context);
     const structScope: Scope = context.scopeStack.getCurrentScope();
-    context.scopeStack.pop();
+    context.scopeStack.pop(context);
 
     const evaluatedValue = new Struct();
     for (const [name, variable] of structScope.variables) {
@@ -980,7 +980,7 @@ function evaluateStruct(statements: Statement[], context: EvaluationContext): Ev
 
 function evaluateSum(summands: Value[], context: EvaluationContext): EvaluatedRValue {
     if (summands.length < 2) {
-        throw new EvaluationError("A sum must have at least 2 summands. Summands: ${summands}");
+        throw new EvaluationError(context.thisFbuildUri, "A sum must have at least 2 summands. Summands: ${summands}");
     }
 
     const result = evaluateRValue(summands[0], context);
@@ -989,7 +989,7 @@ function evaluateSum(summands: Value[], context: EvaluationContext): EvaluatedRV
 
     for (const summand of summands.slice(1)) {
         const evaluatedSummand = evaluateRValue(summand, context);
-        result.value = inPlaceAdd(result.value, evaluatedSummand.value);
+        result.value = inPlaceAdd(result.value, evaluatedSummand.value, context);
         result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
         result.variableReferences.push(...evaluatedSummand.variableReferences);
         for (const [varName, varDefinition] of evaluatedSummand.variableDefinitions) {
@@ -1001,7 +1001,7 @@ function evaluateSum(summands: Value[], context: EvaluationContext): EvaluatedRV
 }
 
 // In-place add summand to existingValue, and return it.
-function inPlaceAdd(existingValue: Value, summand: Value): Value {
+function inPlaceAdd(existingValue: Value, summand: Value, context: EvaluationContext): Value {
     if (existingValue instanceof Array) {
         if (summand instanceof Array) {
             existingValue.push(...summand);
@@ -1017,7 +1017,7 @@ function inPlaceAdd(existingValue: Value, summand: Value): Value {
     } else if ((typeof existingValue == 'number') && (typeof summand == 'number')) {
         existingValue += summand;
     } else {
-        throw new EvaluationError(`Cannot add a ${typeof summand} (${JSON.stringify(summand)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
+        throw new EvaluationError(context.thisFbuildUri, `Cannot add a ${typeof summand} (${JSON.stringify(summand)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
     }
 
     return existingValue;
