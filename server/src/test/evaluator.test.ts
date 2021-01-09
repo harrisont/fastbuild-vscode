@@ -304,6 +304,35 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
         });
 
+        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line)', () => {
+            const input = `
+                .MyMessage = 'hello' +
+                             ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified (with comments)', () => {
+            const input = `
+                .MyMessage = 'hello' // Comment 1
+                           // Comment 2
+                           + ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line, with comments)', () => {
+            const input = `
+                .MyMessage = 'hello' + // Comment 1
+                             // Comment 2
+                             ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
         it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyMessage = 'hello'
@@ -330,6 +359,18 @@ describe('evaluator', () => {
                 .MyVar2 = '!'
                 .MyMessage = 'hello '
                            + .MyVar1
+                           + .MyVar2
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
+        });
+
+        it('adding mulitple evaluated variables should use the last referenced variable if none is specified (with comments)', () => {
+            const input = `
+                .MyVar1 = 'world'
+                .MyVar2 = '!'
+                .MyMessage = 'hello ' // Comment 1
+                           + .MyVar1  // Comment 2
                            + .MyVar2
                 .Evaluated = .MyMessage
             `;
