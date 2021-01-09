@@ -1,5 +1,6 @@
 import * as nearley from 'nearley';
 import fbuildGrammar from './fbuild-grammar';
+import { UriStr } from './parseDataProvider';
 
 export interface SourcePosition {
     line: number;
@@ -21,17 +22,16 @@ export function isPositionInRange(position: SourcePosition, range: ParseSourceRa
 export type Statement = Record<string, any>;
 
 export class ParseError extends Error {
-    private filePath = '';
+    fileUri: UriStr = '';
 
-    constructor(message?: string) {
+    constructor(message: string, readonly isNumParsesError=false) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseError.name;
     }
 
-    setFilePath(path: string): void {
-        this.filePath = path;
-        this.message = `${path}: ${this.message}`;
+    setFile(uri: UriStr): void {
+        this.fileUri = uri;
     }
 }
 
@@ -85,7 +85,7 @@ export function parse(input: string, options: ParseOptions): ParseData {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
+        throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`, true /*isNumParsesError*/);
     }
     const statements = parser.results[0];
     return {

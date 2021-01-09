@@ -14,7 +14,12 @@ import {
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
-import * as evaluator from './evaluator';
+import { ParseError } from './parser';
+
+import {
+    evaluate,
+    EvaluationError,
+} from './evaluator';
 
 import { HoverProvider } from './features/hoversProvider';
 import { DefinitionProvider } from './features/definitionProvider';
@@ -69,7 +74,7 @@ class State {
     readonly hoverProvider = new HoverProvider();
     readonly definitionProvider = new DefinitionProvider();
     readonly referenceProvider = new ReferenceProvider();
-    diagnosticProvider: DiagnosticProvider | null = null;
+    readonly diagnosticProvider = new DiagnosticProvider();
 
     getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI {
         const cachedRootUri = this.fileToRootFbuildFileCache.get(uri.toString());
@@ -94,7 +99,7 @@ state.connection.onInitialize((params: InitializeParams) => {
         capabilities.textDocument.publishDiagnostics.relatedInformation
     );
 
-    state.diagnosticProvider = new DiagnosticProvider(hasDiagnosticRelatedInformationCapability);
+    state.diagnosticProvider.hasDiagnosticRelatedInformationCapability = hasDiagnosticRelatedInformationCapability;
 
     const result: InitializeResult = {
         capabilities: {
@@ -115,21 +120,40 @@ state.connection.onReferences(state.referenceProvider.onReferences.bind(state.re
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
     const changedDocumentUri = vscodeUri.URI.parse(change.document.uri);
-    state.parseDataProvider.updateParseData(changedDocumentUri);
-
-    // We need to start evaluating from the root FASTBuild file, not from the changed one.
-    // This is because changes to a file can affect other files.
-    // A future optimization would be to support incremental evaluation.
-    const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
-    const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
-    const evaluatedData = evaluator.evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
-
-    state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
-    state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
-    state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
+    let hasErrorForChangedDocument = false;
+    try {
+        state.parseDataProvider.updateParseData(changedDocumentUri);
     
-    // Placeholder for diagnostics. This will likely need to change to behave like the other providers, and take the evaluated data.
-    state.diagnosticProvider?.onContentChanged(change.document, state.connection);
+        // We need to start evaluating from the root FASTBuild file, not from the changed one.
+        // This is because changes to a file can affect other files.
+        // A future optimization would be to support incremental evaluation.
+        const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
+        const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        const evaluatedData = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
+
+        state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
+        state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
+        state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
+    } catch (error) {
+        if (error instanceof ParseError || error instanceof EvaluationError) {
+            if (error.fileUri == change.document.uri) {
+                hasErrorForChangedDocument = true;
+            }
+
+            if (error instanceof ParseError) {
+                state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
+            } else {
+                state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
+            }
+        } else {
+            throw error;
+        }
+    }
+
+    // Clear any errors that no longer exist.
+    if (!hasErrorForChangedDocument) {
+        state.diagnosticProvider.clearDiagnostics(change.document.uri, state.connection);
+    }
 });
 
 // Make the text document manager listen on the connection for open, change and close text document events.

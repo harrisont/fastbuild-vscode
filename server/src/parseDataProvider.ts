@@ -27,7 +27,7 @@ export class ParseDataProvider {
             return parseData;
         } catch (error) {
             if (error instanceof ParseError) {
-                error.setFilePath(uri.fsPath);
+                error.setFile(uri.toString());
             }
             throw error;
         }
