@@ -868,6 +868,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new EvaluatedDataAndMaybeError(result, error);
                 }
 
+                let error: Error | null = null;
                 context.scopeStack.withScope(() => {
                     for (const arrayItem of arrayItems) {
                         const variable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, arrayItem, definition);
@@ -887,10 +888,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             result.variableDefinitions.set(varName, varDefinition);
                         }
                         if (evaluatedStatementsAndMaybeError.error !== null) {
-                            return new EvaluatedDataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
+                            error = evaluatedStatementsAndMaybeError.error;
+                            return;
                         }
                     }
                 });
+                if (error !== null) {
+                    return new EvaluatedDataAndMaybeError(result, error);
+                }
             } else if (isParsedStatementGenericFunction(statement)) {
                 // Evaluate the alias.
                 const evaluatedAliasNameAndMaybeError = evaluateRValue(statement.alias, context);
