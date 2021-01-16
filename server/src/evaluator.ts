@@ -568,14 +568,6 @@ class ScopeStack {
         return existingVariable;
     }
 
-    updateExistingVariableInScope(scope: ScopeLocation, name: string, value: Value, variableRange: SourceRange): ScopeVariable {
-        if (scope == 'current') {
-            return this.updateExistingVariableInCurrentScope(name, value, variableRange);
-        } else {
-            return this.updateExistingVariableInParentScope(name, value, variableRange);
-        }
-    }
-
     getCurrentScope(): Scope {
         return this.stack[this.stack.length - 1];
     }
@@ -683,7 +675,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
             const evaluatedLhsName = evaluateRValue(lhs.name, context);
             if (typeof evaluatedLhsName.value !== 'string') {
-                throw new EvaluationError(lhsRange, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                throw new EvaluationError(lhsRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLhsName.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
             result.variableReferences.push(...evaluatedLhsName.variableReferences);
@@ -720,7 +712,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
             const evaluatedLhsName = evaluateRValue(lhs.name, context);
             if (typeof evaluatedLhsName.value !== 'string') {
-                throw new EvaluationError(lhsRange, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLhsName.value)}`);
+                throw new EvaluationError(lhsRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLhsName.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
             result.variableReferences.push(...evaluatedLhsName.variableReferences);
@@ -751,9 +743,10 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             });
         } else if (isParsedStatementUsing(statement)) {
             const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+            const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
 
             if (statement.struct.type !== 'evaluatedVariable') {
-                throw new EvaluationError(statementRange, `'Using' parameter must be an evaluated variable but instead is '${statement.struct.type}'`);
+                throw new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`);
             }
             const evaluated = evaluateEvaluatedVariable(statement.struct, context);
             result.evaluatedVariables.push(...evaluated.evaluatedVariables);
@@ -762,16 +755,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const structVariable = evaluated.valueScopeVariable;
             const struct = structVariable.value;
             if (!(struct instanceof Struct)) {
-                throw new EvaluationError(statementRange, `'Using' parameter must be a struct`);
+                throw new EvaluationError(structRange, `'Using' parameter must be a struct, but instead is ${JSON.stringify(struct)}`);
             }
 
             if (structVariable.structMemberDefinitions === null) {
-                throw new EvaluationError(statementRange, `'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
+                throw new InternalEvaluationError(structRange, `'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
             }
             for (const [varName, varValue] of struct) {
                 const definition = structVariable.structMemberDefinitions.get(varName);
                 if (definition === undefined) {
-                    throw new EvaluationError(statementRange, `'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
+                    throw new InternalEvaluationError(structRange, `'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
                 }
                 const variable = context.scopeStack.setVariableInCurrentScope(varName, varValue, definition);
                 variable.usingRange = statementRange;
@@ -780,7 +773,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             // Evaluate the array to loop over.
             if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
                 const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable but instead is '${statement.arrayToLoopOver.type}'`);
+                throw new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${statement.arrayToLoopOver.type}'`);
             }
             const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
             const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, arrayToLoopOver.range);
@@ -793,7 +786,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             // Evaluate the loop-variable name.
             const evaluatedLoopVarName = evaluateRValue(statement.loopVar.name, context);
             if (typeof evaluatedLoopVarName.value !== 'string') {
-                throw new EvaluationError(loopVarRange, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedLoopVarName.value)}`);
+                throw new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLoopVarName.value)}`);
             }
             const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
             result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
@@ -804,7 +797,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const definition = context.scopeStack.createVariableDefinition(loopVarRange);
             const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
             if (!(arrayItems instanceof Array)) {
-                throw new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an array`);
+                throw new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an array, but instead is ${JSON.stringify(arrayItems)}`);
             }
 
             context.scopeStack.withScope(() => {
@@ -830,8 +823,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             // Evaluate the alias.
             const evaluatedAliasName = evaluateRValue(statement.alias, context);
             if (typeof evaluatedAliasName.value !== 'string') {
-                const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new EvaluationError(range, `Alias must evaluate to a string, but was ${JSON.stringify(evaluatedAliasName.value)}`);
+                const range = new SourceRange(context.thisFbuildUri, evaluatedAliasName.range);
+                throw new EvaluationError(range, `Alias must evaluate to a string, but instead is ${JSON.stringify(evaluatedAliasName.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
             result.variableReferences.push(...evaluatedAliasName.variableReferences);
@@ -849,7 +842,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const evaluatedValue = evaluateRValue(statement.value, context);
             if (typeof evaluatedValue.value !== 'string') {
                 const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new EvaluationError(range, `'Error' argument must evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                throw new EvaluationError(range, `'Error' argument must evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
             result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -858,7 +851,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const evaluatedValue = evaluateRValue(value, context);
             if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
                 const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new EvaluationError(range, `'Print' argument must either be a variable or evaluate to a string, but was ${JSON.stringify(evaluatedValue.value)}`);
+                throw new EvaluationError(range, `'Print' argument must either be a variable or evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
             result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -879,14 +872,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             let evaluatedConditionBool = false;
             if (isParsedIfConditionBoolean(condition)) {
                 if (condition.value.type !== 'evaluatedVariable') {
-                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable but instead is '${condition.value.type}'`);
+                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
                 }
                 const conditionValue = condition.value;
                 const evaluatedCondition = evaluateEvaluatedVariable(conditionValue, context);
                 const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
                 if (typeof evaluatedConditionValue !== 'boolean') {
                     const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
-                    throw new EvaluationError(conditionValueRange, `Condition must evaluate to a boolean, but was ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
+                    throw new EvaluationError(conditionValueRange, `Condition must evaluate to a boolean, but instead is ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
                 }
                 result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
                 result.variableReferences.push(...evaluatedCondition.variableReferences);
@@ -895,7 +888,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedIfConditionComparison(condition)) {
                 // Evaluate LHS.
                 if (condition.lhs.type !== 'evaluatedVariable') {
-                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
                 }
                 const lhs = condition.lhs;
                 const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
@@ -905,7 +898,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 
                 // Evaluate RHS.
                 if (condition.rhs.type !== 'evaluatedVariable') {
-                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
                 }
                 const rhs = condition.rhs;
                 const evaluatedRhs = evaluateEvaluatedVariable(rhs, context);
@@ -954,7 +947,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedIfConditionIn(condition)) {
                 // Evaluate LHS.
                 if (condition.lhs.type !== 'evaluatedVariable') {
-                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable but instead is '${condition.lhs.type}'`);
+                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
                 }
                 const lhs = condition.lhs;
                 const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
@@ -964,7 +957,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 
                 // Evaluate RHS.
                 if (condition.rhs.type !== 'evaluatedVariable') {
-                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable but instead is '${condition.rhs.type}'`);
+                    throw new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
                 }
                 const rhs = condition.rhs;
                 const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
@@ -1218,7 +1211,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     const evaluatedVariableName = evaluateRValue(parsedEvaluatedVariable.name, context);
     const evaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
     if (typeof evaluatedVariableName.value !== 'string') {
-        throw new EvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but was ${JSON.stringify(evaluatedVariableName.value)}`);
+        throw new EvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedVariableName.value)}`);
     }
 
     const evaluatedVariables = evaluatedVariableName.evaluatedVariables;

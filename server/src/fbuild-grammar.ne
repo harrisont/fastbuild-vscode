@@ -610,24 +610,24 @@ genericFunctionWithAlias ->
 
 # Function names of functions that we don't care about handling except for the function's alias parameter.
 genericFunctionNameWithAlias ->
-    %keywordAlias
-  | %keywordCompiler
-  | %keywordCopy
-  | %keywordCopyDir
-  | %keywordCSAssembly
-  | %keywordDLL
-  | %keywordExec
-  | %keywordExecutable
-  | %keywordLibrary
-  | %keywordObjectList
-  | %keywordRemoveDir
-  | %keywordTest
-  | %keywordTextFile
-  | %keywordUnity
-  | %keywordVCXProject
-  | %keywordVSProjectExternal
-  | %keywordVSSolution
-  | %keywordXCodeProject
+    %keywordAlias              {% id %}
+  | %keywordCompiler           {% id %}
+  | %keywordCopy               {% id %}
+  | %keywordCopyDir            {% id %}
+  | %keywordCSAssembly         {% id %}
+  | %keywordDLL                {% id %}
+  | %keywordExec               {% id %}
+  | %keywordExecutable         {% id %}
+  | %keywordLibrary            {% id %}
+  | %keywordObjectList         {% id %}
+  | %keywordRemoveDir          {% id %}
+  | %keywordTest               {% id %}
+  | %keywordTextFile           {% id %}
+  | %keywordUnity              {% id %}
+  | %keywordVCXProject         {% id %}
+  | %keywordVSProjectExternal  {% id %}
+  | %keywordVSSolution         {% id %}
+  | %keywordXCodeProject       {% id %}
 
 alias ->
     string             {% ([value]) => [ value, new ParseContext() ] %}
@@ -716,8 +716,8 @@ directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine,
 directiveImport   -> %directiveImport   %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'importEnvVar', symbol }, context] %}
 
 whitespaceOrNewline ->
-    %whitespace                             {% ([space]) => space %}
-  | %optionalWhitespaceAndMandatoryNewline  {% ([space]) => space %}
+    %whitespace                             {% id %}
+  | %optionalWhitespaceAndMandatoryNewline  {% id %}
 
 optionalWhitespaceOrNewline ->
     null                 {% () => null %}

@@ -1163,6 +1163,21 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+
+        it('Using errors if its parameter is not a struct', () => {
+            const input = `
+                .MyVar = 1
+                Using( .MyVar )
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `'Using' parameter must be a struct, but instead is 1`,
+                    range: createRange(2, 23, 2, 29)
+                }
+            );
+        });
     });
 
     describe('ForEach', () => {
@@ -1241,6 +1256,23 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+
+        it('Loop variable must be an array', () => {
+            const input = `
+                .MyArray = 123
+                ForEach( .Item in .MyArray )
+                {
+                }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `'ForEach' variable to loop over must be an array, but instead is 123`,
+                    range: createRange(2, 34, 2, 42)
+                }
+            );
+        });
     });
 
     // Functions that we don't care about handling, but we just need to make sure that their statements are evaluated.
@@ -1299,6 +1331,23 @@ describe('evaluator', () => {
                         'MyAliasName',
                         'SomeName'
                     ]);
+                });
+        
+                it('errors if the evaluated variable alias name is not a string', () => {
+                    const input = `
+                        .MyAliasName = 123
+                        ${functionName}( .MyAliasName )
+                        {
+                        }
+                    `;
+                    assert.throws(
+                        () => evaluateInput(input),
+                        {
+                            name: 'EvaluationError',
+                            message: `Alias must evaluate to a string, but instead is 123`,
+                            range: createRange(2, 26 + functionName.length, 2, 38 + functionName.length)
+                        }
+                    );
                 });
         
                 it('evaluates body statements', () => {
