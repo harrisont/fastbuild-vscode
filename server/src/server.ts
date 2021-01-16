@@ -135,16 +135,16 @@ state.documents.onDidChangeContent(change => {
         state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
         state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
     } catch (error) {
-        if (error instanceof ParseError || error instanceof EvaluationError) {
+        if (error instanceof ParseError) {
             if (error.fileUri == change.document.uri) {
                 hasErrorForChangedDocument = true;
             }
-
-            if (error instanceof ParseError) {
-                state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
-            } else {
-                state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
+            state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
+        } else if (error instanceof EvaluationError) {
+            if (error.range.uri == change.document.uri) {
+                hasErrorForChangedDocument = true;
             }
+            state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
         } else {
             throw error;
         }

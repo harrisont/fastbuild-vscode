@@ -56,14 +56,13 @@ export class DiagnosticProvider {
     addEvaluationErrorDiagnostic(error: EvaluationError, connection: Connection): void {
         const diagnostic: Diagnostic = {
             severity: DiagnosticSeverity.Error,
-            // TODO: store the range on the EvaluationError and get it here.
-            range: Range.create(0, 0, Number.MAX_VALUE, Number.MAX_VALUE),
+            range: error.range,
             message: error.message,
             source: SOURCE_NAME
         };
 
         const diagnostics = [diagnostic];
-        connection.sendDiagnostics({ uri: error.fileUri, diagnostics });
+        connection.sendDiagnostics({ uri: error.range.uri, diagnostics });
     }
 
     clearDiagnostics(uri: UriStr, connection: Connection): void {

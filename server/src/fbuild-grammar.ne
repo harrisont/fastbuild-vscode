@@ -193,11 +193,11 @@ statement ->
   | directiveInclude          {% ([value]) => [ value, new ParseContext() ] %}
   | directiveOnce             {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveDefine           {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveUndefine         {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveImport           {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveDefine           {% ([valueWithContext]) => valueWithContext %}
+  | directiveUndefine         {% ([valueWithContext]) => valueWithContext %}
+  | directiveImport           {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: "scopedStatements", statements }; } %}
+scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: 'scopedStatements', statements }; } %}
 
 @{%
 
@@ -244,42 +244,112 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
     };
 }
 
+function createString(nameToken: Token) {
+    const result = {
+        type: 'string',
+        value: nameToken.value,
+        range: {
+            start: createLocation(nameToken),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
 %}
 
 variableName ->
     # Literal name
-    %variableName  {% ([nameToken]) => nameToken.value %}
+    %variableName  {% ([nameToken]) => createString(nameToken) %}
     # Evaluated (dynamic) name
-  | string  {% ([string]) => string %}
+  | string  {% ([value]) => [ value, new ParseContext() ] %}
 
 variableReference ->
-    %variableReferenceCurrentScope variableName  {% ([scopeToken, varName]) => [scopeToken, "current", varName] %}
-  | %variableReferenceParentScope  variableName  {% ([scopeToken, varName]) => [scopeToken, "parent",  varName] %}
+    %variableReferenceCurrentScope variableName  {% ([scopeToken, [varName, context]]) => [scopeToken, 'current', varName, context] %}
+  | %variableReferenceParentScope  variableName  {% ([scopeToken, [varName, context]]) => [scopeToken, 'parent',  varName, context] %}
 
 lhsWithOperatorAssignment ->
-    variableReference                     %operatorAssignment  {% ([[scopeToken, scope, varName],        operator]) => { return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
-  | variableReference whitespaceOrNewline %operatorAssignment  {% ([[scopeToken, scope, varName], space, operator]) => { return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
+    variableReference                     %operatorAssignment  {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
+  | variableReference whitespaceOrNewline %operatorAssignment  {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
 
 lhsWithOperatorAddition ->
-    variableReference                     %operatorAddition    {% ([[scopeToken, scope, varName],        operator]) => { return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
-  | variableReference whitespaceOrNewline %operatorAddition    {% ([[scopeToken, scope, varName], space, operator]) => { return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
+    variableReference                     %operatorAddition    {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
+  | variableReference whitespaceOrNewline %operatorAddition    {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
 
 variableDefinition ->
-    lhsWithOperatorAssignment optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: "variableDefinition", lhs: lhs, rhs: rValue }, context ]; } %}
+    lhsWithOperatorAssignment optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: 'variableDefinition', lhs: lhs, rhs: rValue }, context ]; } %}
 
 variableAddition ->
-    lhsWithOperatorAddition   optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: "variableAddition",   lhs: lhs, rhs: rValue }, context ]; } %}
+    lhsWithOperatorAddition   optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: 'variableAddition',   lhs: lhs, rhs: rValue }, context ]; } %}
+
+@{%
+
+function createInteger(token: Token) {
+    const result = {
+        type: 'integer',
+        value: token.value,
+        range: {
+            start: createLocation(token),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+function createBoolean(value: boolean, token: Token) {
+    const result = {
+        type: 'boolean',
+        value,
+        range: {
+            start: createLocation(token),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+%}
 
 rValue ->
-    %integer          {% ([token]) => [ token.value, new ParseContext() ] %}
-  | bool              {% ([value]) => [ value,       new ParseContext() ] %}
+    %integer  {% ([token]) => createInteger(token) %}
+  | bool      {% ([valueWithContext]) => valueWithContext %}
   # sum is the sum of 1 or more strings, evaluated variables, or arrays.
-  | sum               {% ([valueWithContext]) => valueWithContext %}
-  | struct            {% ([valueWithContext]) => valueWithContext %}
+  | sum       {% ([valueWithContext]) => valueWithContext %}
+  | struct    {% ([valueWithContext]) => valueWithContext %}
 
 bool ->
-    %keywordTrue   {% () => true %}
-  | %keywordFalse  {% () => false %}
+    %keywordTrue   {% ([token]) => createBoolean(true,  token) %}
+  | %keywordFalse  {% ([token]) => createBoolean(false, token) %}
 
 # A single item or multiple items added together.
 sum -> sumHelper  {% ([[parts, context]]) => {
@@ -318,17 +388,31 @@ function unescapeString(escapedString: string): string {
     return escapedString.replace(/\^(.)/g, '$1');
 }
 
-function createString(parts: any[]) {
+function createStringOrStringExpression(parts: any[], startToken: Token, endToken: Token) {
+    const range = createRangeEndInclusive(startToken, endToken);
     if (parts.length == 0) {
-        return '';
+        return {
+            type: 'string',
+            value: '',
+            range,
+        };
     } else if (parts.length == 1) {
-        return parts[0];
+        const value = parts[0];
+        if (typeof value === 'string') {
+            return {
+                type: 'string',
+                value: parts[0],
+                range,
+            }
+        } else {
+            return value;
+        }
     } else {
-        const stringExpression = {
+        return {
             type: 'stringExpression',
             parts,
+            range,
         };
-        return stringExpression;
     }
 }
 
@@ -339,8 +423,8 @@ stringLiteral ->
   | %doubleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => unescapeString(content.value) %}
 
 string ->
-    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
-  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(content) %}
+    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
+  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringContents ->
@@ -358,20 +442,15 @@ stringContents ->
     } %}
     # Templated string
   | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
+        const varNameWithContext = createString(varName);
+        const varNameValue = varNameWithContext[0] as Record<string, any>;
+        const varNameContext = varNameWithContext[1] as ParseContext;
+        callOnNextToken(varNameContext, endVarIndicator);
         const evaluatedVariable = {
-            type: "evaluatedVariable",
-            scope: "current",
-            name: varName.value,
-            range: {
-                start: {
-                    line: varName.line - 1,
-                    character: startVarIndicator.col - 1,
-                },
-                end: {
-                    line: varName.line - 1,
-                    character: endVarIndicator.col,
-                }
-            }
+            type: 'evaluatedVariable',
+            scope: 'current',
+            name: varNameValue,
+            range: createRangeEndInclusive(startVarIndicator, endVarIndicator),
         };
         if (rest.length > 0) {
             return [evaluatedVariable, ...rest];
@@ -382,9 +461,9 @@ stringContents ->
 
 @{%
 
-function createEvaluatedVariable(varName: any, startToken: Token, scope: ("current" | "parent")) {
+function createEvaluatedVariable(varName: any, startToken: Token, scope: ("current" | "parent"), existingContext: ParseContext) {
     const evaluatedVariable = {
-        type: "evaluatedVariable",
+        type: 'evaluatedVariable',
         scope: scope,
         name: varName,
         range: {
@@ -399,6 +478,7 @@ function createEvaluatedVariable(varName: any, startToken: Token, scope: ("curre
 
     const context = new ParseContext();
     context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
         evaluatedVariable.range.end = createLocation(token);
     };
 
@@ -407,9 +487,9 @@ function createEvaluatedVariable(varName: any, startToken: Token, scope: ("curre
 
 %}
 
-evaluatedVariable -> variableReference  {% ([[scopeToken, scope, varName]]) => createEvaluatedVariable(varName, scopeToken, scope) %}
+evaluatedVariable -> variableReference  {% ([[scopeToken, scope, varName, context]]) => createEvaluatedVariable(varName, scopeToken, scope, context) %}
 
-array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [contents, context], braceClose]) => { callOnNextToken(context, braceClose); return [contents, context]; } %}
+array -> %scopeOrArrayStart arrayContents %scopeOrArrayEnd  {% ([braceOpen, [value, context], braceClose]) => { callOnNextToken(context, braceClose); return [ { type: 'array', value, range: createRangeEndInclusive(braceOpen, braceClose) }, context]; } %}
 
 arrayContents ->
     # Empty
@@ -436,7 +516,7 @@ nonEmptyArrayContents ->
 struct -> %structStart structContents %structEnd  {% ([braceOpen, [statements, context], braceClose]) => {
     callOnNextToken(context, braceClose);
     return [
-        { type: "struct", statements: statements },
+        { type: 'struct', statements, range: createRangeEndInclusive(braceOpen, braceClose) },
         context
     ];
 } %}
@@ -486,11 +566,12 @@ functionUsing ->
 
 @{%
 
-function createForEach(loopVar: object, arrayToLoopOver: object, statements: Record<string, any>) {
+function createForEach(loopVar: object, arrayToLoopOver: object, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'forEach',
         loopVar,
         arrayToLoopOver,
+        range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
     };
 }
@@ -498,12 +579,12 @@ function createForEach(loopVar: object, arrayToLoopOver: object, statements: Rec
 %}
 
 functionForEach ->
-    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(forEachLoopVar, evaluatedVariable, statements); } %}
-  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context], space4, braceClose, statements]) => { callOnNextToken(context, space4);     return createForEach(forEachLoopVar, evaluatedVariable, statements); } %}
+    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(forEachLoopVar, evaluatedVariable, statements, functionName, braceClose); } %}
+  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context], space4, braceClose, statements]) => { callOnNextToken(context, space4);     return createForEach(forEachLoopVar, evaluatedVariable, statements, functionName, braceClose); } %}
 
 forEachLoopVar ->
-    %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, varName,        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
-  | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, varName, space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
+    %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, [varName, varNameContext],        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
+  | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, [varName, varNameContext], space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
 functionBody ->
                                 optionalWhitespaceOrNewline            %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([                  space2, braceOpen, space3, comment2, space4, statements, braceClose]) => statements %}
@@ -511,10 +592,11 @@ functionBody ->
 
 @{%
 
-function createGenericFunction(alias: any, statements: Record<string, any>) {
+function createGenericFunction(alias: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'genericFunction',
         alias,
+        range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
     };
 }
@@ -523,8 +605,8 @@ function createGenericFunction(alias: any, statements: Record<string, any>) {
 
 # Functions that we don't care about handling except for the function's alias parameter.
 genericFunctionWithAlias ->
-    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements); } %}
-  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements); } %}
+    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements, functionName, braceClose); } %}
+  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements, functionName, braceClose); } %}
 
 # Function names of functions that we don't care about handling except for the function's alias parameter.
 genericFunctionNameWithAlias ->
@@ -551,20 +633,20 @@ alias ->
     string             {% ([value]) => [ value, new ParseContext() ] %}
   | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
 
-functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'error', value }; } %}
+functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'error', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 functionPrint ->
     # String
-    %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string            optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value,            space3, braceClose]) => {                                       return { type: 'print', value }; } %}
+    %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string            optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value,            space3, braceClose]) => {                                       return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
     # Evaluated variable
-  | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                             %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context],         braceClose]) => { callOnNextToken(context, braceClose); return { type: 'print', value }; } %}
-  | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline         %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context], space3, braceClose]) => { callOnNextToken(context, space3);     return { type: 'print', value }; } %}
+  | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                             %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context],         braceClose]) => { callOnNextToken(context, braceClose); return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+  | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline         %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context], space3, braceClose]) => { callOnNextToken(context, space3);     return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 functionSettings -> %keywordSettings functionBody  {% ([functionName, statements]) => { return { type: 'settings', statements }; } %}
 
 functionIf ->
-    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements }; } %}
-  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements }; } %}
+    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 ifCondition ->
     # Boolean expression: .Value
@@ -601,8 +683,8 @@ directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral 
 directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
 
 directiveIf ->
-    %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines                                                                                                %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements,                                                          directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [] }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveElse optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements, directiveElse, space4, comment2, space5, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements     }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines                                                                                                %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements,                                                          directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf) }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveElse optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements, directiveElse, space4, comment2, space5, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf) }; } %}
 
 directiveIfConditionOrExpression ->
     # Single item
@@ -623,15 +705,15 @@ directiveIfConditionTermOrNot ->
   | %operatorNot optionalWhitespace directiveIfConditionTerm  {% ([not, space, term]) => { return { term, invert: true  }; } %}
 
 directiveIfConditionTerm ->
-    variableName  {% ([symbol]) => { return { type: 'isSymbolDefined', symbol }; } %}
-  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, envVar,   space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
-  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath, space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
+    variableName  {% ([[symbol, context]]) => { return { type: 'isSymbolDefined', symbol: symbol.value }; } %}
+  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
+  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
 
-directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define, space, symbol]) => { return { type: 'define', symbol }; } %}
+directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, context]]) => [{ type: 'define',       symbol }, context] %}
 
-directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, symbol]) => { return { type: 'undefine', symbol }; } %}
+directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine',     symbol }, context] %}
 
-directiveImport -> %directiveImport %whitespace variableName  {% ([undefine, space, symbol]) => { return { type: 'importEnvVar', symbol }; } %}
+directiveImport   -> %directiveImport   %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'importEnvVar', symbol }, context] %}
 
 whitespaceOrNewline ->
     %whitespace                             {% ([space]) => space %}
