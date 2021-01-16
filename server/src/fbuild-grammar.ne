@@ -648,29 +648,50 @@ functionIf ->
     %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
   | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
+@{%
+
+function createIfConditionComparison(operatorToken: Token, lhs: any, rhs: any) {
+    const operatorValue = operatorToken.value;
+
+    const operatorRange = createRange(operatorToken, operatorToken);
+    operatorRange.end.character += operatorValue.length;
+
+    return {
+        type: 'comparison',
+        operator: {
+            value: operatorValue,
+            range: operatorRange
+        },
+        lhs,
+        rhs
+    };
+}
+
+%}
+
 ifCondition ->
     # Boolean expression: .Value
                                              evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: ! .Value 
   | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', value, invert: true  }, context ] %}
     # Comparison: .Value1 == .Value2
-  | evaluatedVariable                     %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 != .Value2
-  | evaluatedVariable                     %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorNotEqual       optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 < .Value2
-  | evaluatedVariable                     %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorLess           optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 <= .Value2
-  | evaluatedVariable                     %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorLessOrEqual    optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 > .Value2
-  | evaluatedVariable                     %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorGreater        optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 >= .Value2
-  | evaluatedVariable                     %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
-  | evaluatedVariable whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ { type: 'comparison', operator: operator.value, lhs, rhs }, rhsContext ]; } %}
+  | evaluatedVariable                     %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | evaluatedVariable whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Presence in ArrayOfStrings: .Value1 in .Value2
   | evaluatedVariable                                                             %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
   | evaluatedVariable whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline evaluatedVariable  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}

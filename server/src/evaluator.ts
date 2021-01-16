@@ -294,7 +294,10 @@ interface ParsedIfConditionComparison {
     type: 'comparison';
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
-    operator: '==' | '!=' | '<' | '<=' | '>' | '>='
+    operator: {
+        value: '==' | '!=' | '<' | '<=' | '>' | '>=';
+        range: ParseSourceRange;
+    }
 }
 
 function isParsedIfConditionComparison(obj: Record<string, any>): obj is ParsedIfConditionComparison {
@@ -908,7 +911,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
                     const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
-                    throw new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but got '${typeof evaluatedLhsValue}' and '${typeof evaluatedRhsValue}'`);
+                    throw new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${JSON.stringify(evaluatedLhsValue)} and RHS is ${JSON.stringify(evaluatedRhsValue)}`);
                 }
 
                 const operator = condition.operator;
@@ -916,13 +919,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Only allow '==' and '!=' operators for booleans, since {'>', '>=', '<', '<='} don't make sense.
                 // Checking the LHS type also implicitly checks the RHS type since above we checked that the LHS and RHS types are equal.
                 if (typeof evaluatedLhsValue === 'boolean'
-                    && operator !== '=='
-                    && operator !== '!=')
+                    && operator.value !== '=='
+                    && operator.value !== '!=')
                 {
-                    throw new EvaluationError(statementRange, `'If' comparison of booleans only supports '==' and '!=', but '${operator}' was used`);
+                    const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
+                    throw new EvaluationError(operatorRange, `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator.value}'`);
                 }
 
-                switch (operator) {
+                switch (operator.value) {
                     case '==':
                         evaluatedConditionBool = evaluatedLhsValue == evaluatedRhsValue;
                         break;
@@ -942,7 +946,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         evaluatedConditionBool = evaluatedLhsValue >= evaluatedRhsValue;
                         break;
                     default:
-                        throw new EvaluationError(statementRange, `Unknown 'If' comparison operator '${operator}'`);
+                        throw new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`);
                 }
             } else if (isParsedIfConditionIn(condition)) {
                 // Evaluate LHS.
@@ -980,16 +984,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             } else if (typeof evaluatedLhsValue[0] === 'string') {
                                 evaluatedConditionBool = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                             } else {
-                                throw new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got an array of '${typeof evaluatedLhsValue[0]}'`);
+                                throw new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is ${JSON.stringify(evaluatedLhsValue)}`);
                             }
                         } else {
-                            throw new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but got '${JSON.stringify(evaluatedLhsValue)}'`);
+                            throw new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is ${JSON.stringify(evaluatedLhsValue)}`);
                         }
                     } else {
-                        throw new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but got an array of '${typeof evaluatedRhsValue[0]}'`);
+                        throw new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is ${JSON.stringify(evaluatedRhsValue)}`);
                     }
                 } else {
-                    throw new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but got '${JSON.stringify(evaluatedRhsValue)}'`);
+                    throw new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is ${JSON.stringify(evaluatedRhsValue)}`);
                 }
 
                 if (condition.invert) {

@@ -1612,6 +1612,32 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false, true, true]);
                 });
+
+                const illegalComparisonOperators = [
+                    '<',
+                    '<=',
+                    '>',
+                    '>='
+                ];
+                for (const operator of illegalComparisonOperators) {
+                    it(`booleans cannot be compared with ${operator}`, () => {
+                        const input = `
+                            .Value1 = true
+                            .Value2 = true
+                            If( .Value1 ${operator} .Value2 )
+                            {
+                            }
+                        `;
+                        assert.throws(
+                            () => evaluateInput(input),
+                            {
+                                name: 'EvaluationError',
+                                message: `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator}'`,
+                                range: createRange(3, 40, 3, 40 + operator.length)
+                            }
+                        );
+                    });
+                }
             });
 
             describe('integer', () => {
@@ -2205,6 +2231,24 @@ describe('evaluator', () => {
                     assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
                 });
             });
+
+            it('comparing different types errors', () => {
+                const input = `
+                    .Value1 = 'dog'
+                    .Value2 = 123
+                    If( .Value1 == .Value2 )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' condition comparison must compare variables of the same type, but LHS is "dog" and RHS is 123`,
+                        range: createRange(3, 24, 3, 42)
+                    }
+                );
+            });
         });
         
         describe('Presence in ArrayOfStrings', () => {
@@ -2458,6 +2502,78 @@ describe('evaluator', () => {
                     [],
                     true
                 ]);
+            });
+            
+            it('errors if LHS is not a string or an array of strings (variation 1: array of non-strings)', () => {
+                const input = `
+                    .Needle = { 123 }
+                    .Haystack = { '123' }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is [123]`,
+                        range: createRange(3, 24, 3, 31)
+                    }
+                );
+            });
+            
+            it('errors if LHS is not a string or an array of strings (variation 2: non-string, non-array)', () => {
+                const input = `
+                    .Needle = 123
+                    .Haystack = { '123' }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is 123`,
+                        range: createRange(3, 24, 3, 31)
+                    }
+                );
+            });
+            
+            it('errors if RHS is not an array of strings (variation 1: array of non-strings)', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = { 123 }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is [123]`,
+                        range: createRange(3, 35, 3, 44)
+                    }
+                );
+            });
+            
+            it('errors if RHS is not an array of strings (variation 2: non-array)', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = 123
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is 123`,
+                        range: createRange(3, 35, 3, 44)
+                    }
+                );
             });
         });
     });
