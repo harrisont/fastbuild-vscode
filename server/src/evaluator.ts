@@ -33,6 +33,37 @@ export class InternalEvaluationError extends EvaluationError {
     }
 }
 
+// Either a T value or an Error, but not both.
+class Maybe<T> {
+    private constructor(readonly hasError: boolean, private readonly _value: T | null, private readonly _error: Error | null) {
+    }
+
+    static ok<U>(value: U): Maybe<U> {
+        return new Maybe<U>(false /*hasError*/, value, null /*_error*/);
+    }
+
+    static error<U>(error: Error): Maybe<U> {
+        return new Maybe<U>(true /*hasError*/, null /*_value*/, error);
+    }
+
+    // Throws an Error if |hasError| is |true|.
+    getValue(): T {
+        if (this._value === null) {
+            throw new Error(`'Maybe' has an error, not a value. Check 'hasError' before calling 'getValue'. Error: ${this._error}`);
+        }
+        return this._value;
+    }
+
+    // Throws an Error if |hasError| is |false|.
+    getError(): Error {
+        if (this._error === null) {
+            throw new Error("'Maybe' has a value, not an error. Check 'hasError' before calling 'getValue'.");
+        }
+        return this._error;
+    }
+}
+
+
 type ValueTypeName = 'Boolean' | 'Integer' | 'String' | 'Array' | 'Struct';
 
 export type Value = boolean | number | string | Value[] | Struct;
@@ -525,41 +556,45 @@ class ScopeStack {
 
     // Get a variable, searching from the current scope to its parents.
     // Throw EvaluationError if the variable is not defined.
-    getVariableStartingFromCurrentScope(variableName: string, variableRange: SourceRange): ScopeVariable {
+    getVariableStartingFromCurrentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
             const scope = this.stack[scopeIndex];
             const maybeVariable = scope.variables.get(variableName);
             if (maybeVariable !== undefined) {
-                return maybeVariable;
+                return Maybe.ok(maybeVariable);
             }
         }
-        throw new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`);
+        return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`));
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInCurrentScope(variableName: string, variableRange: SourceRange): ScopeVariable {
+    getVariableInCurrentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const currentScope = this.getCurrentScope();
         const maybeVariable = currentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`);
+            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`));
         } else {
-            return maybeVariable;
+            return Maybe.ok(maybeVariable);
         }
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInParentScope(variableName: string, variableRange: SourceRange): ScopeVariable {
-        const parentScope = this.getParentScope(variableRange);
+    getVariableInParentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
+        const maybeParentScope = this.getParentScope(variableRange);
+        if (maybeParentScope.hasError) {
+            return Maybe.error(maybeParentScope.getError());
+        }
+        const parentScope = maybeParentScope.getValue();
         const maybeVariable = parentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the parent scope.`);
+            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the parent scope.`));
         } else {
-            return maybeVariable;
+            return Maybe.ok(maybeVariable);
         }
     }
 
     // Throw EvaluationError if the variable is not defined.
-    getVariableInScope(scope: ScopeLocation, variableName: string, variableRange: SourceRange): ScopeVariable {
+    getVariableInScope(scope: ScopeLocation, variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         if (scope == 'current') {
             return this.getVariableInCurrentScope(variableName, variableRange);
         } else {
@@ -585,35 +620,39 @@ class ScopeStack {
         }
     }
 
-    updateExistingVariableInCurrentScope(name: string, value: Value, variableRange: SourceRange): ScopeVariable {
+    updateExistingVariableInCurrentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
-            throw new EvaluationError(variableRange, `Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`);
+            return Maybe.error(new EvaluationError(variableRange, `Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`));
         }
         existingVariable.value = value;
-        return existingVariable;
+        return Maybe.ok(existingVariable);
     }
 
-    updateExistingVariableInParentScope(name: string, value: Value, variableRange: SourceRange): ScopeVariable {
-        const parentScope = this.getParentScope(variableRange);
+    updateExistingVariableInParentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
+        const maybeParentScope = this.getParentScope(variableRange);
+        if (maybeParentScope.hasError) {
+            return Maybe.error(maybeParentScope.getError());
+        }
+        const parentScope = maybeParentScope.getValue();
         const existingVariable = parentScope.variables.get(name);
         if (existingVariable === undefined) {
-            throw new EvaluationError(variableRange, `Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`);
+            return Maybe.error(new EvaluationError(variableRange, `Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`));
         }
         existingVariable.value = value;
-        return existingVariable;
+        return Maybe.ok(existingVariable);
     }
 
     getCurrentScope(): Scope {
         return this.stack[this.stack.length - 1];
     }
 
-    private getParentScope(variableRange: SourceRange): Scope {
+    private getParentScope(variableRange: SourceRange): Maybe<Scope> {
         if (this.stack.length < 2) {
-            throw new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`);
+            return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`));
         }
-        return this.stack[this.stack.length - 2];
+        return Maybe.ok(this.stack[this.stack.length - 2]);
     }
 
     createVariableDefinition(range: SourceRange): VariableDefinition {
@@ -727,7 +766,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
                 } else {
-                    variable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, lhsRange);
+                    const maybeVariable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, lhsRange);
+                    if (maybeVariable.hasError) {
+                        return new EvaluatedDataAndMaybeError(result, maybeVariable.getError());
+                    }
+                    variable = maybeVariable.getValue();
                 }
 
                 if (evaluatedRhs.value instanceof Struct) {
@@ -768,7 +811,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new EvaluatedDataAndMaybeError(result, error);
                 }
 
-                const existingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value, lhsRange);
+                const maybeExistingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value, lhsRange);
+                if (maybeExistingVariable.hasError) {
+                    return new EvaluatedDataAndMaybeError(result, maybeExistingVariable.getError());
+                }
+                const existingVariable = maybeExistingVariable.getValue();
                 const previousValue = deepCopyValue(existingVariable.value);
                 const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
                 existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value, additionRange);
@@ -1143,9 +1190,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
                     const includeParseData = context.parseDataProvider.getParseData(includeUri);
                 
-                    const current_dir_relative_to_root = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_', dummyRange).value;
-                    const include_dir_relative_to_root = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', include_dir_relative_to_root, dummyRange);
+                    const maybeCurrentDirRelativeToRoot = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_', dummyRange);
+                    if (maybeCurrentDirRelativeToRoot.hasError) {
+                        return new EvaluatedDataAndMaybeError(result, maybeCurrentDirRelativeToRoot.getError());
+                    }
+                    const currentDirRelativeToRoot = maybeCurrentDirRelativeToRoot.getValue().value;
+                    const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', includeDirRelativeToRoot, dummyRange);
 
                     const includeContext: EvaluationContext = {
                         scopeStack: context.scopeStack,
@@ -1168,7 +1219,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new EvaluatedDataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
                     
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', current_dir_relative_to_root, dummyRange);
+                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', currentDirRelativeToRoot, dummyRange);
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
@@ -1365,9 +1416,14 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     const evaluatedVariables = evaluatedVariableName.evaluatedVariables;
     const variableReferences = evaluatedVariableName.variableReferences;
     
-    const valueScopeVariable = (parsedEvaluatedVariable.scope == 'current')
+
+    const maybeValueScopeVariable = (parsedEvaluatedVariable.scope == 'current')
         ? context.scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value, evaluatedVariableRange)
         : context.scopeStack.getVariableInParentScope(evaluatedVariableName.value, evaluatedVariableRange);
+    if (maybeValueScopeVariable.hasError) {
+        throw maybeValueScopeVariable.getError();
+    }
+    const valueScopeVariable = maybeValueScopeVariable.getValue();
 
     const parsedEvaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
 
