@@ -818,7 +818,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const existingVariable = maybeExistingVariable.getValue();
                 const previousValue = deepCopyValue(existingVariable.value);
                 const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
-                existingVariable.value = inPlaceAdd(existingVariable.value, evaluatedRhs.value, additionRange);
+                const maybeSum = inPlaceAdd(existingVariable.value, evaluatedRhs.value, additionRange);
+                if (maybeSum.hasError) {
+                    return new EvaluatedDataAndMaybeError(result, maybeSum.getError());
+                }
+                existingVariable.value = maybeSum.getValue();
 
                 // The addition's LHS is an evaluated variable and is a variable reference.
                 result.evaluatedVariables.push({
@@ -1516,7 +1520,11 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValu
         }
         const evaluatedSummand = evaluatedSummandAndMaybeError.data;
         const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, previousSummand.range.start, evaluatedSummand.range.end);
-        result.value = inPlaceAdd(result.value, evaluatedSummand.value, additionRange);
+        const maybeSum = inPlaceAdd(result.value, evaluatedSummand.value, additionRange);
+        if (maybeSum.hasError) {
+            return new EvaluatedRValueAndMaybeError(result, maybeSum.getError());
+        }
+        result.value = maybeSum.getValue();
         result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
         result.variableReferences.push(...evaluatedSummand.variableReferences);
         for (const [varName, varDefinition] of evaluatedSummand.variableDefinitions) {
@@ -1529,7 +1537,7 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValu
 }
 
 // In-place add summand to existingValue, and return it.
-function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceRange): Value {
+function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceRange): Maybe<Value> {
     if (existingValue instanceof Array) {
         if (summand instanceof Array) {
             existingValue.push(...summand);
@@ -1545,10 +1553,10 @@ function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceR
     } else if ((typeof existingValue == 'number') && (typeof summand == 'number')) {
         existingValue += summand;
     } else {
-        throw new EvaluationError(additionRange, `Cannot add a ${getValueTypeName(summand)} (${JSON.stringify(summand)}) to a ${getValueTypeName(existingValue)} (${JSON.stringify(existingValue)}).`);
+        return Maybe.error(new EvaluationError(additionRange, `Cannot add a ${getValueTypeName(summand)} (${JSON.stringify(summand)}) to a ${getValueTypeName(existingValue)} (${JSON.stringify(existingValue)}).`));
     }
 
-    return existingValue;
+    return Maybe.ok(existingValue);
 }
 
 function getValueTypeName(value: Value): ValueTypeName {
