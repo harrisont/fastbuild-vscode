@@ -148,7 +148,8 @@ state.documents.onDidChangeContent(change => {
             }
             state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
         } else {
-            throw error;
+            hasErrorForChangedDocument = true;
+            state.diagnosticProvider.addUnknownErrorDiagnostic(error, state.connection);
         }
     }
 
