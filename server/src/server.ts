@@ -131,7 +131,11 @@ state.documents.onDidChangeContent(change => {
         // A future optimization would be to support incremental evaluation.
         const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
         const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
-        evaluatedData = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
+        const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
+        evaluatedData = evaluatedDataAndMaybeError.data;
+        if (evaluatedDataAndMaybeError.error !== null) {
+            throw evaluatedDataAndMaybeError.error;
+        }
     } catch (error) {
         if (error instanceof ParseError) {
             if (error.fileUri == change.document.uri) {

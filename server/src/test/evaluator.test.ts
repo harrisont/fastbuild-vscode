@@ -69,7 +69,11 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const parseData = parseDataProvider.getParseData(thisFbuildUri);
-    return evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
+    const evaluatedStatementsAndMaybeError = evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
+    if (evaluatedStatementsAndMaybeError.error !== null) {
+        throw evaluatedStatementsAndMaybeError.error;
+    }
+    return evaluatedStatementsAndMaybeError.data;
 }
 
 function evaluateInput(input: FileContents): EvaluatedData {
