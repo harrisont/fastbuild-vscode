@@ -1366,58 +1366,64 @@ describe('evaluator', () => {
     });
 
     describe('Functions with no effect for our evaluation', () => {
-        it('Error', () => {
-            const input = `
-                .Value = 1
-                Error('Value is $Value$')
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+        describe('Error', () => {
+            it('Basic', () => {
+                const input = `
+                    .Value = 1
+                    Error( 'Value is $Value$' )
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
         });
         
-        it('Print string', () => {
-            const input = `
-                .Value = 1
-                Print('Value is $Value$')
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+        describe('Print', () => {
+            it('Print string', () => {
+                const input = `
+                    .Value = 1
+                    Print('Value is $Value$')
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+            
+            it('Print string variable', () => {
+                const input = `
+                    .Value = 'hello'
+                    Print(.Value)
+                `;
+                assertEvaluatedVariablesValueEqual(input, ['hello']);
+            });
+            
+            it('Print integer variable', () => {
+                const input = `
+                    .Value = 123
+                    Print(.Value)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [123]);
+            });
         });
-        
-        it('Print string variable', () => {
-            const input = `
-                .Value = 'hello'
-                Print(.Value)
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello']);
-        });
-        
-        it('Print integer variable', () => {
-            const input = `
-                .Value = 123
-                Print(.Value)
-            `;
-            assertEvaluatedVariablesValueEqual(input, [123]);
-        });
-        
-        it('Settings', () => {
-            const input = `
-                .Value = 1
-                Settings
-                {
-                    .Copy = .Value
-                }
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
-        });
-        
-        it('Settings with comments', () => {
-            const input = `
-                .Value = 1
-                Settings // Comment 1
-                { // Comment 2
-                    .Copy = .Value
-                } // Comment 3
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+
+        describe('Settings', () => {
+            it('Basic', () => {
+                const input = `
+                    .Value = 1
+                    Settings
+                    {
+                        .Copy = .Value
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+            
+            it('Settings with comments', () => {
+                const input = `
+                    .Value = 1
+                    Settings // Comment 1
+                    { // Comment 2
+                        .Copy = .Value
+                    } // Comment 3
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
         });
     });
 
@@ -1473,6 +1479,23 @@ describe('evaluator', () => {
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false, true]);
+            });
+            
+            it('errors on using a non-boolean variable for the condition', () => {
+                const input = `
+                    .Value = 123
+                    If( .Value )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `Condition must evaluate to a boolean, but instead is 123`,
+                        range: createRange(2, 24, 2, 30)
+                    }
+                );
             });
         });
         

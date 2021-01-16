@@ -842,7 +842,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const evaluatedValue = evaluateRValue(statement.value, context);
             if (typeof evaluatedValue.value !== 'string') {
                 const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new EvaluationError(range, `'Error' argument must evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
+                throw new InternalEvaluationError(range, `'Error' argument must evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
             result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -851,7 +851,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             const evaluatedValue = evaluateRValue(value, context);
             if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
                 const range = new SourceRange(context.thisFbuildUri, statement.range);
-                throw new EvaluationError(range, `'Print' argument must either be a variable or evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
+                throw new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
             }
             result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
             result.variableReferences.push(...evaluatedValue.variableReferences);
@@ -879,7 +879,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
                 if (typeof evaluatedConditionValue !== 'boolean') {
                     const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
-                    throw new EvaluationError(conditionValueRange, `Condition must evaluate to a boolean, but instead is ${typeof evaluatedConditionValue} (${JSON.stringify(evaluatedConditionValue)})`);
+                    throw new EvaluationError(conditionValueRange, `Condition must evaluate to a boolean, but instead is ${JSON.stringify(evaluatedConditionValue)}`);
                 }
                 result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
                 result.variableReferences.push(...evaluatedCondition.variableReferences);
