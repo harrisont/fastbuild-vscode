@@ -519,6 +519,113 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('should error on adding anything other than an integer to an integer', () => {
+            const input = `
+                .LHS = 123
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Integer (123).',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Integer (123).',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything other than a string to a string', () => {
+            const input = `
+                .LHS = 'hi'
+                .LHS + 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Integer (123) to a String ("hi").',
+                    range: createRange(2, 16, 2, 26)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string to a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' + {}
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Array ([]) to a String ("hi").',
+                    range: createRange(1, 25, 1, 34)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string to a string (via evaluated variable)', () => {
+            const input = `
+                .LHS = 'hi'
+                .RHS = 123
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Integer (123) to a String ("hi").',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything to a boolean', () => {
+            const input = `
+                .LHS = true
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Boolean (true).',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything to a boolean (via evaluated variable)', () => {
+            const input = `
+                .LHS = true
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Boolean (true).',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
         it('should correctly evaulate an empty string literal', () => {
             const input = `
                 .MyVar = ''

@@ -33,6 +33,8 @@ export class InternalEvaluationError extends EvaluationError {
     }
 }
 
+type ValueTypeName = 'Boolean' | 'Integer' | 'String' | 'Array' | 'Struct';
+
 export type Value = boolean | number | string | Value[] | Struct;
 
 export class Struct extends Map<string, Value> {
@@ -131,7 +133,7 @@ function isParsedStruct(obj: Record<string, any>): obj is ParsedStruct {
 
 interface ParsedSum {
     type: 'sum';
-    summands: Value[];
+    summands: any[];
 }
 
 function isParsedSum(obj: Record<string, any>): obj is ParsedSum {
@@ -151,7 +153,7 @@ function isParsedEvaluatedVariable(obj: Record<string, any>): obj is ParsedEvalu
 
 interface ParsedArray {
     type: 'array';
-    value: Array<any>;
+    value: any[];
     range: ParseSourceRange;
 }
 
@@ -471,7 +473,7 @@ class Scope {
 }
 
 class ScopeStack {
-    private stack: Array<Scope> = []
+    private stack: Scope[] = []
     private nextVariableDefinitionId = 1;
 
     constructor() {
@@ -1000,7 +1002,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     evaluatedConditionBool = !evaluatedConditionBool;
                 }
             } else {
-                throw new EvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
+                throw new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
             }
 
             // Evaluate the function body if the condition was true.
@@ -1215,7 +1217,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     const evaluatedVariableName = evaluateRValue(parsedEvaluatedVariable.name, context);
     const evaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
     if (typeof evaluatedVariableName.value !== 'string') {
-        throw new EvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedVariableName.value)}`);
+        throw new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedVariableName.value)}`);
     }
 
     const evaluatedVariables = evaluatedVariableName.evaluatedVariables;
@@ -1298,18 +1300,21 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValu
     }
 
     const result = evaluateRValue(sum.summands[0], context);
+
     // Copy the value so that we don't modify the EvaluatedVariable which references it when we add to it.
     result.value = deepCopyValue(result.value);
 
+    let previousSummand = result;
     for (const summand of sum.summands.slice(1)) {
         const evaluatedSummand = evaluateRValue(summand, context);
-        const additionRange = new SourceRange(context.thisFbuildUri, evaluatedSummand.range);
+        const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, previousSummand.range.start, evaluatedSummand.range.end);
         result.value = inPlaceAdd(result.value, evaluatedSummand.value, additionRange);
         result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
         result.variableReferences.push(...evaluatedSummand.variableReferences);
         for (const [varName, varDefinition] of evaluatedSummand.variableDefinitions) {
             result.variableDefinitions.set(varName, varDefinition);
         }
+        previousSummand = summand;
     }
 
     return result;
@@ -1332,10 +1337,27 @@ function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceR
     } else if ((typeof existingValue == 'number') && (typeof summand == 'number')) {
         existingValue += summand;
     } else {
-        throw new EvaluationError(additionRange, `Cannot add a ${typeof summand} (${JSON.stringify(summand)}) to a ${typeof existingValue} (${JSON.stringify(existingValue)}).`);
+        throw new EvaluationError(additionRange, `Cannot add a ${getValueTypeName(summand)} (${JSON.stringify(summand)}) to a ${getValueTypeName(existingValue)} (${JSON.stringify(existingValue)}).`);
     }
 
     return existingValue;
+}
+
+function getValueTypeName(value: Value): ValueTypeName {
+    if (value instanceof Array) {
+        return 'Array';
+    } else if (value instanceof Map) {
+        return 'Struct';
+    } else if (typeof value == 'string') {
+        return 'String';
+    } else if (typeof value == 'number') {
+        return 'Integer';
+    } else if (typeof value == 'boolean') {
+        return 'Boolean';
+    } else {
+        const dummyRange = SourceRange.create('', 0, 0, 0, 0);
+        throw new InternalEvaluationError(dummyRange, `Unhandled Value type: ${JSON.stringify(value)}`);
+    }
 }
 
 function deepCopyValue(value: Value): Value {
