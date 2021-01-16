@@ -184,7 +184,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.',
+                    message: 'Referencing variable "Var1" that is not defined in the current scope or any of the parent scopes.',
                     range: createRange(4, 24, 4, 29)
                 }
             );
@@ -411,7 +411,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the current scope.',
+                    message: 'Referencing varable "MyMessage" that is not defined in the current scope.',
                     range: createRange(3, 20, 3, 30)
                 }
             );
@@ -427,7 +427,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the parent scope.',
+                    message: 'Referencing varable "MyMessage" that is not defined in the parent scope.',
                     range: createRange(2, 20, 2, 30)
                 }
             );

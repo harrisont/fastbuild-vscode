@@ -533,7 +533,7 @@ class ScopeStack {
                 return maybeVariable;
             }
         }
-        throw new EvaluationError(variableRange, `Referencing variable "${variableName}" that is undefined in the current scope or any of the parent scopes.`);
+        throw new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`);
     }
 
     // Throw EvaluationError if the variable is not defined.
@@ -541,7 +541,7 @@ class ScopeStack {
         const currentScope = this.getCurrentScope();
         const maybeVariable = currentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is undefined in the current scope.`);
+            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`);
         } else {
             return maybeVariable;
         }
@@ -552,7 +552,7 @@ class ScopeStack {
         const parentScope = this.getParentScope(variableRange);
         const maybeVariable = parentScope.variables.get(variableName);
         if (maybeVariable === undefined) {
-            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is undefined in the parent scope.`);
+            throw new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the parent scope.`);
         } else {
             return maybeVariable;
         }
