@@ -180,7 +180,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
+                    message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.',
+                    range: createRange(4, 24, 4, 29)
                 }
             );
         });
@@ -206,7 +207,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
+                    range: createRange(2, 20, 2, 25)
                 }
             );
         });
@@ -224,7 +226,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
+                    range: createRange(4, 24, 4, 29)
                 }
             );
         });
@@ -404,7 +407,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
+                    message: 'Referencing varable "MyMessage" that is undefined in the current scope.',
+                    range: createRange(3, 20, 3, 30)
                 }
             );
         });
@@ -419,7 +423,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
+                    message: 'Referencing varable "MyMessage" that is undefined in the parent scope.',
+                    range: createRange(2, 20, 2, 30)
                 }
             );
         });
@@ -2995,7 +3000,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #define already defined symbol "MY_DEFINE".`
+                    message: `Cannot #define already defined symbol "MY_DEFINE".`,
+                    range: createRange(2, 24, 2, 33)
                 }
             );
         });
@@ -3023,7 +3029,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`
+                    message: `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`,
+                    range: createRange(1, 23, 1, 42)
                 }
             );
         });
@@ -3037,7 +3044,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #undef built-in symbol "${builtInDefine}".`
+                    message: `Cannot #undef built-in symbol "${builtInDefine}".`,
+                    range: createRange(1, 23, 1, 23 + builtInDefine.length)
                 }
             );
         });
