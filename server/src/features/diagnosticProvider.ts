@@ -15,6 +15,7 @@ import {
 
 import {
     EvaluationError,
+    InternalEvaluationError,
 } from '../evaluator';
 
 const SOURCE_NAME = 'FASTBuild';
@@ -60,7 +61,9 @@ export class DiagnosticProvider {
     }
 
     addEvaluationErrorDiagnostic(error: EvaluationError, connection: Connection): void {
-        const diagnostic = createDiagnosticError(error.message, error.range);
+        const isInternalError = error instanceof InternalEvaluationError;
+        const message = isInternalError ? `Internal error: ${error.message}` : error.message;
+        const diagnostic = createDiagnosticError(message, error.range);
         const diagnostics = [diagnostic];
         connection.sendDiagnostics({ uri: error.range.uri, diagnostics });
     }
