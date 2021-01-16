@@ -18,6 +18,7 @@ import { ParseError } from './parser';
 
 import {
     evaluate,
+    EvaluatedData,
     EvaluationError,
 } from './evaluator';
 
@@ -120,6 +121,7 @@ state.connection.onReferences(state.referenceProvider.onReferences.bind(state.re
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
     const changedDocumentUri = vscodeUri.URI.parse(change.document.uri);
+    let evaluatedData = new EvaluatedData();
     let hasErrorForChangedDocument = false;
     try {
         state.parseDataProvider.updateParseData(changedDocumentUri);
@@ -129,11 +131,7 @@ state.documents.onDidChangeContent(change => {
         // A future optimization would be to support incremental evaluation.
         const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
         const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
-        const evaluatedData = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
-
-        state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
-        state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
-        state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
+        evaluatedData = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
     } catch (error) {
         if (error instanceof ParseError) {
             if (error.fileUri == change.document.uri) {
@@ -149,6 +147,10 @@ state.documents.onDidChangeContent(change => {
             throw error;
         }
     }
+
+    state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
+    state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
+    state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
 
     // Clear any errors that no longer exist.
     if (!hasErrorForChangedDocument) {
