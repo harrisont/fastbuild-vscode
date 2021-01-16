@@ -748,6 +748,24 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+    
+        it('should evaluate a basic struct with comments', () => {
+            const input = `
+                .MyVar = [ // Comment 1
+                    .MyBool = true // Comment 2
+                    // Comment 3
+                    // Comment 4
+                    .MyInt = 123
+                ] // Comment 5
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                new Struct(Object.entries({
+                    MyBool: true,
+                    MyInt: 123,
+                }))
+            ]);
+        });
 
         it('should evaluate a struct with an evaluated variable', () => {
             const input = `
