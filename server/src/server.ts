@@ -40,8 +40,10 @@ type UriStr = string;
 //
 // The root FASTBuild file must be in one of the parent directories.
 //
+// Return null if no root FASTBuild file exists.
+//
 // Given the root FASTBuild file, returns itself.
-function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI {
+function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
     let searchUri = uri;
     while (searchUri.path !== '/') {
         searchUri = vscodeUri.Utils.dirname(searchUri);
@@ -50,9 +52,7 @@ function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI {
             return potentialRootFbuildUri;
         }
     }
-
-    const errorRange = SourceRange.create(uri.toString(), 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
-    throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${uri.fsPath}'`);
+    return null;
 }
 
 class State {
@@ -79,10 +79,17 @@ class State {
     readonly referenceProvider = new ReferenceProvider();
     readonly diagnosticProvider = new DiagnosticProvider();
 
-    getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI {
+    // Map of open documents to their root FASTBuild file
+    readonly openDocumentToRootMap = new Map<UriStr, UriStr>();
+
+    // Same API as the non-member getRootFbuildFile.
+    getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
         const cachedRootUri = this.fileToRootFbuildFileCache.get(uri.toString());
         if (cachedRootUri === undefined) {
             const rootUri = getRootFbuildFile(uri);
+            if (rootUri === null) {
+                return null;
+            }
             this.fileToRootFbuildFileCache.set(uri.toString(), rootUri);
             return rootUri;
         } else {
@@ -122,7 +129,8 @@ state.connection.onReferences(state.referenceProvider.onReferences.bind(state.re
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
-    const changedDocumentUri = vscodeUri.URI.parse(change.document.uri);
+    const changedDocumentUriStr: UriStr = change.document.uri;
+    const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
     let evaluatedData = new EvaluatedData();
     let hasErrorForChangedDocument = false;
     try {
@@ -132,6 +140,10 @@ state.documents.onDidChangeContent(change => {
         // This is because changes to a file can affect other files.
         // A future optimization would be to support incremental evaluation.
         const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
+        if (rootFbuildUri === null) {
+            const errorRange = SourceRange.create(changedDocumentUriStr, 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
+            throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`);
+        }
         const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
@@ -140,12 +152,12 @@ state.documents.onDidChangeContent(change => {
         }
     } catch (error) {
         if (error instanceof ParseError) {
-            if (error.fileUri == change.document.uri) {
+            if (error.fileUri == changedDocumentUriStr) {
                 hasErrorForChangedDocument = true;
             }
             state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
         } else if (error instanceof EvaluationError) {
-            if (error.range.uri == change.document.uri) {
+            if (error.range.uri == changedDocumentUriStr) {
                 hasErrorForChangedDocument = true;
             }
             state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
@@ -161,7 +173,30 @@ state.documents.onDidChangeContent(change => {
 
     // Clear any errors that no longer exist.
     if (!hasErrorForChangedDocument) {
-        state.diagnosticProvider.clearDiagnostics(change.document.uri, state.connection);
+        state.diagnosticProvider.clearDiagnostics(changedDocumentUriStr, state.connection);
+    }
+});
+
+// Track the open files by root FASTBuild file.
+state.documents.onDidOpen(change => {
+    const changedDocumentUriStr: UriStr = change.document.uri;
+    const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
+    const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
+    // If a document has no root, use itself as its root.
+    const rootFbuildUriStr = rootFbuildUri ? rootFbuildUri.toString() : changedDocumentUriStr;
+    state.openDocumentToRootMap.set(changedDocumentUriStr, rootFbuildUriStr);
+});
+
+// If the closed document's root's tree has no more open documents, clear the closed document's diagnostics.
+state.documents.onDidClose(change => {
+    const closedDocumentUriStr: UriStr = change.document.uri;
+    const rootFbuildUriStr = state.openDocumentToRootMap.get(closedDocumentUriStr);
+    if (rootFbuildUriStr === undefined) {
+        return;
+    }
+    state.openDocumentToRootMap.delete(closedDocumentUriStr);
+    if (!Array.from(state.openDocumentToRootMap.values()).includes(rootFbuildUriStr)) {
+        state.diagnosticProvider.clearDiagnostics(closedDocumentUriStr, state.connection);
     }
 });
 
