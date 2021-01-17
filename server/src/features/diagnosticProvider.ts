@@ -5,49 +5,96 @@ import {
 } from 'vscode-languageserver';
 
 import {
-    TextDocument
-} from 'vscode-languageserver-textdocument';
+    Position,
+    Range,
+} from 'vscode-languageserver-types';
+
+import {
+    ParseError
+} from '../parser';
+
+import {
+    EvaluationError,
+    InternalEvaluationError,
+} from '../evaluator';
 
 const SOURCE_NAME = 'FASTBuild';
 
+type UriStr = string;
+
+function createWholeDocumentRange(): Range {
+    return Range.create(0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
+}
+
+function createDiagnosticError(message: string, range: Range): Diagnostic {
+    return {
+        severity: DiagnosticSeverity.Error,
+        range,
+        message: message,
+        source: SOURCE_NAME
+    };
+}
+
+function createDiagnosticFromParseError(error: ParseError): Diagnostic {
+    let match: RegExpMatchArray | null = null;
+    if (error.isNumParsesError) {
+        // We don't know the location that causes the wrong number of parses, so use the whole document as the error range.
+        return createDiagnosticError(error.message, createWholeDocumentRange());
+    } else if ((match = error.message.match(/Error: (?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):/)) !== null) {
+        // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
+        const startLine = parseInt(match[1]) - 1;
+        const startCharacter = parseInt(match[2]) - 1;
+        const rangeStart = Position.create(startLine, startCharacter);
+        // Use the same end as the start in order to have VS Code auto-match the word.
+        const range = Range.create(rangeStart, rangeStart);
+        return createDiagnosticError(error.message, range);
+    } else {
+        // We were unable to parse the location from the error, so use the whole document as the error range.
+        return createDiagnosticError(`Failed to parse error location from ParseError: ${error}`, createWholeDocumentRange());
+    }
+}
+
 export class DiagnosticProvider {
-    constructor(readonly hasDiagnosticRelatedInformationCapability: boolean) {
+    hasDiagnosticRelatedInformationCapability = false;
+    readonly _documentsWithDiagnostics = new Set<UriStr>();
+
+    addParseErrorDiagnostic(error: ParseError, connection: Connection): void {
+        const diagnostic = createDiagnosticFromParseError(error);
+        const diagnostics = [diagnostic];
+        this._addDiagnostics(error.fileUri, diagnostics, connection);
     }
 
-    // Sends diagnostics about the document through the connection.
-    async onContentChanged(textDocument: TextDocument, connection: Connection): Promise<void> {
-        // Placeholder diagnostic.
+    addEvaluationErrorDiagnostic(error: EvaluationError, connection: Connection): void {
+        const isInternalError = error instanceof InternalEvaluationError;
+        const message = isInternalError ? `Internal error: ${error.message}` : error.message;
+        const diagnostic = createDiagnosticError(message, error.range);
+        const diagnostics = [diagnostic];
+        this._addDiagnostics(error.range.uri, diagnostics, connection);
+    }
 
-        // The validator creates diagnostics for all uppercase words length 2 and more
-        const text = textDocument.getText();
-        const pattern = /\b[A-Z]{2,}\b/g;
-        let m: RegExpExecArray | null;
-    
-        const diagnostics: Diagnostic[] = [];
-        while ((m = pattern.exec(text))) {
-            const diagnostic: Diagnostic = {
-                severity: DiagnosticSeverity.Warning,
-                range: {
-                    start: textDocument.positionAt(m.index),
-                    end: textDocument.positionAt(m.index + m[0].length)
-                },
-                message: `[Placeholder Diagnostic] ${m[0]} is all uppercase.`,
-                source: SOURCE_NAME
-            };
-            if (this.hasDiagnosticRelatedInformationCapability) {
-                diagnostic.relatedInformation = [
-                    {
-                        location: {
-                            uri: textDocument.uri,
-                            range: Object.assign({}, diagnostic.range)
-                        },
-                        message: 'Spelling matters'
-                    }
-                ];
-            }
-            diagnostics.push(diagnostic);
+    addUnknownErrorDiagnostic(error: Error, connection: Connection): void {
+        // We do not know which URI caused the error, so use a dummy error range.
+        const uri = '';
+        const message = `Internal error: ${error.message}`;
+        const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
+        const diagnostics = [diagnostic];
+        this._addDiagnostics(uri, diagnostics, connection);
+    }
+
+    private _addDiagnostics(uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
+        connection.sendDiagnostics({ uri, diagnostics });
+        if (diagnostics.length > 0) {
+            this._documentsWithDiagnostics.add(uri);
         }
-    
-        connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+    }
+
+    clearDiagnosticsForDocument(uri: UriStr, connection: Connection): void {
+        connection.sendDiagnostics({ uri, diagnostics: [] });
+    }
+
+    clearDiagnostics(connection: Connection): void {
+        for (const uri of this._documentsWithDiagnostics) {
+            connection.sendDiagnostics({ uri, diagnostics: [] });
+        }
     }
 }

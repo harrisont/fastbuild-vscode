@@ -7,6 +7,10 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+    Maybe,
+} from '../coreTypes';
+
+import {
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
@@ -32,12 +36,12 @@ class MockFileSystem implements IFileSystem {
         return this.fileContents.has(uri.toString());
     }
 
-    getFileContents(uri: vscodeUri.URI): FileContents {
+    getFileContents(uri: vscodeUri.URI): Maybe<FileContents> {
         const contents = this.fileContents.get(uri.toString());
         if (contents === undefined) {
-            throw new Error(`MockFileSystem has no data for URI '${uri}'`);
+            return Maybe.error(new Error(`MockFileSystem has no data for URI '${uri}'`));
         }
-        return contents;
+        return Maybe.ok(contents);
     }
 }
 
@@ -68,8 +72,16 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
         { enableDiagnostics: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
-    const parseData = parseDataProvider.getParseData(thisFbuildUri);
-    return evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
+    const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);
+    if (maybeParseData.hasError) {
+        throw maybeParseData.getError();
+    }
+    const parseData = maybeParseData.getValue();
+    const evaluatedStatementsAndMaybeError = evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
+    if (evaluatedStatementsAndMaybeError.error !== null) {
+        throw evaluatedStatementsAndMaybeError.error;
+    }
+    return evaluatedStatementsAndMaybeError.data;
 }
 
 function evaluateInput(input: FileContents): EvaluatedData {
@@ -180,7 +192,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing variable "Var1" that is undefined in the current scope or any of the parent scopes.'
+                    message: 'Referencing variable "Var1" that is not defined in the current scope or any of the parent scopes.',
+                    range: createRange(4, 24, 4, 29)
                 }
             );
         });
@@ -206,7 +219,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
+                    range: createRange(2, 20, 2, 25)
                 }
             );
         });
@@ -224,7 +238,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.'
+                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
+                    range: createRange(4, 24, 4, 29)
                 }
             );
         });
@@ -404,7 +419,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the current scope.'
+                    message: 'Referencing varable "MyMessage" that is not defined in the current scope.',
+                    range: createRange(3, 20, 3, 30)
                 }
             );
         });
@@ -419,7 +435,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is undefined in the parent scope.'
+                    message: 'Referencing varable "MyMessage" that is not defined in the parent scope.',
+                    range: createRange(2, 20, 2, 30)
                 }
             );
         });
@@ -512,6 +529,113 @@ describe('evaluator', () => {
                     C: 3
                 }))
             ]);
+        });
+
+        it('should error on adding anything other than an integer to an integer', () => {
+            const input = `
+                .LHS = 123
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Integer (123).',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Integer (123).',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything other than a string to a string', () => {
+            const input = `
+                .LHS = 'hi'
+                .LHS + 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Integer (123) to a String ("hi").',
+                    range: createRange(2, 16, 2, 26)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string to a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' + {}
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Array ([]) to a String ("hi").',
+                    range: createRange(1, 25, 1, 34)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string to a string (via evaluated variable)', () => {
+            const input = `
+                .LHS = 'hi'
+                .RHS = 123
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Integer (123) to a String ("hi").',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything to a boolean', () => {
+            const input = `
+                .LHS = true
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Boolean (true).',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything to a boolean (via evaluated variable)', () => {
+            const input = `
+                .LHS = true
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String ("hi") to a Boolean (true).',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
         });
 
         it('should correctly evaulate an empty string literal', () => {
@@ -629,6 +753,24 @@ describe('evaluator', () => {
                     MyBool: true,
                     MyInt: 123,
                     MyStr: 'Hello world!'
+                }))
+            ]);
+        });
+    
+        it('should evaluate a basic struct with comments', () => {
+            const input = `
+                .MyVar = [ // Comment 1
+                    .MyBool = true // Comment 2
+                    // Comment 3
+                    // Comment 4
+                    .MyInt = 123
+                ] // Comment 5
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                new Struct(Object.entries({
+                    MyBool: true,
+                    MyInt: 123,
                 }))
             ]);
         });
@@ -1158,6 +1300,21 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+
+        it('Using errors if its parameter is not a struct', () => {
+            const input = `
+                .MyVar = 1
+                Using( .MyVar )
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `'Using' parameter must be a struct, but instead is 1`,
+                    range: createRange(2, 23, 2, 29)
+                }
+            );
+        });
     });
 
     describe('ForEach', () => {
@@ -1236,6 +1393,23 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+
+        it('Loop variable must be an array', () => {
+            const input = `
+                .MyArray = 123
+                ForEach( .Item in .MyArray )
+                {
+                }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: `'ForEach' variable to loop over must be an array, but instead is 123`,
+                    range: createRange(2, 34, 2, 42)
+                }
+            );
+        });
     });
 
     // Functions that we don't care about handling, but we just need to make sure that their statements are evaluated.
@@ -1296,6 +1470,23 @@ describe('evaluator', () => {
                     ]);
                 });
         
+                it('errors if the evaluated variable alias name is not a string', () => {
+                    const input = `
+                        .MyAliasName = 123
+                        ${functionName}( .MyAliasName )
+                        {
+                        }
+                    `;
+                    assert.throws(
+                        () => evaluateInput(input),
+                        {
+                            name: 'EvaluationError',
+                            message: `Alias must evaluate to a string, but instead is 123`,
+                            range: createRange(2, 26 + functionName.length, 2, 38 + functionName.length)
+                        }
+                    );
+                });
+        
                 it('evaluates body statements', () => {
                     const input = `
                         .MyVar = 1
@@ -1312,58 +1503,64 @@ describe('evaluator', () => {
     });
 
     describe('Functions with no effect for our evaluation', () => {
-        it('Error', () => {
-            const input = `
-                .Value = 1
-                Error('Value is $Value$')
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+        describe('Error', () => {
+            it('Basic', () => {
+                const input = `
+                    .Value = 1
+                    Error( 'Value is $Value$' )
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
         });
         
-        it('Print string', () => {
-            const input = `
-                .Value = 1
-                Print('Value is $Value$')
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+        describe('Print', () => {
+            it('Print string', () => {
+                const input = `
+                    .Value = 1
+                    Print('Value is $Value$')
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+            
+            it('Print string variable', () => {
+                const input = `
+                    .Value = 'hello'
+                    Print(.Value)
+                `;
+                assertEvaluatedVariablesValueEqual(input, ['hello']);
+            });
+            
+            it('Print integer variable', () => {
+                const input = `
+                    .Value = 123
+                    Print(.Value)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [123]);
+            });
         });
-        
-        it('Print string variable', () => {
-            const input = `
-                .Value = 'hello'
-                Print(.Value)
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello']);
-        });
-        
-        it('Print integer variable', () => {
-            const input = `
-                .Value = 123
-                Print(.Value)
-            `;
-            assertEvaluatedVariablesValueEqual(input, [123]);
-        });
-        
-        it('Settings', () => {
-            const input = `
-                .Value = 1
-                Settings
-                {
-                    .Copy = .Value
-                }
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
-        });
-        
-        it('Settings with comments', () => {
-            const input = `
-                .Value = 1
-                Settings // Comment 1
-                { // Comment 2
-                    .Copy = .Value
-                } // Comment 3
-            `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+
+        describe('Settings', () => {
+            it('Basic', () => {
+                const input = `
+                    .Value = 1
+                    Settings
+                    {
+                        .Copy = .Value
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+            
+            it('Settings with comments', () => {
+                const input = `
+                    .Value = 1
+                    Settings // Comment 1
+                    { // Comment 2
+                        .Copy = .Value
+                    } // Comment 3
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
         });
     });
 
@@ -1419,6 +1616,23 @@ describe('evaluator', () => {
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false, true]);
+            });
+            
+            it('errors on using a non-boolean variable for the condition', () => {
+                const input = `
+                    .Value = 123
+                    If( .Value )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `Condition must evaluate to a boolean, but instead is 123`,
+                        range: createRange(2, 24, 2, 30)
+                    }
+                );
             });
         });
         
@@ -1535,6 +1749,32 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false, true, true]);
                 });
+
+                const illegalComparisonOperators = [
+                    '<',
+                    '<=',
+                    '>',
+                    '>='
+                ];
+                for (const operator of illegalComparisonOperators) {
+                    it(`booleans cannot be compared with ${operator}`, () => {
+                        const input = `
+                            .Value1 = true
+                            .Value2 = true
+                            If( .Value1 ${operator} .Value2 )
+                            {
+                            }
+                        `;
+                        assert.throws(
+                            () => evaluateInput(input),
+                            {
+                                name: 'EvaluationError',
+                                message: `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator}'`,
+                                range: createRange(3, 40, 3, 40 + operator.length)
+                            }
+                        );
+                    });
+                }
             });
 
             describe('integer', () => {
@@ -2128,6 +2368,24 @@ describe('evaluator', () => {
                     assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
                 });
             });
+
+            it('comparing different types errors', () => {
+                const input = `
+                    .Value1 = 'dog'
+                    .Value2 = 123
+                    If( .Value1 == .Value2 )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' condition comparison must compare variables of the same type, but LHS is "dog" and RHS is 123`,
+                        range: createRange(3, 24, 3, 42)
+                    }
+                );
+            });
         });
         
         describe('Presence in ArrayOfStrings', () => {
@@ -2381,6 +2639,78 @@ describe('evaluator', () => {
                     [],
                     true
                 ]);
+            });
+            
+            it('errors if LHS is not a string or an array of strings (variation 1: array of non-strings)', () => {
+                const input = `
+                    .Needle = { 123 }
+                    .Haystack = { '123' }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is [123]`,
+                        range: createRange(3, 24, 3, 31)
+                    }
+                );
+            });
+            
+            it('errors if LHS is not a string or an array of strings (variation 2: non-string, non-array)', () => {
+                const input = `
+                    .Needle = 123
+                    .Haystack = { '123' }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is 123`,
+                        range: createRange(3, 24, 3, 31)
+                    }
+                );
+            });
+            
+            it('errors if RHS is not an array of strings (variation 1: array of non-strings)', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = { 123 }
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is [123]`,
+                        range: createRange(3, 35, 3, 44)
+                    }
+                );
+            });
+            
+            it('errors if RHS is not an array of strings (variation 2: non-array)', () => {
+                const input = `
+                    .Needle = {}
+                    .Haystack = 123
+                    If( .Needle in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is 123`,
+                        range: createRange(3, 35, 3, 44)
+                    }
+                );
             });
         });
     });
@@ -2995,7 +3325,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #define already defined symbol "MY_DEFINE".`
+                    message: `Cannot #define already defined symbol "MY_DEFINE".`,
+                    range: createRange(2, 24, 2, 33)
                 }
             );
         });
@@ -3023,7 +3354,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`
+                    message: `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`,
+                    range: createRange(1, 23, 1, 42)
                 }
             );
         });
@@ -3037,7 +3369,8 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `Cannot #undef built-in symbol "${builtInDefine}".`
+                    message: `Cannot #undef built-in symbol "${builtInDefine}".`,
+                    range: createRange(1, 23, 1, 23 + builtInDefine.length)
                 }
             );
         });

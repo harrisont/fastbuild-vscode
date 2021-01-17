@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { create } from 'domain';
 
 import {
     parse,
@@ -63,11 +64,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -78,11 +87,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(0, 7, 0, 10)
+                }
             }
         ]);
     });
@@ -99,11 +116,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(5, 16, 5, 19)
+                }
             }
         ]);
     });
@@ -116,11 +141,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(1, 1, 1, 4)
+                }
             }
         ]);
     });
@@ -131,11 +164,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: true
+                rhs: {
+                    type: 'boolean',
+                    value: true,
+                    range: createRange(0, 9, 0, 13)
+                }
             }
         ]);
     });
@@ -146,11 +187,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: false
+                rhs: {
+                    type: 'boolean',
+                    value: false,
+                    range: createRange(0, 9, 0, 14)
+                }
             }
         ]);
     });
@@ -161,11 +210,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: ''
+                rhs: {
+                    type: 'string',
+                    value: '',
+                    range: createRange(0, 9, 0, 11)
+                }
             }
         ]);
     });
@@ -176,11 +233,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'hi'
+                rhs: {
+                    type: 'string',
+                    value: 'hi',
+                    range: createRange(0, 9, 0, 13)
+                }
             }
         ]);
     });
@@ -191,11 +256,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'hi'
+                rhs: {
+                    type: 'string',
+                    value: 'hi',
+                    range: createRange(0, 9, 0, 13)
+                }
             }
         ]);
     });
@@ -206,11 +279,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'h"i'
+                rhs: {
+                    type: 'string',
+                    value: 'h"i',
+                    range: createRange(0, 9, 0, 14)
+                }
             }
         ]);
     });
@@ -221,11 +302,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'h\'i'
+                rhs: {
+                    type: 'string',
+                    value: 'h\'i',
+                    range: createRange(0, 9, 0, 14)
+                }
             }
         ]);
     });
@@ -236,11 +325,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: "h'i"
+                rhs: {
+                    type: 'string',
+                    value: "h'i",
+                    range: createRange(0, 9, 0, 15)
+                }
             }
         ]);
     });
@@ -251,11 +348,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 'h"i'
+                rhs: {
+                    type: 'string',
+                    value: 'h"i',
+                    range: createRange(0, 9, 0, 15)
+                }
             }
         ]);
     });
@@ -266,11 +371,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: "h$i"
+                rhs: {
+                    type: 'string',
+                    value: 'h$i',
+                    range: createRange(0, 9, 0, 15)
+                }
             }
         ]);
     });
@@ -281,11 +394,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: "h^i"
+                rhs: {
+                    type: 'string',
+                    value: 'h^i',
+                    range: createRange(0, 9, 0, 15)
+                }
             }
         ]);
     });
@@ -296,7 +417,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -306,12 +431,17 @@ describe('parser', () => {
                         'pre-',
                         {
                             type: 'evaluatedVariable',
-                            name: 'OtherVar',
+                            name: {
+                                type: 'string',
+                                value: 'OtherVar',
+                                range: createRange(0, 15, 0, 23)
+                            },
                             scope: 'current',
                             range: createRange(0, 14, 0, 24)
                         },
                         '-post'
-                    ]
+                    ],
+                    range: createRange(0, 9, 0, 30),
                 }
             }
         ]);
@@ -323,7 +453,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -333,12 +467,17 @@ describe('parser', () => {
                         'pre-',
                         {
                             type: 'evaluatedVariable',
-                            name: 'OtherVar',
+                            name: {
+                                type: 'string',
+                                value: 'OtherVar',
+                                range: createRange(0, 15, 0, 23)
+                            },
                             scope: 'current',
                             range: createRange(0, 14, 0, 24),
                         },
                         '-post'
-                    ]
+                    ],
+                    range: createRange(0, 9, 0, 30),
                 }
             }
         ]);
@@ -350,7 +489,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -360,19 +503,28 @@ describe('parser', () => {
                         'pre-',
                         {
                             type: 'evaluatedVariable',
-                            name: 'OtherVar1',
+                            name: {
+                                type: 'string',
+                                value: 'OtherVar1',
+                                range: createRange(0, 15, 0, 24)
+                            },
                             scope: 'current',
                             range: createRange(0, 14, 0, 25),
                         },
                         '-',
                         {
                             type: 'evaluatedVariable',
-                            name: 'OtherVar2',
+                            name: {
+                                type: 'string',
+                                value: 'OtherVar2',
+                                range: createRange(0, 27, 0, 36)
+                            },
                             scope: 'current',
                             range: createRange(0, 26, 0, 37),
                         },
                         '-post'
-                    ]
+                    ],
+                    range: createRange(0, 9, 0, 43),
                 }
             }
         ]);
@@ -384,13 +536,18 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
                 rhs: {
                     type: 'struct',
                     statements: [],
+                    range: createRange(0, 9, 0, 11),
                 }
             }
         ]);
@@ -406,7 +563,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
@@ -416,13 +577,22 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyBool',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(2, 17, 2, 23)
+                                },
                                 scope: 'current',
                                 range: createRange(2, 16, 2, 23),
                             },
-                            rhs: true
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(2, 26, 2, 30)
+                            }
                         }
                     ],
+                    range: createRange(1, 21, 3, 13),
                 }
             }
         ]);
@@ -440,7 +610,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
@@ -450,31 +624,56 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyBool',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(2, 17, 2, 23)
+                                },
                                 scope: 'current',
                                 range: createRange(2, 16, 2, 23),
                             },
-                            rhs: true
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(2, 26, 2, 30)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyInt',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyInt',
+                                    range: createRange(3, 17, 3, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(3, 16, 3, 22),
                             },
-                            rhs: 123
+                            rhs: {
+                                type: 'integer',
+                                value: 123,
+                                range: createRange(3, 25, 3, 28)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyStr',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyStr',
+                                    range: createRange(4, 17, 4, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(4, 16, 4, 22),
                             },
-                            rhs: 'Hello world!'
+                            rhs: {
+                                type: 'string',
+                                value: 'Hello world!',
+                                range: createRange(4, 25, 4, 39),
+                            }
                         }
                     ],
+                    range: createRange(1, 21, 5, 13),
                 }
             }
         ]);
@@ -492,7 +691,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
@@ -502,31 +705,56 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyBool',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(2, 17, 2, 23)
+                                },
                                 scope: 'current',
                                 range: createRange(2, 16, 2, 23),
                             },
-                            rhs: true
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(2, 26, 2, 30)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyInt',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyInt',
+                                    range: createRange(3, 17, 3, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(3, 16, 3, 22),
                             },
-                            rhs: 123
+                            rhs: {
+                                type: 'integer',
+                                value: 123,
+                                range: createRange(3, 25, 3, 28)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyStr',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyStr',
+                                    range: createRange(4, 17, 4, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(4, 16, 4, 22),
                             },
-                            rhs: 'Hello world!'
+                            rhs: {
+                                type: 'string',
+                                value: 'Hello world!',
+                                range: createRange(4, 25, 4, 39),
+                            }
                         },
                     ],
+                    range: createRange(1, 21, 5, 13),
                 }
             }
         ]);
@@ -545,7 +773,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
@@ -555,22 +787,39 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyBool',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(3, 17, 3, 23)
+                                },
                                 scope: 'current',
                                 range: createRange(3, 16, 3, 23),
                             },
-                            rhs: true
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(3, 26, 3, 30)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyInt',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyInt',
+                                    range: createRange(5, 17, 5, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(5, 16, 5, 22),
                             },
-                            rhs: 123
+                            rhs: {
+                                type: 'integer',
+                                value: 123,
+                                range: createRange(5, 25, 5, 28)
+                            }
                         }
                     ],
+                    range: createRange(1, 21, 6, 13),
                 }
             }
         ]);
@@ -586,7 +835,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
@@ -596,13 +849,22 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'MyBool',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(2, 17, 2, 23)
+                                },
                                 scope: 'current',
                                 range: createRange(2, 16, 2, 23),
                             },
-                            rhs: true
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(2, 26, 2, 30)
+                            }
                         }
                     ],
+                    range: createRange(1, 21, 3, 13),
                 }
             }
         ]);
@@ -614,7 +876,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -624,22 +890,39 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'A',
+                                name: {
+                                    type: 'string',
+                                    value: 'A',
+                                    range: createRange(0, 11, 0, 12)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 10, 0, 12),
                             },
-                            rhs: 1
+                            rhs: {
+                                type: 'integer',
+                                value: 1,
+                                range: createRange(0, 13, 0, 14)
+                            }
                         },
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'B',
+                                name: {
+                                    type: 'string',
+                                    value: 'B',
+                                    range: createRange(0, 17, 0, 18)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 16, 0, 18),
                             },
-                            rhs: 2
+                            rhs: {
+                                type: 'integer',
+                                value: 2,
+                                range: createRange(0, 19, 0, 20)
+                            }
                         }
                     ],
+                    range: createRange(0, 9, 0, 21),
                 }
             }
         ]);
@@ -651,7 +934,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -661,18 +948,27 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'A',
+                                name: {
+                                    type: 'string',
+                                    value: 'A',
+                                    range: createRange(0, 11, 0, 12)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 10, 0, 12),
                             },
                             rhs: {
                                 type: 'evaluatedVariable',
-                                name: 'B',
+                                name: {
+                                    type: 'string',
+                                    value: 'B',
+                                    range: createRange(0, 14, 0, 15)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 13, 0, 15),
                             }
                         }
                     ],
+                    range: createRange(0, 9, 0, 16),
                 }
             }
         ]);
@@ -684,7 +980,11 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
@@ -694,13 +994,21 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'A',
+                                name: {
+                                    type: 'string',
+                                    value: 'A',
+                                    range: createRange(0, 11, 0, 12)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 10, 0, 12),
                             },
                             rhs: {
                                 type: 'evaluatedVariable',
-                                name: 'B',
+                                name: {
+                                    type: 'string',
+                                    value: 'B',
+                                    range: createRange(0, 14, 0, 15)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 13, 0, 15),
                             }
@@ -708,18 +1016,27 @@ describe('parser', () => {
                         {
                             type: 'variableDefinition',
                             lhs: {
-                                name: 'C',
+                                name: {
+                                    type: 'string',
+                                    value: 'C',
+                                    range: createRange(0, 18, 0, 19)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 17, 0, 19),
                             },
                             rhs: {
                                 type: 'evaluatedVariable',
-                                name: 'D',
+                                name: {
+                                    type: 'string',
+                                    value: 'D',
+                                    range: createRange(0, 21, 0, 22)
+                                },
                                 scope: 'current',
                                 range: createRange(0, 20, 0, 22),
                             }
                         }
                     ],
+                    range: createRange(0, 9, 0, 23),
                 }
             }
         ]);
@@ -731,13 +1048,21 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
                 rhs: {
                     type: 'evaluatedVariable',
-                    name: 'OtherVar',
+                    name: {
+                        type: 'string',
+                        value: 'OtherVar',
+                        range: createRange(0, 10, 0, 18)
+                    },
                     scope: 'current',
                     range: createRange(0, 9, 0, 18),
                 }
@@ -757,13 +1082,21 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'evaluatedVariable',
-                    name: 'OtherVar',
+                    name: {
+                        type: 'string',
+                        value: 'OtherVar',
+                        range: createRange(5, 17, 5, 25)
+                    },
                     scope: 'current',
                     range: createRange(5, 16, 5, 25),
                 }
@@ -777,11 +1110,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'parent',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -794,11 +1135,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(1, 21, 1, 24)
+                }
             }
         ]);
     });
@@ -813,11 +1162,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(2, 13, 2, 18)
+                    },
                     scope: 'current',
                     range: createRange(2, 12, 2, 18),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(2, 21, 2, 24)
+                }
             }
         ]);
     });
@@ -828,11 +1185,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -843,11 +1208,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: 123
+                rhs: {
+                    type: 'integer',
+                    value: 123,
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -864,20 +1237,36 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar1',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar1',
+                        range: createRange(1, 13, 1, 19)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 19),
                 },
-                rhs: 1
+                rhs: {
+                    type: 'integer',
+                    value: 1,
+                    range: createRange(1, 22, 1, 23)
+                }
             },
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar2',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar2',
+                        range: createRange(5, 13, 5, 19)
+                    },
                     scope: 'current',
                     range: createRange(5, 12, 5, 19),
                 },
-                rhs: 2
+                rhs: {
+                    type: 'integer',
+                    value: 2,
+                    range: createRange(5, 22, 5, 23)
+                }
             }
         ]);
     });
@@ -898,7 +1287,7 @@ describe('parser', () => {
     it('should work on a scope with a statement', () => {
         const input = `
             {
-                .MyVar = 123;
+                .MyVar = 123
             }
         `;
         assertParseResultsEqual(input, [
@@ -908,11 +1297,19 @@ describe('parser', () => {
                     {
                         type: 'variableDefinition',
                         lhs: {
-                            name: 'MyVar',
+                            name: {
+                                type: 'string',
+                                value: 'MyVar',
+                                range: createRange(2, 17, 2, 22)
+                            },
                             scope: 'current',
                             range: createRange(2, 16, 2, 22),
                         },
-                        rhs: 123
+                        rhs: {
+                            type: 'integer',
+                            value: 123,
+                            range: createRange(2, 25, 2, 28)
+                        }
                     }
                 ],
             }
@@ -928,20 +1325,36 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(1, 13, 1, 22)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
-                rhs: 'hello'
+                rhs: {
+                    type: 'string',
+                    value: 'hello',
+                    range: createRange(1, 25, 1, 32)
+                }
             },
             {
                 type: 'variableAddition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(2, 13, 2, 22)
+                    },
                     scope: 'current',
                     range: createRange(2, 12, 2, 22),
                 },
-                rhs: ' world'
+                rhs: {
+                    type: 'string',
+                    value: ' world',
+                    range: createRange(2, 25, 2, 33)
+                }
             }
         ]);
     });
@@ -957,11 +1370,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(1, 13, 1, 22)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
-                rhs: 'hello'
+                rhs: {
+                    type: 'string',
+                    value: 'hello',
+                    range: createRange(1, 25, 1, 32)
+                }
             },
             {
                 type: 'scopedStatements',
@@ -969,11 +1390,19 @@ describe('parser', () => {
                     {
                         type: 'variableAddition',
                         lhs: {
-                            name: 'MyMessage',
+                            name: {
+                                type: 'string',
+                                value: 'MyMessage',
+                                range: createRange(3, 17, 3, 26)
+                            },
                             scope: 'parent',
                             range: createRange(3, 16, 3, 26),
                         },
-                        rhs: ' world'
+                        rhs: {
+                            type: 'string',
+                            value: ' world',
+                            range: createRange(3, 29, 3, 37)
+                        }
                     }
                 ],
             },
@@ -990,25 +1419,45 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyName',
+                    name: {
+                        type: 'string',
+                        value: 'MyName',
+                        range: createRange(1, 13, 1, 19)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 19),
                 },
-                rhs: 'Bobo'
+                rhs: {
+                    type: 'string',
+                    value: 'Bobo',
+                    range: createRange(1, 22, 1, 28)
+                }
             },
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(2, 13, 2, 22)
+                    },
                     scope: 'current',
                     range: createRange(2, 12, 2, 22),
                 },
-                rhs: 'hello'
+                rhs: {
+                    type: 'string',
+                    value: 'hello',
+                    range: createRange(2, 25, 2, 32)
+                }
             },
             {
                 type: 'variableAddition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(3, 13, 3, 22)
+                    },
                     scope: 'current',
                     range: createRange(3, 12, 3, 22),
                 },
@@ -1018,11 +1467,16 @@ describe('parser', () => {
                         ' ',
                         {
                             type: 'evaluatedVariable',
-                            name: 'MyName',
+                            name: {
+                                type: 'string',
+                                value: 'MyName',
+                                range: createRange(3, 28, 3, 34)
+                            },
                             scope: 'current',
                             range: createRange(3, 27, 3, 35),
                         }
-                    ]
+                    ],
+                    range: createRange(3, 25, 3, 36),
                 }
             }
         ]);
@@ -1031,21 +1485,33 @@ describe('parser', () => {
     it('adding a string literal should use the last referenced variable if none is specified', () => {
         const input = `
             .MyMessage = 'hello'
-                        + ' world'
+                       + ' world'
         `;
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(1, 13, 1, 22)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello',
-                        ' world'
+                        {
+                            type: 'string',
+                            value: 'hello',
+                            range: createRange(1, 25, 1, 32)
+                        },
+                        {
+                            type: 'string',
+                            value: ' world',
+                            range: createRange(2, 25, 2, 33)
+                        }
                     ],
                 }
             }
@@ -1058,15 +1524,27 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(0, 1, 0, 10)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 10),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello',
-                        ' world'
+                        {
+                            type: 'string',
+                            value: 'hello',
+                            range: createRange(0, 13, 0, 20)
+                        },
+                        {
+                            type: 'string',
+                            value: ' world',
+                            range: createRange(0, 23, 0, 31)
+                        }
                     ],
                 }
             }
@@ -1076,23 +1554,39 @@ describe('parser', () => {
     it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
         const input = `
             .MyMessage = 'hello'
-                        + ' world'
-                        + '!'
+                       + ' world'
+                       + '!'
         `;
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(1, 13, 1, 22)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 22),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello',
-                        ' world',
-                        '!'
+                        {
+                            type: 'string',
+                            value: 'hello',
+                            range: createRange(1, 25, 1, 32)
+                        },
+                        {
+                            type: 'string',
+                            value: ' world',
+                            range: createRange(2, 25, 2, 33)
+                        },
+                        {
+                            type: 'string',
+                            value: '!',
+                            range: createRange(3, 25, 3, 28)
+                        }
                     ],
                 }
             }
@@ -1106,16 +1600,32 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello',
-                        ' world',
-                        '!'
+                        {
+                            type: 'string',
+                            value: 'hello',
+                            range: createRange(0, 9, 0, 16)
+                        },
+                        {
+                            type: 'string',
+                            value: ' world',
+                            range: createRange(0, 19, 0, 27)
+                        },
+                        {
+                            type: 'string',
+                            value: '!',
+                            range: createRange(0, 28, 0, 31)
+                        }
                     ],
                 }
             }
@@ -1128,17 +1638,29 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(0, 1, 0, 10)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 10),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello ',
+                        {
+                            type: 'string',
+                            value: 'hello ',
+                            range: createRange(0, 13, 0, 21)
+                        },
                         {
                             type: 'evaluatedVariable',
-                            name: 'MyVar',
+                            name: {
+                                type: 'string',
+                                value: 'MyVar',
+                                range: createRange(0, 25, 0, 30)
+                            },
                             scope: 'current',
                             range: createRange(0, 24, 0, 30),
                         }
@@ -1154,23 +1676,39 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyMessage',
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(0, 1, 0, 10)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 10),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        'hello ',
+                        {
+                            type: 'string',
+                            value: 'hello ',
+                            range: createRange(0, 13, 0, 21)
+                        },
                         {
                             type: 'evaluatedVariable',
-                            name: 'MyVar1',
+                            name: {
+                                type: 'string',
+                                value: 'MyVar1',
+                                range: createRange(0, 25, 0, 31)
+                            },
                             scope: 'current',
                             range: createRange(0, 24, 0, 31),
                         },
                         {
                             type: 'evaluatedVariable',
-                            name: 'MyVar2',
+                            name: {
+                                type: 'string',
+                                value: 'MyVar2',
+                                range: createRange(0, 35, 0, 41)
+                            },
                             scope: 'current',
                             range: createRange(0, 34, 0, 41),
                         }
@@ -1186,11 +1724,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: []
+                rhs: {
+                    type: 'array',
+                    value: [],
+                    range: createRange(0, 9, 0, 11)
+                }
             }
         ]);
     });
@@ -1201,11 +1747,19 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: []
+                rhs: {
+                    type: 'array',
+                    value: [],
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -1216,11 +1770,25 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: [1]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'integer',
+                            value: 1,
+                            range: createRange(0, 10, 0, 11)
+                        }
+                    ],
+                    range: createRange(0, 9, 0, 12)
+                }
             }
         ]);
     });
@@ -1234,11 +1802,25 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: [1]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'integer',
+                            value: 1,
+                            range: createRange(2, 24, 2, 25)
+                        }
+                    ],
+                    range: createRange(1, 21, 2, 27)
+                }
             }
         ]);
     });
@@ -1253,11 +1835,30 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: [1, 100]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'integer',
+                            value: 1,
+                            range: createRange(2, 16, 2, 17)
+                        },
+                        {
+                            type: 'integer',
+                            value: 100,
+                            range: createRange(3, 16, 3, 19)
+                        }
+                    ],
+                    range: createRange(1, 21, 4, 13)
+                }
             }
         ]);
     });
@@ -1268,11 +1869,35 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: [1, 2, 3]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'integer',
+                            value: 1,
+                            range: createRange(0, 10, 0, 11)
+                        },
+                        {
+                            type: 'integer',
+                            value: 2,
+                            range: createRange(0, 12, 0, 13)
+                        },
+                        {
+                            type: 'integer',
+                            value: 3,
+                            range: createRange(0, 14, 0, 15)
+                        }
+                    ],
+                    range: createRange(0, 9, 0, 16)
+                }
             }
         ]);
     });
@@ -1286,11 +1911,35 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: [1, 2, 3]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'integer',
+                            value: 1,
+                            range: createRange(1, 22, 1, 23)
+                        },
+                        {
+                            type: 'integer',
+                            value: 2,
+                            range: createRange(1, 26, 1, 27)
+                        },
+                        {
+                            type: 'integer',
+                            value: 3,
+                            range: createRange(2, 24, 2, 25)
+                        }
+                    ],
+                    range: createRange(1, 21, 2, 26)
+                }
             }
         ]);
     });
@@ -1301,11 +1950,30 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: ['str1', 'str2']
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'string',
+                            value: 'str1',
+                            range: createRange(0, 10, 0, 16)
+                        },
+                        {
+                            type: 'string',
+                            value: 'str2',
+                            range: createRange(0, 18, 0, 24)
+                        }
+                    ],
+                    range: createRange(0, 9, 0, 25)
+                }
             }
         ]);
     });
@@ -1316,11 +1984,30 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: [true, false]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'boolean',
+                            value: true,
+                            range: createRange(0, 10, 0, 14)
+                        },
+                        {
+                            type: 'boolean',
+                            value: false,
+                            range: createRange(0, 16, 0, 21)
+                        }
+                    ],
+                    range: createRange(0, 9, 0, 22)
+                }
             }
         ]);
     });
@@ -1331,24 +2018,40 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
                     scope: 'current',
                     range: createRange(0, 0, 0, 6),
                 },
-                rhs: [
-                    {
-                        type: 'evaluatedVariable',
-                        name: 'A',
-                        scope: 'current',
-                        range: createRange(0, 10, 0, 12),
-                    },
-                    {
-                        type: 'evaluatedVariable',
-                        name: 'B',
-                        scope: 'current',
-                        range: createRange(0, 14, 0, 16),
-                    }
-                ]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'evaluatedVariable',
+                            name: {
+                                type: 'string',
+                                value: 'A',
+                                range: createRange(0, 11, 0, 12)
+                            },
+                            scope: 'current',
+                            range: createRange(0, 10, 0, 12),
+                        },
+                        {
+                            type: 'evaluatedVariable',
+                            name: {
+                                type: 'string',
+                                value: 'B',
+                                range: createRange(0, 15, 0, 16)
+                            },
+                            scope: 'current',
+                            range: createRange(0, 14, 0, 16),
+                        }
+                    ],
+                    range: createRange(0, 9, 0, 17)
+                }
             }
         ]);
     });
@@ -1361,11 +2064,25 @@ describe('parser', () => {
             {
                 type: 'variableAddition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: ['cow']
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'string',
+                            value: 'cow',
+                            range: createRange(1, 22, 1, 27)
+                        }
+                    ],
+                    range: createRange(1, 21, 1, 28)
+                }
             }
         ]);
     });
@@ -1378,19 +2095,35 @@ describe('parser', () => {
             {
                 type: 'variableAddition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
-                rhs: [
-                    {
-                        type: 'evaluatedVariable',
-                        name: 'B',
-                        scope: 'current',
-                        range: createRange(1, 22, 1, 24),
-                    },
-                    'c'
-                ]
+                rhs: {
+                    type: 'array',
+                    value: [
+                        {
+                            type: 'evaluatedVariable',
+                            name: {
+                                type: 'string',
+                                value: 'B',
+                                range: createRange(1, 23, 1, 24)
+                            },
+                            scope: 'current',
+                            range: createRange(1, 22, 1, 24),
+                        },
+                        {
+                            type: 'string',
+                            value: 'c',
+                            range: createRange(1, 26, 1, 29)
+                        }
+                    ],
+                    range: createRange(1, 21, 1, 30)
+                }
             }
         ]);
     });
@@ -1403,25 +2136,49 @@ describe('parser', () => {
             {
                 type: 'variableDefinition',
                 lhs: {
-                    name: 'MyVar',
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
                     scope: 'current',
                     range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'sum',
                     summands: [
-                        [
-                            'a'
-                        ],
-                        [
-                            {
-                                type: 'evaluatedVariable',
-                                name: 'B',
-                                scope: 'current',
-                                range: createRange(1, 31, 1, 33),
-                            },
-                            'c'
-                        ]
+                        {
+                            type: 'array',
+                            value: [
+                                {
+                                    type: 'string',
+                                    value: 'a',
+                                    range: createRange(1, 22, 1, 25)
+                                }
+                            ],
+                            range: createRange(1, 21, 1, 26)
+                        },
+                        {
+                            type: 'array',
+                            value: [
+                                {
+                                    type: 'evaluatedVariable',
+                                    name: {
+                                        type: 'string',
+                                        value: 'B',
+                                        range: createRange(1, 32, 1, 33)
+                                    },
+                                    scope: 'current',
+                                    range: createRange(1, 31, 1, 33),
+                                },
+                                {
+                                    type: 'string',
+                                    value: 'c',
+                                    range: createRange(1, 36, 1, 39)
+                                }
+                            ],
+                            range: createRange(1, 29, 1, 40)
+                        }
                     ]
                 }
             }
@@ -1440,7 +2197,11 @@ describe('parser', () => {
                 {
                     type: 'variableDefinition',
                     lhs: {
-                        name: 'MyVar',
+                        name: {
+                            type: 'string',
+                            value: 'MyVar',
+                            range: createRange(1, 17, 1, 22)
+                        },
                         scope: 'current',
                         range: createRange(1, 16, 1, 22),
                     },
@@ -1450,33 +2211,37 @@ describe('parser', () => {
                             {
                                 type: 'variableDefinition',
                                 lhs: {
-                                    name: 'MyBool',
+                                    name: {
+                                        type: 'string',
+                                        value: 'MyBool',
+                                        range: createRange(2, 21, 2, 27)
+                                    },
                                     scope: 'current',
                                     range: createRange(2, 20, 2, 27),
                                 },
-                                rhs: true
+                                rhs: {
+                                    type: 'boolean',
+                                    value: true,
+                                    range: createRange(2, 30, 2, 34)
+                                }
                             }
                         ],
+                        range: createRange(1, 25, 3, 17),
                     }
                 },
                 {
                     type: 'using',
                     struct: {
                         type: 'evaluatedVariable',
-                        name: 'MyVar',
+                        name: {
+                            type: 'string',
+                            value: 'MyVar',
+                            range: createRange(4, 23, 4, 28)
+                        },
                         scope: 'current',
                         range: createRange(4, 22, 4, 28),
                     },
-                    range: {
-                        start: {
-                            line: 4,
-                            character: 16
-                        },
-                        end: {
-                            line: 4,
-                            character: 29
-                        }
-                    },
+                    range: createRange(4, 16, 4, 29),
                 }
             ]);
         });
@@ -1492,7 +2257,11 @@ describe('parser', () => {
                 {
                     type: 'variableDefinition',
                     lhs: {
-                        name: 'MyVar',
+                        name: {
+                            type: 'string',
+                            value: 'MyVar',
+                            range: createRange(1, 17, 1, 22)
+                        },
                         scope: 'current',
                         range: createRange(1, 16, 1, 22),
                     },
@@ -1502,33 +2271,37 @@ describe('parser', () => {
                             {
                                 type: 'variableDefinition',
                                 lhs: {
-                                    name: 'MyBool',
+                                    name: {
+                                        type: 'string',
+                                        value: 'MyBool',
+                                        range: createRange(2, 21, 2, 27)
+                                    },
                                     scope: 'current',
                                     range: createRange(2, 20, 2, 27),
                                 },
-                                rhs: true
+                                rhs: {
+                                    type: 'boolean',
+                                    value: true,
+                                    range: createRange(2, 30, 2, 34)
+                                }
                             }
                         ],
+                        range: createRange(1, 25, 3, 17),
                     }
                 },
                 {
                     type: 'using',
                     struct: {
                         type: 'evaluatedVariable',
-                        name: 'MyVar',
+                        name: {
+                            type: 'string',
+                            value: 'MyVar',
+                            range: createRange(4, 27, 4, 32)
+                        },
                         scope: 'current',
                         range: createRange(4, 26, 4, 32),
                     },
-                    range: {
-                        start: {
-                            line: 4,
-                            character: 16
-                        },
-                        end: {
-                            line: 4,
-                            character: 35
-                        }
-                    },
+                    range: createRange(4, 16, 4, 35),
                 }
             ]);
         });
@@ -1546,7 +2319,11 @@ describe('parser', () => {
                 {
                     type: 'variableDefinition',
                     lhs: {
-                        name: 'MyVar',
+                        name: {
+                            type: 'string',
+                            value: 'MyVar',
+                            range: createRange(1, 17, 1, 22)
+                        },
                         scope: 'current',
                         range: createRange(1, 16, 1, 22),
                     },
@@ -1556,19 +2333,32 @@ describe('parser', () => {
                             {
                                 type: 'variableDefinition',
                                 lhs: {
-                                    name: 'MyBool',
+                                    name: {
+                                        type: 'string',
+                                        value: 'MyBool',
+                                        range: createRange(2, 21, 2, 27)
+                                    },
                                     scope: 'current',
                                     range: createRange(2, 20, 2, 27),
                                 },
-                                rhs: true
+                                rhs: {
+                                    type: 'boolean',
+                                    value: true,
+                                    range: createRange(2, 30, 2, 34)
+                                }
                             }
                         ],
+                        range: createRange(1, 25, 3, 17),
                     }
                 },
                 {
                     type: 'variableDefinition',
                     lhs: {
-                        name: 'Other',
+                        name: {
+                            type: 'string',
+                            value: 'Other',
+                            range: createRange(4, 17, 4, 22)
+                        },
                         scope: 'current',
                         range: createRange(4, 16, 4, 22),
                     },
@@ -1579,22 +2369,18 @@ describe('parser', () => {
                                 type: 'using',
                                 struct: {
                                     type: 'evaluatedVariable',
-                                    name: 'MyVar',
+                                    name: {
+                                        type: 'string',
+                                        value: 'MyVar',
+                                        range: createRange(5, 27, 5, 32)
+                                    },
                                     scope: 'current',
                                     range: createRange(5, 26, 5, 32),
                                 },
-                                range: {
-                                    start: {
-                                        line: 5,
-                                        character: 20
-                                    },
-                                    end: {
-                                        line: 5,
-                                        character: 33
-                                    }
-                                },
+                                range: createRange(5, 20, 5, 33),
                             }
                         ],
+                        range: createRange(4, 25, 6, 17),
                     }
                 }
             ]);
