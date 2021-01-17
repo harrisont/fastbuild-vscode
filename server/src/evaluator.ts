@@ -63,6 +63,10 @@ class Maybe<T> {
     }
 }
 
+export class DataAndMaybeError<T> {
+    constructor(readonly data: T, readonly error: Error | null = null) {
+    }
+}
 
 type ValueTypeName = 'Boolean' | 'Integer' | 'String' | 'Array' | 'Struct';
 
@@ -128,11 +132,6 @@ export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
     variableReferences: VariableReference[] = [];
     variableDefinitions = new Map<string, VariableDefinition>();
-}
-
-export class EvaluatedDataAndMaybeError {
-    constructor(readonly data = new EvaluatedData(), readonly error: Error | null = null) {
-    }
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -482,31 +481,26 @@ interface EvaluatedRValue {
     variableDefinitions: Map<string, VariableDefinition>;
 }
 
-class EvaluatedRValueAndMaybeError {
-    constructor(readonly data: EvaluatedRValue, readonly error: Error | null = null) {
-    }
-
-    static fromError(error: Error): EvaluatedRValueAndMaybeError {
-        const data: EvaluatedRValue = {
-            // Dummy value
-            value: 0,
-            // Dummy range
-            range: {
-                start: {
-                    line: 0,
-                    character: 0
-                },
-                end: {
-                    line: 0,
-                    character: 0
-                }
+function createErrorEvaluatedRValue(error: Error): DataAndMaybeError<EvaluatedRValue> {
+    const data: EvaluatedRValue = {
+        // Dummy value
+        value: 0,
+        // Dummy range
+        range: {
+            start: {
+                line: 0,
+                character: 0
             },
-            evaluatedVariables: [],
-            variableReferences: [],
-            variableDefinitions: new Map<string, VariableDefinition>(),
-        };
-        return new EvaluatedRValueAndMaybeError(data, error);
-    }
+            end: {
+                line: 0,
+                character: 0
+            }
+        },
+        evaluatedVariables: [],
+        variableReferences: [],
+        variableDefinitions: new Map<string, VariableDefinition>(),
+    };
+    return new DataAndMaybeError(data, error);
 }
 
 interface EvaluatedStringExpression {
@@ -680,7 +674,7 @@ function getPlatformSpecificDefineSymbol(): string {
 }
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): EvaluatedDataAndMaybeError {
+export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
 
     const scopeStack = new ScopeStack();
@@ -730,7 +724,7 @@ interface EvaluationContext {
     onceIncludeUrisAlreadyIncluded: string[];
 }
 
-function evaluateStatements(statements: Statement[], context: EvaluationContext): EvaluatedDataAndMaybeError {
+function evaluateStatements(statements: Statement[], context: EvaluationContext): DataAndMaybeError<EvaluatedData> {
     const result = new EvaluatedData();
     try {
         for (const statement of statements) {
@@ -743,7 +737,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     result.variableDefinitions.set(varName, varDefinition);
                 }
                 if (evaluatedRhsAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                 }
 
                 const lhs: ParsedVariableDefinitionLhs = statement.lhs;
@@ -754,11 +748,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLhsName.variableReferences);
                 if (evaluatedLhsNameAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
                 }
                 if (typeof evaluatedLhsName.value !== 'string') {
                     const error = new EvaluationError(lhsRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLhsName.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 let variable: ScopeVariable | null = null;
@@ -768,7 +762,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 } else {
                     const maybeVariable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, lhsRange);
                     if (maybeVariable.hasError) {
-                        return new EvaluatedDataAndMaybeError(result, maybeVariable.getError());
+                        return new DataAndMaybeError(result, maybeVariable.getError());
                     }
                     variable = maybeVariable.getValue();
                 }
@@ -793,7 +787,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
                 result.variableReferences.push(...evaluatedRhs.variableReferences);
                 if (evaluatedRhsAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                 }
 
                 const lhs = statement.lhs;
@@ -804,23 +798,23 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLhsName.variableReferences);
                 if (evaluatedLhsNameAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
                 }
                 if (typeof evaluatedLhsName.value !== 'string') {
                     const error = new EvaluationError(lhsRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLhsName.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 const maybeExistingVariable = context.scopeStack.getVariableInScope(lhs.scope, evaluatedLhsName.value, lhsRange);
                 if (maybeExistingVariable.hasError) {
-                    return new EvaluatedDataAndMaybeError(result, maybeExistingVariable.getError());
+                    return new DataAndMaybeError(result, maybeExistingVariable.getError());
                 }
                 const existingVariable = maybeExistingVariable.getValue();
                 const previousValue = deepCopyValue(existingVariable.value);
                 const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
                 const maybeSum = inPlaceAdd(existingVariable.value, evaluatedRhs.value, additionRange);
                 if (maybeSum.hasError) {
-                    return new EvaluatedDataAndMaybeError(result, maybeSum.getError());
+                    return new DataAndMaybeError(result, maybeSum.getError());
                 }
                 existingVariable.value = maybeSum.getValue();
 
@@ -847,7 +841,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 });
                 if (error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementUsing(statement)) {
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
@@ -855,28 +849,32 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 if (statement.struct.type !== 'evaluatedVariable') {
                     const error = new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
-                const evaluated = evaluateEvaluatedVariable(statement.struct, context);
+                const evaluatedAndMaybeError = evaluateEvaluatedVariable(statement.struct, context);
+                const evaluated = evaluatedAndMaybeError.data;
                 result.evaluatedVariables.push(...evaluated.evaluatedVariables);
                 result.variableReferences.push(...evaluated.variableReferences);
+                if (evaluatedAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
+                }
 
                 const structVariable = evaluated.valueScopeVariable;
                 const struct = structVariable.value;
                 if (!(struct instanceof Struct)) {
                     const error = new EvaluationError(structRange, `'Using' parameter must be a struct, but instead is ${JSON.stringify(struct)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 if (structVariable.structMemberDefinitions === null) {
                     const error = new InternalEvaluationError(structRange, `'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 for (const [varName, varValue] of struct) {
                     const definition = structVariable.structMemberDefinitions.get(varName);
                     if (definition === undefined) {
                         const error = new InternalEvaluationError(structRange, `'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const variable = context.scopeStack.setVariableInCurrentScope(varName, varValue, definition);
                     variable.usingRange = statementRange;
@@ -886,13 +884,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
                     const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${statement.arrayToLoopOver.type}'`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
                 const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, arrayToLoopOver.range);
-                const evaluatedArrayToLoopOver = evaluateEvaluatedVariable(arrayToLoopOver, context);
+                const evaluatedArrayToLoopOverAndMaybeError = evaluateEvaluatedVariable(arrayToLoopOver, context);
+                const evaluatedArrayToLoopOver = evaluatedArrayToLoopOverAndMaybeError.data;
                 result.evaluatedVariables.push(...evaluatedArrayToLoopOver.evaluatedVariables);
                 result.variableReferences.push(...evaluatedArrayToLoopOver.variableReferences);
+                if (evaluatedArrayToLoopOverAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedArrayToLoopOverAndMaybeError.error);
+                }
 
                 const loopVarRange = new SourceRange(context.thisFbuildUri, statement.loopVar.range);
 
@@ -902,11 +904,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedLoopVarName.variableReferences);
                 if (evaluatedLoopVarNameAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedLoopVarNameAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedLoopVarNameAndMaybeError.error);
                 }
                 if (typeof evaluatedLoopVarName.value !== 'string') {
                     const error = new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedLoopVarName.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
 
@@ -916,7 +918,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
                 if (!(arrayItems instanceof Array)) {
                     const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an array, but instead is ${JSON.stringify(arrayItems)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 let error: Error | null = null;
@@ -945,7 +947,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 });
                 if (error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementGenericFunction(statement)) {
                 // Evaluate the alias.
@@ -954,12 +956,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
                 result.variableReferences.push(...evaluatedAliasName.variableReferences);
                 if (evaluatedAliasNameAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedAliasNameAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedAliasNameAndMaybeError.error);
                 }
                 if (typeof evaluatedAliasName.value !== 'string') {
                     const range = new SourceRange(context.thisFbuildUri, evaluatedAliasName.range);
                     const error = new EvaluationError(range, `Alias must evaluate to a string, but instead is ${JSON.stringify(evaluatedAliasName.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 // Evaluate the function body.
@@ -975,7 +977,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 });
                 if (error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementError(statement)) {
                 const evaluatedValueAndMaybeError = evaluateRValue(statement.value, context);
@@ -983,12 +985,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);
                 if (evaluatedValueAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedValueAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
                 }
                 if (typeof evaluatedValue.value !== 'string') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
                     const error = new InternalEvaluationError(range, `'Error' argument must evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementPrint(statement)) {
                 const value = statement.value;
@@ -997,12 +999,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
                 result.variableReferences.push(...evaluatedValue.variableReferences);
                 if (evaluatedValueAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedValueAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
                 }
                 if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
                     const error = new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a string, but instead is ${JSON.stringify(evaluatedValue.value)}`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementSettings(statement)) {                
                 // Evaluate the function body.
@@ -1018,7 +1020,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 });
                 if (error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementIf(statement)) {
                 // Evaluate the condition.
@@ -1028,47 +1030,59 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (isParsedIfConditionBoolean(condition)) {
                     if (condition.value.type !== 'evaluatedVariable') {
                         const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const conditionValue = condition.value;
-                    const evaluatedCondition = evaluateEvaluatedVariable(conditionValue, context);
+                    const evaluatedConditionAndMaybeError = evaluateEvaluatedVariable(conditionValue, context);
+                    const evaluatedCondition = evaluatedConditionAndMaybeError.data;
+                    result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
+                    result.variableReferences.push(...evaluatedCondition.variableReferences);
+                    if (evaluatedConditionAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
+                    }
                     const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
                     if (typeof evaluatedConditionValue !== 'boolean') {
                         const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
                         const error = new EvaluationError(conditionValueRange, `Condition must evaluate to a boolean, but instead is ${JSON.stringify(evaluatedConditionValue)}`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
-                    result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedCondition.variableReferences);
 
                     evaluatedConditionBool = condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
                 } else if (isParsedIfConditionComparison(condition)) {
                     // Evaluate LHS.
                     if (condition.lhs.type !== 'evaluatedVariable') {
                         const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const lhs = condition.lhs;
-                    const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
-                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+                    const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+                    const evaluatedLhs = evaluatedLhsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
                     result.variableReferences.push(...evaluatedLhs.variableReferences);
+                    if (evaluatedLhsAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
+                    }
+                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
                     
                     // Evaluate RHS.
                     if (condition.rhs.type !== 'evaluatedVariable') {
                         const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const rhs = condition.rhs;
-                    const evaluatedRhs = evaluateEvaluatedVariable(rhs, context);
-                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+                    const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+                    const evaluatedRhs = evaluatedRhsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
                     result.variableReferences.push(...evaluatedRhs.variableReferences);
+                    if (evaluatedRhsAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                    }
+                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
 
                     if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
                         const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
                         const error = new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${JSON.stringify(evaluatedLhsValue)} and RHS is ${JSON.stringify(evaluatedRhsValue)}`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
 
                     const operator = condition.operator;
@@ -1081,7 +1095,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     {
                         const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
                         const error = new EvaluationError(operatorRange, `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator.value}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
 
                     switch (operator.value) {
@@ -1105,32 +1119,40 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             break;
                         default: {
                             const error = new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`);
-                            return new EvaluatedDataAndMaybeError(result, error);
+                            return new DataAndMaybeError(result, error);
                         }
                     }
                 } else if (isParsedIfConditionIn(condition)) {
                     // Evaluate LHS.
                     if (condition.lhs.type !== 'evaluatedVariable') {
                         const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const lhs = condition.lhs;
-                    const evaluatedLhs = evaluateEvaluatedVariable(lhs, context);
-                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+                    const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+                    const evaluatedLhs = evaluatedLhsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
                     result.variableReferences.push(...evaluatedLhs.variableReferences);
+                    if (evaluatedLhsAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
+                    }
+                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
                     
                     // Evaluate RHS.
                     if (condition.rhs.type !== 'evaluatedVariable') {
                         const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                     const rhs = condition.rhs;
-                    const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
-                    const evaluatedRhs = evaluateEvaluatedVariable(rhs, context);
-                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+                    const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+                    const evaluatedRhs = evaluatedRhsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
                     result.variableReferences.push(...evaluatedRhs.variableReferences);
+                    if (evaluatedRhsAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                    }
+                    const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
+                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
 
                     // Check presence.
                     if (evaluatedRhsValue instanceof Array) {
@@ -1147,19 +1169,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                     evaluatedConditionBool = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                                 } else {
                                     const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is ${JSON.stringify(evaluatedLhsValue)}`);
-                                    return new EvaluatedDataAndMaybeError(result, error);
+                                    return new DataAndMaybeError(result, error);
                                 }
                             } else {
                                 const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is ${JSON.stringify(evaluatedLhsValue)}`);
-                                return new EvaluatedDataAndMaybeError(result, error);
+                                return new DataAndMaybeError(result, error);
                             }
                         } else {
                             const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is ${JSON.stringify(evaluatedRhsValue)}`);
-                            return new EvaluatedDataAndMaybeError(result, error);
+                            return new DataAndMaybeError(result, error);
                         }
                     } else {
                         const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is ${JSON.stringify(evaluatedRhsValue)}`);
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
 
                     if (condition.invert) {
@@ -1167,7 +1189,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 } else {
                     const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
 
                 // Evaluate the function body if the condition was true.
@@ -1184,7 +1206,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         }
                     });
                     if (error !== null) {
-                        return new EvaluatedDataAndMaybeError(result, error);
+                        return new DataAndMaybeError(result, error);
                     }
                 }
             } else if (isParsedStatementInclude(statement)) {  // #include
@@ -1196,7 +1218,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 
                     const maybeCurrentDirRelativeToRoot = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_', dummyRange);
                     if (maybeCurrentDirRelativeToRoot.hasError) {
-                        return new EvaluatedDataAndMaybeError(result, maybeCurrentDirRelativeToRoot.getError());
+                        return new DataAndMaybeError(result, maybeCurrentDirRelativeToRoot.getError());
                     }
                     const currentDirRelativeToRoot = maybeCurrentDirRelativeToRoot.getValue().value;
                     const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
@@ -1220,7 +1242,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableDefinitions.set(varName, varDefinition);
                     }
                     if (evaluatedStatementsAndMaybeError.error !== null) {
-                        return new EvaluatedDataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
+                        return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
                     
                     context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', currentDirRelativeToRoot, dummyRange);
@@ -1250,7 +1272,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             const rangeStart = statement.rangeStart;
                             const range = SourceRange.create(context.thisFbuildUri, rangeStart.line, rangeStart.character, rangeStart.line, Number.MAX_VALUE);
                             const error = new InternalEvaluationError(range, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`);
-                            return new EvaluatedDataAndMaybeError(result, error);
+                            return new DataAndMaybeError(result, error);
                         }
 
                         if (invert) {
@@ -1282,14 +1304,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     result.variableDefinitions.set(varName, varDefinition);
                 }
                 if (evaluatedStatementsAndMaybeError.error !== null) {
-                    return new EvaluatedDataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
+                    return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                 }
             } else if (isParsedStatementDefine(statement)) {  // #define
                 const symbol = statement.symbol.value;
                 if (context.defines.has(symbol)) {
                     const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
                     const error = new EvaluationError(sourceRange, `Cannot #define already defined symbol "${symbol}".`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 context.defines.add(symbol);
             } else if (isParsedStatementUndefine(statement)) {  // #undef
@@ -1297,11 +1319,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
                 if (symbol === getPlatformSpecificDefineSymbol()) {
                     const error = new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 if (!context.defines.has(symbol)) {
                     const error = new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`);
-                    return new EvaluatedDataAndMaybeError(result, error);
+                    return new DataAndMaybeError(result, error);
                 }
                 context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
@@ -1328,19 +1350,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                 const error = new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
-                return new EvaluatedDataAndMaybeError(result, error);
+                return new DataAndMaybeError(result, error);
             }
         }
     } catch (error) {
-        return new EvaluatedDataAndMaybeError(result, error);
+        return new DataAndMaybeError(result, error);
     }
 
-    return new EvaluatedDataAndMaybeError(result);
+    return new DataAndMaybeError(result);
 }
 
-function evaluateRValue(rValue: any, context: EvaluationContext): EvaluatedRValueAndMaybeError {
+function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeError<EvaluatedRValue> {
     if (isParsedString(rValue)) {
-        return new EvaluatedRValueAndMaybeError({
+        return new DataAndMaybeError({
             value: rValue.value,
             range: rValue.range,
             evaluatedVariables: [],
@@ -1348,27 +1370,33 @@ function evaluateRValue(rValue: any, context: EvaluationContext): EvaluatedRValu
             variableDefinitions: new Map<string, VariableDefinition>(),
         });
     } else if (isParsedStringExpression(rValue)) {
-        const evaluated = evaluateStringExpression(rValue.parts, context);
-        return new EvaluatedRValueAndMaybeError({
-            value: evaluated.evaluatedString,
-            range: rValue.range,
-            evaluatedVariables: evaluated.evaluatedVariables,
-            variableReferences: evaluated.variableReferences,
-            variableDefinitions: new Map<string, VariableDefinition>(),
-        });
+        const evaluatedAndMaybeError = evaluateStringExpression(rValue.parts, context);
+        const evaluated = evaluatedAndMaybeError.data;
+        return new DataAndMaybeError(
+            {
+                value: evaluated.evaluatedString,
+                range: rValue.range,
+                evaluatedVariables: evaluated.evaluatedVariables,
+                variableReferences: evaluated.variableReferences,
+                variableDefinitions: new Map<string, VariableDefinition>(),
+            },
+            evaluatedAndMaybeError.error);
     } else if (isParsedStruct(rValue)) {
         return evaluateStruct(rValue, context);
     } else if (isParsedSum(rValue)) {
         return evaluateSum(rValue, context);
     } else if (isParsedEvaluatedVariable(rValue)) {
-        const evaluated = evaluateEvaluatedVariable(rValue, context);
-        return new EvaluatedRValueAndMaybeError({
-            value: evaluated.valueScopeVariable.value,
-            range: rValue.range,
-            evaluatedVariables: evaluated.evaluatedVariables,
-            variableReferences: evaluated.variableReferences,
-            variableDefinitions: new Map<string, VariableDefinition>(),
-        });
+        const evaluatedAndMaybeError = evaluateEvaluatedVariable(rValue, context);
+        const evaluated = evaluatedAndMaybeError.data;
+        return new DataAndMaybeError(
+            {
+                value: evaluated.valueScopeVariable.value,
+                range: rValue.range,
+                evaluatedVariables: evaluated.evaluatedVariables,
+                variableReferences: evaluated.variableReferences,
+                variableDefinitions: new Map<string, VariableDefinition>(),
+            },
+            evaluatedAndMaybeError.error);
     } else if (isParsedArray(rValue)) {
         const result: EvaluatedRValue = {
             value: [],
@@ -1387,13 +1415,13 @@ function evaluateRValue(rValue: any, context: EvaluationContext): EvaluatedRValu
                 result.variableDefinitions.set(varName, varDefinition);
             }
             if (evaluatedAndMaybeError.error !== null) {
-                return new EvaluatedRValueAndMaybeError(result, evaluatedAndMaybeError.error);
+                return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
             }
             result.value.push(evaluated.value);
         }
-        return new EvaluatedRValueAndMaybeError(result);
+        return new DataAndMaybeError(result);
     } else if (isParsedBoolean(rValue) || isParsedInteger(rValue)) {
-        return new EvaluatedRValueAndMaybeError({
+        return new DataAndMaybeError({
             value: rValue.value,
             range: rValue.range,
             evaluatedVariables: [],
@@ -1402,55 +1430,67 @@ function evaluateRValue(rValue: any, context: EvaluationContext): EvaluatedRValu
         });
     } else {
         const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-        return EvaluatedRValueAndMaybeError.fromError(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
+        return createErrorEvaluatedRValue(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
     }
 }
 
-function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): EvaluatedEvaluatedVariable {
+function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): DataAndMaybeError<EvaluatedEvaluatedVariable> {
+    const placeholderScopeVariable: ScopeVariable = {
+        value: 0,
+        definition: {
+            id: 0,
+            range: SourceRange.create('', 0, 0, 0, 0)
+        },
+        structMemberDefinitions: null,
+        usingRange: null,
+    };
+
+    const result: EvaluatedEvaluatedVariable = {
+        valueScopeVariable: placeholderScopeVariable,
+        evaluatedVariables: [],
+        variableReferences: [],
+    };
+
     const evaluatedVariableNameAndMaybeError = evaluateRValue(parsedEvaluatedVariable.name, context);
     if (evaluatedVariableNameAndMaybeError.error !== null) {
-        throw evaluatedVariableNameAndMaybeError.error;
+        return new DataAndMaybeError(result, evaluatedVariableNameAndMaybeError.error);
     }
     const evaluatedVariableName = evaluatedVariableNameAndMaybeError.data;
     const evaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
     if (typeof evaluatedVariableName.value !== 'string') {
-        throw new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedVariableName.value)}`);
+        const error = new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a string, but instead is ${JSON.stringify(evaluatedVariableName.value)}`);
+        return new DataAndMaybeError(result, error);
     }
 
-    const evaluatedVariables = evaluatedVariableName.evaluatedVariables;
-    const variableReferences = evaluatedVariableName.variableReferences;
-    
+    result.evaluatedVariables = evaluatedVariableName.evaluatedVariables;
+    result.variableReferences = evaluatedVariableName.variableReferences;
 
     const maybeValueScopeVariable = (parsedEvaluatedVariable.scope == 'current')
         ? context.scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value, evaluatedVariableRange)
         : context.scopeStack.getVariableInParentScope(evaluatedVariableName.value, evaluatedVariableRange);
     if (maybeValueScopeVariable.hasError) {
-        throw maybeValueScopeVariable.getError();
+        return new DataAndMaybeError(result, maybeValueScopeVariable.getError());
     }
-    const valueScopeVariable = maybeValueScopeVariable.getValue();
+    result.valueScopeVariable = maybeValueScopeVariable.getValue();
 
     const parsedEvaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
 
-    evaluatedVariables.push({
-        value: valueScopeVariable.value,
+    result.evaluatedVariables.push({
+        value: result.valueScopeVariable.value,
         range: parsedEvaluatedVariableRange,
     });
 
-    variableReferences.push({
-        definition: valueScopeVariable.definition,
-        usingRange: valueScopeVariable.usingRange,
+    result.variableReferences.push({
+        definition: result.valueScopeVariable.definition,
+        usingRange: result.valueScopeVariable.usingRange,
         range: parsedEvaluatedVariableRange,
     });
 
-    return {
-        valueScopeVariable,
-        evaluatedVariables,
-        variableReferences,
-    };
+    return new DataAndMaybeError(result);
 }
 
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
-function evaluateStringExpression(parts: (string | any)[], context: EvaluationContext): EvaluatedStringExpression {
+function evaluateStringExpression(parts: (string | any)[], context: EvaluationContext): DataAndMaybeError<EvaluatedStringExpression> {
     const result: EvaluatedStringExpression = {
         evaluatedString: '',
         evaluatedVariables: [],
@@ -1459,7 +1499,11 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
 
     for (const part of parts) {
         if (isParsedEvaluatedVariable(part)) {
-            const evaluated = evaluateEvaluatedVariable(part, context);
+            const evaluatedAndMaybeError = evaluateEvaluatedVariable(part, context);
+            if (evaluatedAndMaybeError.error !== null) {
+                return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
+            }
+            const evaluated = evaluatedAndMaybeError.data;
             result.evaluatedString += String(evaluated.valueScopeVariable.value);
             result.evaluatedVariables.push(...evaluated.evaluatedVariables);
             result.variableReferences.push(...evaluated.variableReferences);
@@ -1469,11 +1513,11 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
         }
     }
 
-    return result;
+    return new DataAndMaybeError(result);
 }
 
-function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): EvaluatedRValueAndMaybeError {
-    let evaluatedStatementsAndMaybeError = new EvaluatedDataAndMaybeError();
+function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): DataAndMaybeError<EvaluatedRValue> {
+    let evaluatedStatementsAndMaybeError = new DataAndMaybeError(new EvaluatedData());
     let structScope = new Scope();
     context.scopeStack.withScope(() => {
         evaluatedStatementsAndMaybeError = evaluateStatements(struct.statements, context);
@@ -1494,13 +1538,13 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Evalu
         variableReferences: evaluatedStatements.variableReferences,
         variableDefinitions: evaluatedStatements.variableDefinitions,
     };
-    return new EvaluatedRValueAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
+    return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
 }
 
-function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValueAndMaybeError {
+function evaluateSum(sum: ParsedSum, context: EvaluationContext): DataAndMaybeError<EvaluatedRValue> {
     if (sum.summands.length < 2) {
         const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-        return EvaluatedRValueAndMaybeError.fromError(new InternalEvaluationError(dummyRange, `A sum must have at least 2 summands. Summands: ${sum.summands}`));
+        return createErrorEvaluatedRValue(new InternalEvaluationError(dummyRange, `A sum must have at least 2 summands. Summands: ${sum.summands}`));
     }
 
     const resultAndMaybeError = evaluateRValue(sum.summands[0], context);
@@ -1516,13 +1560,13 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValu
     for (const summand of sum.summands.slice(1)) {
         const evaluatedSummandAndMaybeError = evaluateRValue(summand, context);
         if (evaluatedSummandAndMaybeError.error !== null) {
-            return new EvaluatedRValueAndMaybeError(result, evaluatedSummandAndMaybeError.error);
+            return new DataAndMaybeError(result, evaluatedSummandAndMaybeError.error);
         }
         const evaluatedSummand = evaluatedSummandAndMaybeError.data;
         const additionRange = SourceRange.createFromPosition(context.thisFbuildUri, previousSummand.range.start, evaluatedSummand.range.end);
         const maybeSum = inPlaceAdd(result.value, evaluatedSummand.value, additionRange);
         if (maybeSum.hasError) {
-            return new EvaluatedRValueAndMaybeError(result, maybeSum.getError());
+            return new DataAndMaybeError(result, maybeSum.getError());
         }
         result.value = maybeSum.getValue();
         result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
@@ -1533,7 +1577,7 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): EvaluatedRValu
         previousSummand = summand;
     }
 
-    return new EvaluatedRValueAndMaybeError(result);
+    return new DataAndMaybeError(result);
 }
 
 // In-place add summand to existingValue, and return it.
