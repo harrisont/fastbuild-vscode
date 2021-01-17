@@ -244,7 +244,16 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
     };
 }
 
-function createString(nameToken: Token) {
+function createString(value: string, range: SourceRange)
+{
+    return {
+        type: 'string',
+        value,
+        range,
+    };
+}
+
+function createStringWithStartRange(nameToken: Token) {
     const result = {
         type: 'string',
         value: nameToken.value,
@@ -270,7 +279,7 @@ function createString(nameToken: Token) {
 
 variableName ->
     # Literal name
-    %variableName  {% ([nameToken]) => createString(nameToken) %}
+    %variableName  {% ([nameToken]) => createStringWithStartRange(nameToken) %}
     # Evaluated (dynamic) name
   | string  {% ([value]) => [ value, new ParseContext() ] %}
 
@@ -391,19 +400,11 @@ function unescapeString(escapedString: string): string {
 function createStringOrStringExpression(parts: any[], startToken: Token, endToken: Token) {
     const range = createRangeEndInclusive(startToken, endToken);
     if (parts.length == 0) {
-        return {
-            type: 'string',
-            value: '',
-            range,
-        };
+        return createString('', range);
     } else if (parts.length == 1) {
         const value = parts[0];
         if (typeof value === 'string') {
-            return {
-                type: 'string',
-                value: parts[0],
-                range,
-            }
+            return createString(parts[0], range);
         } else {
             return value;
         }
@@ -419,8 +420,8 @@ function createStringOrStringExpression(parts: any[], startToken: Token, endToke
 %}
 
 stringLiteral ->
-    %singleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => unescapeString(content.value) %}
-  | %doubleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => unescapeString(content.value) %}
+    %singleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
+  | %doubleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
 
 string ->
     %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
@@ -442,7 +443,7 @@ stringContents ->
     } %}
     # Templated string
   | %startTemplatedVariable %variableName %endTemplatedVariable stringContents  {% ([startVarIndicator, varName, endVarIndicator, rest]) => {
-        const varNameWithContext = createString(varName);
+        const varNameWithContext = createStringWithStartRange(varName);
         const varNameValue = varNameWithContext[0] as Record<string, any>;
         const varNameContext = varNameWithContext[1] as ParseContext;
         callOnNextToken(varNameContext, endVarIndicator);

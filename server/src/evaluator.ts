@@ -2,7 +2,12 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+    Maybe,
+} from './coreTypes';
+
+import {
     ParseData,
+    ParseError,
     ParseSourceRange,
     SourcePosition,
     Statement,
@@ -30,36 +35,6 @@ export class InternalEvaluationError extends EvaluationError {
         super(range, message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = InternalEvaluationError.name;
-    }
-}
-
-// Either a T value or an Error, but not both.
-class Maybe<T> {
-    private constructor(readonly hasError: boolean, private readonly _value: T | null, private readonly _error: Error | null) {
-    }
-
-    static ok<U>(value: U): Maybe<U> {
-        return new Maybe<U>(false /*hasError*/, value, null /*_error*/);
-    }
-
-    static error<U>(error: Error): Maybe<U> {
-        return new Maybe<U>(true /*hasError*/, null /*_value*/, error);
-    }
-
-    // Throws an Error if |hasError| is |true|.
-    getValue(): T {
-        if (this._value === null) {
-            throw new Error(`'Maybe' has an error, not a value. Check 'hasError' before calling 'getValue'. Error: ${this._error}`);
-        }
-        return this._value;
-    }
-
-    // Throws an Error if |hasError| is |false|.
-    getError(): Error {
-        if (this._error === null) {
-            throw new Error("'Maybe' has a value, not an error. Check 'hasError' before calling 'getValue'.");
-        }
-        return this._error;
     }
 }
 
@@ -367,7 +342,7 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
 // #include
 interface ParsedStatementInclude {
     type: 'include';
-    path: string;
+    path: ParsedString;
 }
 
 function isParsedStatementInclude(obj: Record<string, any>): obj is ParsedStatementInclude {
@@ -402,7 +377,7 @@ function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>):
 
 interface ParsedDirectiveIfConditionTermFileExists {
     type: 'fileExists';
-    filePath: string;
+    filePath: ParsedString;
 }
 
 function isParsedDirectiveIfConditionTermFileExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermFileExists {
@@ -1211,11 +1186,23 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
             } else if (isParsedStatementInclude(statement)) {  // #include
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
-                const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path);
-                const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
+                const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
                 if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
-                    const includeParseData = context.parseDataProvider.getParseData(includeUri);
+                    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
+                    if (maybeIncludeParseData.hasError) {
+                        const includeError = maybeIncludeParseData.getError();
+                        let error: Error;
+                        if (includeError instanceof ParseError) {
+                            error = includeError;
+                        } else {
+                            const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
+                            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`);
+                        }
+                        return new DataAndMaybeError(result, error);
+                    }
+                    const includeParseData = maybeIncludeParseData.getValue();
                 
+                    const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                     const maybeCurrentDirRelativeToRoot = context.scopeStack.getVariableStartingFromCurrentScope('_CURRENT_BFF_DIR_', dummyRange);
                     if (maybeCurrentDirRelativeToRoot.hasError) {
                         return new DataAndMaybeError(result, maybeCurrentDirRelativeToRoot.getError());
@@ -1266,7 +1253,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             // so always assume "exists(...)" evaluates to false.
                             evaulatedTerm = false;
                         } else if (isParsedDirectiveIfConditionTermFileExists(term)) {
-                            const fileUri = convertFileSystemPathToUri(term.filePath, context.thisFbuildUri);
+                            const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
                             evaulatedTerm = context.fileSystem.fileExists(fileUri);
                         } else {
                             const rangeStart = statement.rangeStart;

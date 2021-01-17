@@ -134,7 +134,10 @@ state.documents.onDidChangeContent(change => {
     let evaluatedData = new EvaluatedData();
     let hasErrorForChangedDocument = false;
     try {
-        state.parseDataProvider.updateParseData(changedDocumentUri);
+        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
+        if (maybeChangedDocumentParseData.hasError) {
+            throw maybeChangedDocumentParseData.getError();
+        }
     
         // We need to start evaluating from the root FASTBuild file, not from the changed one.
         // This is because changes to a file can affect other files.
@@ -144,7 +147,11 @@ state.documents.onDidChangeContent(change => {
             const errorRange = SourceRange.create(changedDocumentUriStr, 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
             throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`);
         }
-        const rootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        if (maybeRootFbuildParseData.hasError) {
+            throw maybeRootFbuildParseData.getError();
+        }
+        const rootFbuildParseData = maybeRootFbuildParseData.getValue();
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
         if (evaluatedDataAndMaybeError.error !== null) {

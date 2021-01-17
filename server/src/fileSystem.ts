@@ -6,6 +6,10 @@ import {
     TextDocument,
 } from 'vscode-languageserver-textdocument';
 
+import {
+    Maybe,
+} from './coreTypes';
+
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
@@ -13,7 +17,7 @@ import * as fs from 'fs';
 
 export interface IFileSystem {
     fileExists(uri: vscodeUri.URI): boolean;
-    getFileContents(uri: vscodeUri.URI): string;
+    getFileContents(uri: vscodeUri.URI): Maybe<string>;
 }
 
 // Provides an abstraction over reading file contents from either:
@@ -35,12 +39,17 @@ export class DiskFileSystem implements IFileSystem {
 
     // If the file contents already exist in the document manager, return the results from there.
     // Otherwise read the contents from disk.
-    getFileContents(uri: vscodeUri.URI): string {
+    // Returns an error on filesystem errors.
+    getFileContents(uri: vscodeUri.URI): Maybe<string> {
         const cachedDocument = this.documents.get(uri.toString());
         if (cachedDocument !== undefined) {
-            return cachedDocument.getText();
+            return Maybe.ok(cachedDocument.getText());
         } else {
-            return fs.readFileSync(uri.fsPath, 'utf-8');
+            try {
+                return Maybe.ok(fs.readFileSync(uri.fsPath, 'utf-8'));
+            } catch (error) {
+                return Maybe.error(error);
+            }
         }
     }
 }

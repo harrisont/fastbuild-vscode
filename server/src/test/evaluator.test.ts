@@ -7,6 +7,10 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+    Maybe,
+} from '../coreTypes';
+
+import {
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
@@ -32,12 +36,12 @@ class MockFileSystem implements IFileSystem {
         return this.fileContents.has(uri.toString());
     }
 
-    getFileContents(uri: vscodeUri.URI): FileContents {
+    getFileContents(uri: vscodeUri.URI): Maybe<FileContents> {
         const contents = this.fileContents.get(uri.toString());
         if (contents === undefined) {
-            throw new Error(`MockFileSystem has no data for URI '${uri}'`);
+            return Maybe.error(new Error(`MockFileSystem has no data for URI '${uri}'`));
         }
-        return contents;
+        return Maybe.ok(contents);
     }
 }
 
@@ -68,7 +72,11 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
         { enableDiagnostics: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
-    const parseData = parseDataProvider.getParseData(thisFbuildUri);
+    const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);
+    if (maybeParseData.hasError) {
+        throw maybeParseData.getError();
+    }
+    const parseData = maybeParseData.getValue();
     const evaluatedStatementsAndMaybeError = evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
     if (evaluatedStatementsAndMaybeError.error !== null) {
         throw evaluatedStatementsAndMaybeError.error;

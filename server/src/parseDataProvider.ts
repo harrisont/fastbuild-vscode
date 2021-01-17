@@ -4,6 +4,10 @@ import * as vscodeUri from 'vscode-uri';
 import { IFileSystem } from './fileSystem';
 
 import {
+    Maybe,
+} from './coreTypes';
+
+import {
     parse,
     ParseData,
     ParseError,
@@ -19,26 +23,40 @@ export class ParseDataProvider {
     constructor(private readonly fileContentProvider: IFileSystem, private readonly parseOptions: ParseOptions) {
     }
     
-    updateParseData(uri: vscodeUri.URI): ParseData {
-        const text = this.fileContentProvider.getFileContents(uri);
+    // Calculates the parse data for a URI, caches it, and returns it.
+    //
+    // Returns |Error| on failing to read the file contents.
+    // Returns |ParseError| on failing to parse the file contents.
+    updateParseData(uri: vscodeUri.URI): Maybe<ParseData> {
+        const maybeText = this.fileContentProvider.getFileContents(uri);
+        if (maybeText.hasError) {
+            return Maybe.error(maybeText.getError());
+        }
+        const text = maybeText.getValue();
         try {
             const parseData = parse(text, this.parseOptions);
             this.data.set(uri.toString(), parseData);
-            return parseData;
+            return Maybe.ok(parseData);
         } catch (error) {
             if (error instanceof ParseError) {
                 error.setFile(uri.toString());
             }
-            throw error;
+            return Maybe.error(error);
         }
     }
 
-    getParseData(uri: vscodeUri.URI): ParseData {
+    // Returns the parse data for a URI.
+    // If the data is already cached, it just returns it, even if the cached data is stale.
+    // Otherwise, it calculates the parse data and caches it.
+    //
+    // Returns |Error| on failing to read the file contents.
+    // Returns |ParseError| on failing to parse the file contents.
+    getParseData(uri: vscodeUri.URI): Maybe<ParseData> {
         const cachedData = this.data.get(uri.toString());
         if (cachedData === undefined) {
             return this.updateParseData(uri);
         } else {
-            return cachedData;
+            return Maybe.ok(cachedData);
         }
     }
 }
