@@ -131,8 +131,11 @@ state.connection.onReferences(state.referenceProvider.onReferences.bind(state.re
 state.documents.onDidChangeContent(change => {
     const changedDocumentUriStr: UriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
+
+    // Clear all diagnostics, since we don't know which will no longer applly after the change.
+    state.diagnosticProvider.clearDiagnostics(state.connection);
+
     let evaluatedData = new EvaluatedData();
-    let hasErrorForChangedDocument = false;
     try {
         const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
         if (maybeChangedDocumentParseData.hasError) {
@@ -159,17 +162,10 @@ state.documents.onDidChangeContent(change => {
         }
     } catch (error) {
         if (error instanceof ParseError) {
-            if (error.fileUri == changedDocumentUriStr) {
-                hasErrorForChangedDocument = true;
-            }
             state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
         } else if (error instanceof EvaluationError) {
-            if (error.range.uri == changedDocumentUriStr) {
-                hasErrorForChangedDocument = true;
-            }
             state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
         } else {
-            hasErrorForChangedDocument = true;
             state.diagnosticProvider.addUnknownErrorDiagnostic(error, state.connection);
         }
     }
@@ -177,11 +173,6 @@ state.documents.onDidChangeContent(change => {
     state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
     state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
     state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
-
-    // Clear any errors that no longer exist.
-    if (!hasErrorForChangedDocument) {
-        state.diagnosticProvider.clearDiagnostics(changedDocumentUriStr, state.connection);
-    }
 });
 
 // Track the open files by root FASTBuild file.
@@ -203,7 +194,7 @@ state.documents.onDidClose(change => {
     }
     state.openDocumentToRootMap.delete(closedDocumentUriStr);
     if (!Array.from(state.openDocumentToRootMap.values()).includes(rootFbuildUriStr)) {
-        state.diagnosticProvider.clearDiagnostics(closedDocumentUriStr, state.connection);
+        state.diagnosticProvider.clearDiagnosticsForDocument(closedDocumentUriStr, state.connection);
     }
 });
 

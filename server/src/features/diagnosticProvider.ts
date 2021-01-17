@@ -56,11 +56,12 @@ function createDiagnosticFromParseError(error: ParseError): Diagnostic {
 
 export class DiagnosticProvider {
     hasDiagnosticRelatedInformationCapability = false;
+    readonly _documentsWithDiagnostics = new Set<UriStr>();
 
     addParseErrorDiagnostic(error: ParseError, connection: Connection): void {
         const diagnostic = createDiagnosticFromParseError(error);
         const diagnostics = [diagnostic];
-        connection.sendDiagnostics({ uri: error.fileUri, diagnostics });
+        this._addDiagnostics(error.fileUri, diagnostics, connection);
     }
 
     addEvaluationErrorDiagnostic(error: EvaluationError, connection: Connection): void {
@@ -68,7 +69,7 @@ export class DiagnosticProvider {
         const message = isInternalError ? `Internal error: ${error.message}` : error.message;
         const diagnostic = createDiagnosticError(message, error.range);
         const diagnostics = [diagnostic];
-        connection.sendDiagnostics({ uri: error.range.uri, diagnostics });
+        this._addDiagnostics(error.range.uri, diagnostics, connection);
     }
 
     addUnknownErrorDiagnostic(error: Error, connection: Connection): void {
@@ -77,10 +78,23 @@ export class DiagnosticProvider {
         const message = `Internal error: ${error.message}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
         const diagnostics = [diagnostic];
-        connection.sendDiagnostics({ uri, diagnostics });
+        this._addDiagnostics(uri, diagnostics, connection);
     }
 
-    clearDiagnostics(uri: UriStr, connection: Connection): void {
+    private _addDiagnostics(uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
+        connection.sendDiagnostics({ uri, diagnostics });
+        if (diagnostics.length > 0) {
+            this._documentsWithDiagnostics.add(uri);
+        }
+    }
+
+    clearDiagnosticsForDocument(uri: UriStr, connection: Connection): void {
         connection.sendDiagnostics({ uri, diagnostics: [] });
+    }
+
+    clearDiagnostics(connection: Connection): void {
+        for (const uri of this._documentsWithDiagnostics) {
+            connection.sendDiagnostics({ uri, diagnostics: [] });
+        }
     }
 }
