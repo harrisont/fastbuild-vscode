@@ -20,6 +20,7 @@ import {
     evaluate,
     EvaluatedData,
     EvaluationError,
+    SourceRange,
 } from './evaluator';
 
 import { HoverProvider } from './features/hoversProvider';
@@ -50,7 +51,8 @@ function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI {
         }
     }
 
-    throw new Error(`Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${uri}'`);
+    const errorRange = SourceRange.create(uri.toString(), 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
+    throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${uri.fsPath}'`);
 }
 
 class State {
