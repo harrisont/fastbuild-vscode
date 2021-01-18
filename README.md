@@ -6,6 +6,7 @@ This provides the following functionality:
 * Go to definition of a variable.
 * Find references of a variable.
 * Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$` or `.Message = .Location`).
+* Show diagnostics for errors.
 
 It does not yet provide syntax highlighting. For that, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 
