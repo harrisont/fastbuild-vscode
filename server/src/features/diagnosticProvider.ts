@@ -56,44 +56,57 @@ function createDiagnosticFromParseError(error: ParseError): Diagnostic {
 
 export class DiagnosticProvider {
     hasDiagnosticRelatedInformationCapability = false;
-    readonly _documentsWithDiagnostics = new Set<UriStr>();
+    readonly _documentRootToDocumentsWithDiagnosticsMap = new Map<UriStr, Set<UriStr>>();
 
-    addParseErrorDiagnostic(error: ParseError, connection: Connection): void {
+    addParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
         const diagnostic = createDiagnosticFromParseError(error);
         const diagnostics = [diagnostic];
-        this._addDiagnostics(error.fileUri, diagnostics, connection);
+        this._addDiagnostics(rootUri, error.fileUri, diagnostics, connection);
     }
 
-    addEvaluationErrorDiagnostic(error: EvaluationError, connection: Connection): void {
+    addEvaluationErrorDiagnostic(rootUri: UriStr, error: EvaluationError, connection: Connection): void {
         const isInternalError = error instanceof InternalEvaluationError;
         const message = isInternalError ? `Internal error: ${error.message}` : error.message;
         const diagnostic = createDiagnosticError(message, error.range);
         const diagnostics = [diagnostic];
-        this._addDiagnostics(error.range.uri, diagnostics, connection);
+        this._addDiagnostics(rootUri, error.range.uri, diagnostics, connection);
     }
 
-    addUnknownErrorDiagnostic(error: Error, connection: Connection): void {
+    addUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
         // We do not know which URI caused the error, so use a dummy error range.
         const uri = '';
         const message = `Internal error: ${error.message}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
         const diagnostics = [diagnostic];
-        this._addDiagnostics(uri, diagnostics, connection);
+        this._addDiagnostics(rootUri, uri, diagnostics, connection);
     }
 
-    private _addDiagnostics(uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
+    private _addDiagnostics(rootUri: UriStr, uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
         connection.sendDiagnostics({ uri, diagnostics });
         if (diagnostics.length > 0) {
-            this._documentsWithDiagnostics.add(uri);
+            const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
+            if (documentsForRoot === undefined) {
+                this._documentRootToDocumentsWithDiagnosticsMap.set(rootUri, new Set<UriStr>([uri]));
+            } else {
+                documentsForRoot.add(uri);
+            }
         }
     }
 
-    clearDiagnosticsForDocument(uri: UriStr, connection: Connection): void {
-        connection.sendDiagnostics({ uri, diagnostics: [] });
+    clearDiagnostics(connection: Connection): void {
+        for (const documentsForRoot of this._documentRootToDocumentsWithDiagnosticsMap.values()) {
+            for (const uri of documentsForRoot) {
+                connection.sendDiagnostics({ uri, diagnostics: [] });
+            }
+        }
     }
 
-    clearDiagnostics(connection: Connection): void {
-        for (const uri of this._documentsWithDiagnostics) {
+    clearDiagnosticsForRoot(rootUri: UriStr, connection: Connection): void {
+        const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
+        if (documentsForRoot === undefined) {
+            return;
+        }
+        for (const uri of documentsForRoot) {
             connection.sendDiagnostics({ uri, diagnostics: [] });
         }
     }

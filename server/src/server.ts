@@ -128,14 +128,13 @@ state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.d
 state.connection.onReferences(state.referenceProvider.onReferences.bind(state.referenceProvider));
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
-state.documents.onDidChangeContent(change => {
-    const changedDocumentUriStr: UriStr = change.document.uri;
+state.documents.onDidChangeContent(change => updateDocument(change.document.uri));
+
+function updateDocument(changedDocumentUriStr: UriStr): void {
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
 
-    // Clear all diagnostics, since we don't know which will no longer applly after the change.
-    state.diagnosticProvider.clearDiagnostics(state.connection);
-
     let evaluatedData = new EvaluatedData();
+    let rootFbuildUriStr = '';
     try {
         const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
         if (maybeChangedDocumentParseData.hasError) {
@@ -150,30 +149,35 @@ state.documents.onDidChangeContent(change => {
             const errorRange = SourceRange.create(changedDocumentUriStr, 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
             throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`);
         }
+        rootFbuildUriStr = rootFbuildUri.toString();
+
+        // Clear all diagnostics for this root, since we don't know which will no longer applly after the change.
+        state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
+
         const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
         if (maybeRootFbuildParseData.hasError) {
             throw maybeRootFbuildParseData.getError();
         }
         const rootFbuildParseData = maybeRootFbuildParseData.getValue();
-        const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUri.toString(), state.fileSystem, state.parseDataProvider);
+        const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
         if (evaluatedDataAndMaybeError.error !== null) {
             throw evaluatedDataAndMaybeError.error;
         }
     } catch (error) {
         if (error instanceof ParseError) {
-            state.diagnosticProvider.addParseErrorDiagnostic(error, state.connection);
+            state.diagnosticProvider.addParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else if (error instanceof EvaluationError) {
-            state.diagnosticProvider.addEvaluationErrorDiagnostic(error, state.connection);
+            state.diagnosticProvider.addEvaluationErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else {
-            state.diagnosticProvider.addUnknownErrorDiagnostic(error, state.connection);
+            state.diagnosticProvider.addUnknownErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         }
     }
 
     state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
     state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
     state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
-});
+}
 
 // Track the open files by root FASTBuild file.
 state.documents.onDidOpen(change => {
@@ -185,7 +189,7 @@ state.documents.onDidOpen(change => {
     state.openDocumentToRootMap.set(changedDocumentUriStr, rootFbuildUriStr);
 });
 
-// If the closed document's root's tree has no more open documents, clear the closed document's diagnostics.
+// If the closed document's root's tree has no more open documents, clear diagnostics for the root.
 state.documents.onDidClose(change => {
     const closedDocumentUriStr: UriStr = change.document.uri;
     const rootFbuildUriStr = state.openDocumentToRootMap.get(closedDocumentUriStr);
@@ -194,7 +198,7 @@ state.documents.onDidClose(change => {
     }
     state.openDocumentToRootMap.delete(closedDocumentUriStr);
     if (!Array.from(state.openDocumentToRootMap.values()).includes(rootFbuildUriStr)) {
-        state.diagnosticProvider.clearDiagnosticsForDocument(closedDocumentUriStr, state.connection);
+        state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     }
 });
 
