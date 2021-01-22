@@ -61,6 +61,7 @@ TODO
 ### TODO
 
 Support full FASTBuild syntax:
+* Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
 
@@ -73,4 +74,3 @@ Add more language server provider features:
 * Support "go to definition" and "find references" for aliases.
 * Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
 * Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
-* Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)). This is low priority, since I have never seen it used.
