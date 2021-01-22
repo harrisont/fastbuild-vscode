@@ -53,14 +53,6 @@ export class ReferenceProvider {
             }
         }
 
-        if (variableReferenceAtPosition.usingRange) {
-            const location: Location = {
-                uri: variableReferenceAtPosition.usingRange.uri,
-                range: variableReferenceAtPosition.usingRange
-            };
-            locations.set(JSON.stringify(location), location);
-        }
-
         return [...locations.values()];
     }
 }

@@ -16,6 +16,7 @@ import {
     EvaluatedVariable,
     SourceRange,
     Struct,
+    StructMember,
     Value,
     VariableDefinition,
     VariableReference,
@@ -514,19 +515,23 @@ describe('evaluator', () => {
                 .MyVar = .Struct1 + .Struct2
                 .Result = .MyVar
             `;
+            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(1, 29, 1, 31) };
+            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(1, 35, 1, 37) };
+            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(2, 29, 2, 31) };
+            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(2, 35, 2, 37) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    A: 0,
-                    B: 2,
+                Struct.from(Object.entries({
+                    A: new StructMember(0, struct1ADefinition),
+                    B: new StructMember(2, struct1BDefinition),
                 })),
-                new Struct(Object.entries({
-                    A: 1,
-                    C: 3
+                Struct.from(Object.entries({
+                    A: new StructMember(1, struct2ADefinition),
+                    C: new StructMember(3, struct2CDefinition),
                 })),
-                new Struct(Object.entries({
-                    A: 1,
-                    B: 2,
-                    C: 3
+                Struct.from(Object.entries({
+                    A: new StructMember(1, struct2ADefinition),
+                    B: new StructMember(2, struct1BDefinition),
+                    C: new StructMember(3, struct2CDefinition),
                 }))
             ]);
         });
@@ -748,11 +753,14 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
+            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27) };
+            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 26) };
+            const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyBool: true,
-                    MyInt: 123,
-                    MyStr: 'Hello world!'
+                Struct.from(Object.entries({
+                    MyBool: new StructMember(true, myVarMyBoolDefinition),
+                    MyInt: new StructMember(123, myVarMyIntDefinition),
+                    MyStr: new StructMember('Hello world!', myVarMyStrDefinition),
                 }))
             ]);
         });
@@ -767,10 +775,12 @@ describe('evaluator', () => {
                 ] // Comment 5
                 .Copy = .MyVar
             `;
+            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27) };
+            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(5, 20, 5, 26) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyBool: true,
-                    MyInt: 123,
+                Struct.from(Object.entries({
+                    MyBool: new StructMember(true, myVarMyBoolDefinition),
+                    MyInt: new StructMember(123, myVarMyIntDefinition),
                 }))
             ]);
         });
@@ -783,10 +793,11 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
+            const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22) };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
-                new Struct(Object.entries({
-                    A: 1
+                Struct.from(Object.entries({
+                    A: new StructMember(1, myVarADefinition),
                 }))
             ]);
         });
@@ -801,12 +812,14 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
+            const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 23) };
+            const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 23) };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 2,
-                new Struct(Object.entries({
-                    A1: 1,
-                    A2: 2
+                Struct.from(Object.entries({
+                    A1: new StructMember(1, myVarA1Definition),
+                    A2: new StructMember(2, myVarA2Definition),
                 }))
             ]);
         });
@@ -818,9 +831,10 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
+            const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyArray: [1, 2, 3]
+                Struct.from(Object.entries({
+                    MyArray: new StructMember([1, 2, 3], myVarMyArrayDefinition),
                 }))
             ]);
         });
@@ -834,11 +848,14 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
+            const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30) };
+            const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29) };
+            const expectedMyStructValue = Struct.from(Object.entries({
+                MyInt: new StructMember(1, myVarMyStructMyIntDefinition),
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyStruct: new Struct(Object.entries({
-                        MyInt: 1
-                    }))
+                Struct.from(Object.entries({
+                    MyStruct: new StructMember(expectedMyStructValue, myVarMyStructDefinition),
                 }))
             ]);
         });
@@ -853,20 +870,22 @@ describe('evaluator', () => {
                 }
                 .Copy = .MyVar
             `;
+            const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 1, 34) };
+            const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 2, 34) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyInt: 1,
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(1, struct1MyIntDefinition),
                 })),
-                new Struct(Object.entries({
-                    MyInt: 2,
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(2, struct2MyIntDefinition),
                 })),
                 [
-                    new Struct(Object.entries({
-                        MyInt: 1,
+                    Struct.from(Object.entries({
+                        MyInt: new StructMember(1, struct1MyIntDefinition),
                     })),
-                    new Struct(Object.entries({
-                        MyInt: 2,
-                    }))
+                    Struct.from(Object.entries({
+                        MyInt: new StructMember(2, struct2MyIntDefinition),
+                    })),
                 ]
             ]);
         });
@@ -1066,6 +1085,23 @@ describe('evaluator', () => {
         });
     });
 
+    describe('variableDefinitions', () => {
+        it('assigning a new variable creates a definition, but assigning an existing variable does not', () => {
+            const input = `
+                .MyVar = 1
+                .MyVar = 2
+            `;
+            const result = evaluateInput(input);
+            const expectedDefinitions: VariableDefinition[] = [
+                {
+                    id: 1,
+                    range: createRange(1, 16, 1, 22),
+                }
+            ];
+            assert.deepStrictEqual(result.variableDefinitions, expectedDefinitions);
+        });
+    });
+
     describe('variableReferences', () => {
         it('should be detected in a variable definition LHS', () => {
             const input = `
@@ -1079,7 +1115,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(1, 16, 1, 22),
-                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -1098,7 +1133,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(1, 16, 1, 22),
-                    usingRange: null,
                 },
                 {
                     definition: {
@@ -1106,7 +1140,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 22),
                     },
                     range: createRange(2, 16, 2, 22),
-                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -1125,7 +1158,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(1, 16, 1, 23),
-                    usingRange: null,
                 },
                 {
                     definition: {
@@ -1133,7 +1165,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(2, 26, 2, 33),
-                    usingRange: null,
                 },
                 {
                     definition: {
@@ -1141,7 +1172,6 @@ describe('evaluator', () => {
                         range: createRange(2, 16, 2, 23),
                     },
                     range: createRange(2, 16, 2, 23),
-                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -1160,7 +1190,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(1, 16, 1, 23),
-                    usingRange: null,
                 },
                 {
                     definition: {
@@ -1168,7 +1197,6 @@ describe('evaluator', () => {
                         range: createRange(1, 16, 1, 23),
                     },
                     range: createRange(2, 27, 2, 35),
-                    usingRange: null,
                 },
                 {
                     definition: {
@@ -1176,69 +1204,6 @@ describe('evaluator', () => {
                         range: createRange(2, 16, 2, 23),
                     },
                     range: createRange(2, 16, 2, 23),
-                    usingRange: null,
-                }
-            ];
-            assert.deepStrictEqual(result.variableReferences, expectedReferences);
-        });
-
-        it('should be detected in an evaluated variable from a Using', () => {
-            const input = `
-                .MyStruct = [
-                    .StructVar = 1
-                ]
-                
-                Using( .MyStruct )
-                .Copy = .StructVar
-            `;
-            const result = evaluateInput(input);
-            const expectedReferences: VariableReference[] = [
-                // .StructVar = 1
-                {
-                    definition: {
-                        id: 1,
-                        range: createRange(2, 20, 2, 30),
-                    },
-                    range: createRange(2, 20, 2, 30),
-                    usingRange: null,
-                },
-                // .MyStruct = [...]
-                {
-                    definition: {
-                        id: 2,
-                        range: createRange(1, 16, 1, 25),
-                    },
-                    range: createRange(1, 16, 1, 25),
-                    usingRange: null,
-                },
-                // Using( .MyStruct )
-                {
-                    definition: {
-                        id: 2,
-                        range: createRange(1, 16, 1, 25),
-                    },
-                    range: createRange(5, 23, 5, 32),
-                    usingRange: null,
-                },
-                // .Copy = .StructVar (RHS)
-                {
-                    // .StructVar = 1
-                    definition: {
-                        id: 1,
-                        range: createRange(2, 20, 2, 30),
-                    },
-                    range: createRange(6, 24, 6, 34),
-                    // "Using( .MyStruct )"
-                    usingRange: createRange(5, 16, 5, 34),
-                },
-                // .Copy = .StructVar (LHS)
-                {
-                    definition: {
-                        id: 3,
-                        range: createRange(6, 16, 6, 21),
-                    },
-                    range: createRange(6, 16, 6, 21),
-                    usingRange: null,
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -1248,6 +1213,7 @@ describe('evaluator', () => {
     describe('Using', () => {
         it('Call Using outside a struct', () => {
             const input = `
+                .MyBool = false
                 .MyStruct = [
                     .MyBool = true
                     .MyInt = 1
@@ -1258,11 +1224,14 @@ describe('evaluator', () => {
                 .MyIntCopy = .MyInt
                 .MyStringCopy = .MyString
             `;
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27) };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26) };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29) };
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct(Object.entries({
-                    MyBool: true,
-                    MyInt: 1,
-                    MyString: 'hello'
+                Struct.from(Object.entries({
+                    MyBool: new StructMember(true, myStructMyBoolDefinition),
+                    MyInt: new StructMember(1, myStructMyIntDefinition),
+                    MyString: new StructMember('hello', myStructMyStringDefinition)
                 })),
                 true,
                 1,
@@ -1284,19 +1253,124 @@ describe('evaluator', () => {
                 ]
                 .Copy = .Other
             `;
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27) };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26) };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29) };
+            const myStructMyEvaluatedVarDefinition: VariableDefinition = { id: 5, range: createRange(6, 20, 6, 35) };
+            const usingMyStructRange = createRange(9, 20, 9, 36);
+            const usingMyStructMyBoolDefinition: VariableDefinition = { id: 7, range: usingMyStructRange };
+            const usingMyStructMyIntDefinition: VariableDefinition = { id: 8, range: usingMyStructRange };
+            const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange };
+            const usingMyStructMyEvaluatedVarDefinition: VariableDefinition = { id: 10, range: usingMyStructRange };
             assertEvaluatedVariablesValueEqual(input, [
                 'fun',
-                new Struct(Object.entries({
-                    MyBool: true,
-                    MyInt: 1,
-                    MyString: 'hello',
-                    MyEvaluatedVar: 'fun'
+                // Using(.MyStruct)
+                Struct.from(Object.entries({
+                    MyBool: new StructMember(true, myStructMyBoolDefinition),
+                    MyInt: new StructMember(1, myStructMyIntDefinition),
+                    MyString: new StructMember('hello', myStructMyStringDefinition),
+                    MyEvaluatedVar: new StructMember('fun', myStructMyEvaluatedVarDefinition)
                 })),
-                new Struct(Object.entries({
-                    MyBool: true,
-                    MyInt: 1,
-                    MyString: 'hello',
-                    MyEvaluatedVar: 'fun'
+                // .Copy = .Other
+                Struct.from(Object.entries({
+                    MyBool: new StructMember(true, usingMyStructMyBoolDefinition),
+                    MyInt: new StructMember(1, usingMyStructMyIntDefinition),
+                    MyString: new StructMember('hello', usingMyStructMyStringDefinition),
+                    MyEvaluatedVar: new StructMember('fun', usingMyStructMyEvaluatedVarDefinition)
+                }))
+            ]);
+        });
+
+        // 'Using' defines the struct variables if they do not already exist,
+        // references the previous defintion if it does already exist,
+        // and references the struct variables.
+        it('Using has correct definitions and references', () => {
+            const input = `
+                .MyVar1 = 0
+                .MyStruct = [
+                    .MyVar1 = 1
+                    .MyVar2 = 1
+                ]
+                Using( .MyStruct )
+            `;
+            
+            const result = evaluateInput(input);
+
+            const rangeMyVar1 = createFileRange('file:///dummy.bff', 1, 16, 1, 23);
+            const rangeMyStructMyVar1 = createFileRange('file:///dummy.bff', 3, 20, 3, 27);
+            const rangeMyStructMyVar2 = createFileRange('file:///dummy.bff', 4, 20, 4, 27);
+            const rangeMyStruct = createFileRange('file:///dummy.bff', 2, 16, 2, 25);
+            const rangeUsingStatement = createFileRange('file:///dummy.bff', 6, 16, 6, 34);
+            const rangeUsingStructVar = createFileRange('file:///dummy.bff', 6, 23, 6, 32);
+
+            const definitionMyVar1 = { id: 1, range:  rangeMyVar1 };  // MyVar1
+            const definitionMyStructMyVar1 = { id: 2, range: rangeMyStructMyVar1 };  // MyStruct's MyVar1
+            const definitionMyStructMyVar2 = { id: 3, range: rangeMyStructMyVar2 };  // MyStruct's MyVar2
+            const definitionMyStruct = { id: 4, range: rangeMyStruct };  // MyStruct
+            const definitionMyVar2 = { id: 5, range: rangeUsingStatement };  // MyVar2
+            const expectedDefinitions = [
+                // .MyVar1 = 0
+                definitionMyVar1,
+                // MyStruct's .MyVar1 = 1
+                definitionMyStructMyVar1,
+                // MyStruct's .MyVar2 = 1
+                definitionMyStructMyVar2,
+                // .MyStruct = ...
+                definitionMyStruct,
+                // Using( .MyStruct )
+                definitionMyVar2,
+            ];
+            assert.deepStrictEqual(result.variableDefinitions, expectedDefinitions);
+
+            const expectedReferences = [
+                // .MyVar1 = 0
+                { definition: definitionMyVar1, range: rangeMyVar1 },
+                // MyStruct's .MyVar1 = 1
+                { definition: definitionMyStructMyVar1, range: rangeMyStructMyVar1 },
+                // MyStruct's .MyVar2 = 1
+                { definition: definitionMyStructMyVar2, range: rangeMyStructMyVar2 },
+                // .MyStruct = ...
+                { definition: definitionMyStruct, range: rangeMyStruct },
+                // Using( .MyStruct )
+                { definition: definitionMyStruct, range: rangeUsingStructVar },
+                { definition: definitionMyVar1, range: rangeUsingStatement },
+                { definition: definitionMyStructMyVar1, range: rangeUsingStatement },
+                { definition: definitionMyVar1, range: rangeMyStructMyVar1 },
+                { definition: definitionMyVar2, range: rangeUsingStatement },
+                { definition: definitionMyStructMyVar2, range: rangeUsingStatement },
+                { definition: definitionMyVar2, range: rangeMyStructMyVar2 },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
+        });
+    
+        it('Using chain', () => {
+            const input = `
+                .MyStruct1 = [
+                    .MyInt = 1
+                ]
+                .MyStruct2 = [
+                    Using( .MyStruct1 )
+                ]
+                .MyStruct3 = [
+                    Using( .MyStruct2 )
+                ]
+                Print( .MyStruct3 )
+            `;
+            const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 26) };
+            const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39) };
+            const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39) };
+            assertEvaluatedVariablesValueEqual(input, [
+                // Using( .MyStruct1 )
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(1, myStruct1MyIntDefinition),
+                })),
+                // Using( .MyStruct2 )
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(1, usingMyStruct1MyIntDefinition),
+                })),
+                // Print( .MyStruct3 )
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(1, usingMyStruct2MyIntDefinition),
                 }))
             ]);
         });
@@ -1314,6 +1388,26 @@ describe('evaluator', () => {
                     range: createRange(2, 23, 2, 29)
                 }
             );
+        });
+
+        it('Using struct with a scoped variable', () => {
+            const input = `
+                .MyStruct =
+                [
+                    .StructVar1 = 1
+                    {
+                        .InnerStructVar = 3
+                    }
+                ]
+
+                Using( .MyStruct )
+            `;
+            const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31) };
+            assertEvaluatedVariablesValueEqual(input, [
+                Struct.from(Object.entries({
+                    StructVar1: new StructMember(1, myStructStructVar1Definition)
+                })),
+            ]);
         });
     });
 
@@ -1376,20 +1470,22 @@ describe('evaluator', () => {
                     .Copy = .Item
                 }
             `;
+            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(2, 22, 2, 28) };
+            const myArray2ValueDefinition: VariableDefinition = { id: 2, range: createRange(3, 22, 3, 28) };
             assertEvaluatedVariablesValueEqual(input, [
                 [
-                    new Struct(Object.entries({
-                        Value: 1
+                    Struct.from(Object.entries({
+                        Value: new StructMember(1, myArray1ValueDefinition)
                     })),
-                    new Struct(Object.entries({
-                        Value: 2
+                    Struct.from(Object.entries({
+                        Value: new StructMember(2, myArray2ValueDefinition)
                     }))
                 ],
-                new Struct(Object.entries({
-                    Value: 1
+                Struct.from(Object.entries({
+                    Value: new StructMember(1, myArray1ValueDefinition)
                 })),
-                new Struct(Object.entries({
-                    Value: 2
+                Struct.from(Object.entries({
+                    Value: new StructMember(2, myArray2ValueDefinition)
                 }))
             ]);
         });
@@ -2755,41 +2851,36 @@ describe('evaluator', () => {
                 range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
             };
     
-            assert.deepStrictEqual(result.variableDefinitions, new Map<string, VariableDefinition>([
-                ['FromHelper', definitionFromHelper],
-                ['Copy', definitionCopy],
-            ]));
+            assert.deepStrictEqual(result.variableDefinitions, [
+                definitionFromHelper,  // FromHelper
+                definitionCopy,  // Copy
+            ]);
     
             assert.deepStrictEqual(result.variableReferences, [
                 // helper.bff ".FromHelper = 1" LHS
                 {
                     definition: definitionFromHelper,
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
-                    usingRange: null,
                 },
                 // helper.bff ".Copy = .FromHelper" RHS
                 {
                     definition: definitionFromHelper,
                     range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
-                    usingRange: null,
                 },
                 // helper.bff ".Copy = .FromHelper" LHS
                 {
                     definition: definitionCopy,
                     range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
-                    usingRange: null,
                 },
                 // fbuild.bff ".Copy = .FromHelper" RHS
                 {
                     definition: definitionFromHelper,
                     range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
-                    usingRange: null,
                 },
                 // fbuild.bff ".Copy = .FromHelper" LHS
                 {
                     definition: definitionCopy,
                     range: createFileRange('file:///fbuild.bff', 2, 24, 2, 29),
-                    usingRange: null,
                 },
             ]);
         });

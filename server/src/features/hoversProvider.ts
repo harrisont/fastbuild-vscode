@@ -21,8 +21,8 @@ const INDENTATION = ' '.repeat(4);
 export function valueToString(value: Value, indentation = ''): string {
     if (value instanceof Struct) {
         const itemIndentation = indentation + INDENTATION;
-        const items = Array.from(value.entries()).map(
-            ([varName, varValue]) => `${itemIndentation}.${varName} = ${valueToString(varValue, itemIndentation)}`
+        const items = Array.from(value.members,
+            ([structMemberName, structMember]) => `${itemIndentation}.${structMemberName} = ${valueToString(structMember.value, itemIndentation)}`
         );
         const lines = [
             '[',

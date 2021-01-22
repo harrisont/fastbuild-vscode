@@ -47,7 +47,20 @@ type ValueTypeName = 'Boolean' | 'Integer' | 'String' | 'Array' | 'Struct';
 
 export type Value = boolean | number | string | Value[] | Struct;
 
-export class Struct extends Map<string, Value> {
+export type VariableName = string;
+
+export class StructMember {
+    constructor(readonly value: Value, readonly definition: VariableDefinition) {
+    }
+}
+
+export class Struct {
+    constructor(readonly members=new Map<VariableName, StructMember>()) {
+    }
+
+    static from(iterable: Iterable<readonly [VariableName, StructMember]>): Struct {
+        return new Struct(new Map<VariableName, StructMember>(iterable));
+    }
 }
 
 export class SourceRange {
@@ -99,14 +112,12 @@ export interface VariableDefinition {
 export interface VariableReference {
     definition: VariableDefinition;
     range: SourceRange;
-    // Set when the reference is to a variable defined in a struct brought into scope from a `Using` call.
-    usingRange: SourceRange | null;
 }
 
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
     variableReferences: VariableReference[] = [];
-    variableDefinitions = new Map<string, VariableDefinition>();
+    variableDefinitions: VariableDefinition[] = [];
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -441,6 +452,7 @@ interface ParsedStatementImportEnvVar {
         value: string;
         range: ParseSourceRange;
     };
+    range: ParseSourceRange;
 }
 
 function isParsedStatementImportEnvVar(obj: Record<string, any>): obj is ParsedStatementImportEnvVar {
@@ -452,8 +464,7 @@ interface EvaluatedRValue {
     range: ParseSourceRange;
     evaluatedVariables: EvaluatedVariable[];
     variableReferences: VariableReference[];
-    // Used for structs.
-    variableDefinitions: Map<string, VariableDefinition>;
+    variableDefinitions: VariableDefinition[];
 }
 
 function createErrorEvaluatedRValue(error: Error): DataAndMaybeError<EvaluatedRValue> {
@@ -473,7 +484,7 @@ function createErrorEvaluatedRValue(error: Error): DataAndMaybeError<EvaluatedRV
         },
         evaluatedVariables: [],
         variableReferences: [],
-        variableDefinitions: new Map<string, VariableDefinition>(),
+        variableDefinitions: [],
     };
     return new DataAndMaybeError(data, error);
 }
@@ -494,10 +505,6 @@ interface EvaluatedEvaluatedVariable {
 interface ScopeVariable {
     value: Value;
     definition: VariableDefinition;
-    // Set if `value` is a Struct.
-    structMemberDefinitions: Map<string, VariableDefinition> | null;
-    // Set if the variable was created from a `Using` statement.
-    usingRange: SourceRange | null;
 }
 
 class Scope {
@@ -524,7 +531,7 @@ class ScopeStack {
     }
 
     // Get a variable, searching from the current scope to its parents.
-    // Throw EvaluationError if the variable is not defined.
+    // Return EvaluationError if the variable is not defined.
     getVariableStartingFromCurrentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
             const scope = this.stack[scopeIndex];
@@ -536,7 +543,7 @@ class ScopeStack {
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`));
     }
 
-    // Throw EvaluationError if the variable is not defined.
+    // Return EvaluationError if the variable is not defined.
     getVariableInCurrentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const currentScope = this.getCurrentScope();
         const maybeVariable = currentScope.variables.get(variableName);
@@ -547,7 +554,7 @@ class ScopeStack {
         }
     }
 
-    // Throw EvaluationError if the variable is not defined.
+    // Return EvaluationError if the variable is not defined.
     getVariableInParentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const maybeParentScope = this.getParentScope(variableRange);
         if (maybeParentScope.hasError) {
@@ -562,7 +569,7 @@ class ScopeStack {
         }
     }
 
-    // Throw EvaluationError if the variable is not defined.
+    // Return EvaluationError if the variable is not defined.
     getVariableInScope(scope: ScopeLocation, variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         if (scope == 'current') {
             return this.getVariableInCurrentScope(variableName, variableRange);
@@ -578,8 +585,6 @@ class ScopeStack {
             const variable: ScopeVariable = {
                 value: value,
                 definition: definition,
-                structMemberDefinitions: null,
-                usingRange: null,
             };
             currentScope.variables.set(name, variable);
             return variable;
@@ -589,6 +594,7 @@ class ScopeStack {
         }
     }
 
+    // Return EvaluationError if the variable is not defined.
     updateExistingVariableInCurrentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
@@ -599,6 +605,7 @@ class ScopeStack {
         return Maybe.ok(existingVariable);
     }
 
+    // Return EvaluationError if the variable is not defined.
     updateExistingVariableInParentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
         const maybeParentScope = this.getParentScope(variableRange);
         if (maybeParentScope.hasError) {
@@ -708,9 +715,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
                 result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
                 result.variableReferences.push(...evaluatedRhs.variableReferences);
-                for (const [varName, varDefinition] of evaluatedRhs.variableDefinitions) {
-                    result.variableDefinitions.set(varName, varDefinition);
-                }
+                result.variableDefinitions.push(...evaluatedRhs.variableDefinitions);
                 if (evaluatedRhsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                 }
@@ -732,8 +737,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 let variable: ScopeVariable | null = null;
                 if (lhs.scope == 'current') {
+                    const maybeExistingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value, lhsRange);
+                    const variableAlreadyDefined = !maybeExistingVariable.hasError;
+
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
+                    
+                    if (!variableAlreadyDefined) {
+                        // The definition's LHS is a variable definition.
+                        result.variableDefinitions.push(variable.definition);
+                    }
                 } else {
                     const maybeVariable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, lhsRange);
                     if (maybeVariable.hasError) {
@@ -742,20 +755,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     variable = maybeVariable.getValue();
                 }
 
-                if (evaluatedRhs.value instanceof Struct) {
-                    variable.structMemberDefinitions = evaluatedRhs.variableDefinitions;
-                }
-
                 // The definition's LHS is a variable reference.
                 result.variableReferences.push({
                     definition: variable.definition,
                     range: lhsRange,
-                    usingRange: null,
                 });
-
-                
-                // The definition's LHS is a variable definition.
-                result.variableDefinitions.set(evaluatedLhsName.value, variable.definition);
             } else if (isParsedStatementVariableAddition(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
@@ -801,7 +805,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 result.variableReferences.push({
                     definition: existingVariable.definition,
                     range: lhsRange,
-                    usingRange: null,
                 });
             } else if (isParsedStatementScopedStatements(statement)) {
                 let error: Error | null = null;
@@ -811,9 +814,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                     result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                        result.variableDefinitions.set(varName, varDefinition);
-                    }
+                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -841,18 +842,43 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, error);
                 }
 
-                if (structVariable.structMemberDefinitions === null) {
-                    const error = new InternalEvaluationError(structRange, `'Using' parameter variable does not have the 'structMemberDefinitions' property set`);
-                    return new DataAndMaybeError(result, error);
-                }
-                for (const [varName, varValue] of struct) {
-                    const definition = structVariable.structMemberDefinitions.get(varName);
-                    if (definition === undefined) {
-                        const error = new InternalEvaluationError(structRange, `'Using' parameter variable does not have a 'structMemberDefinitions' entry for the "${varName}" member variable`);
-                        return new DataAndMaybeError(result, error);
+                //
+                // For each struct member:
+                //   * If it is already defined in the current scope, update it and add a reference to the definition.
+                //   * Otherwise, define it and add a reference to the definition.
+                //   * Either way, add references to:
+                //       * the struct member's definition from the statement
+                //       * the current scope's variable-from-member's definition from the member's definition
+
+                for (const [structMemberName, structMember] of struct.members) {
+                    // The definition will only be used if the variable does not already exist in the current scope.
+                    let variableDefinition: VariableDefinition;
+                    const maybeExistingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName, statementRange);
+                    const variableAlreadyDefined = !maybeExistingVariable.hasError;
+                    if (variableAlreadyDefined) {
+                        const existingVariable = maybeExistingVariable.getValue();
+                        existingVariable.value = structMember.value;
+                        variableDefinition = existingVariable.definition;
+                    } else {
+                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange);
+                        context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
+                        result.variableDefinitions.push(variableDefinition);
                     }
-                    const variable = context.scopeStack.setVariableInCurrentScope(varName, varValue, definition);
-                    variable.usingRange = statementRange;
+                    
+                    result.variableReferences.push(
+                        {
+                            definition: variableDefinition,
+                            range: statementRange,
+                        },
+                        {
+                            definition: structMember.definition,
+                            range: statementRange,
+                        },
+                        {
+                            definition: variableDefinition,
+                            range: structMember.definition.range,
+                        }
+                    );
                 }
             } else if (isParsedStatementForEach(statement)) {
                 // Evaluate the array to loop over.
@@ -905,16 +931,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableReferences.push({
                             definition: variable.definition,
                             range: loopVarRange,
-                            usingRange: null,
                         });
 
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                         result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                         result.variableReferences.push(...evaluatedStatements.variableReferences);
-                        for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                            result.variableDefinitions.set(varName, varDefinition);
-                        }
+                        result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                         if (evaluatedStatementsAndMaybeError.error !== null) {
                             error = evaluatedStatementsAndMaybeError.error;
                             return;
@@ -947,9 +970,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                     result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                        result.variableDefinitions.set(varName, varDefinition);
-                    }
+                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -990,9 +1011,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                     result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                        result.variableDefinitions.set(varName, varDefinition);
-                    }
+                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1176,9 +1195,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                         result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                         result.variableReferences.push(...evaluatedStatements.variableReferences);
-                        for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                            result.variableDefinitions.set(varName, varDefinition);
-                        }
+                        result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                     });
                     if (error !== null) {
                         return new DataAndMaybeError(result, error);
@@ -1225,9 +1242,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                     result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                     result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                        result.variableDefinitions.set(varName, varDefinition);
-                    }
+                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                     if (evaluatedStatementsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
@@ -1287,9 +1302,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                 result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
                 result.variableReferences.push(...evaluatedStatements.variableReferences);
-                for (const [varName, varDefinition] of evaluatedStatements.variableDefinitions) {
-                    result.variableDefinitions.set(varName, varDefinition);
-                }
+                result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
                 if (evaluatedStatementsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                 }
@@ -1319,21 +1332,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // So use a placeholder value instead of reading the actual environement variable value.
                 const symbol = statement.symbol.value;
                 const value = `placeholder-${symbol}-value`;
-                const dummyVariableDefinition: VariableDefinition = {
-                    id: -1,
-                    range: {
-                        uri: '',
-                        start: {
-                            line: -1,
-                            character: -1
-                        },
-                        end: {
-                            line: -1,
-                            character: -1
-                        }
-                    }
-                };
-                context.scopeStack.setVariableInCurrentScope(symbol, value, dummyVariableDefinition);
+                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+                const definition = context.scopeStack.createVariableDefinition(statementRange);
+                context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                 const error = new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
@@ -1354,7 +1355,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             range: rValue.range,
             evaluatedVariables: [],
             variableReferences: [],
-            variableDefinitions: new Map<string, VariableDefinition>(),
+            variableDefinitions: [],
         });
     } else if (isParsedStringExpression(rValue)) {
         const evaluatedAndMaybeError = evaluateStringExpression(rValue.parts, context);
@@ -1365,7 +1366,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
                 range: rValue.range,
                 evaluatedVariables: evaluated.evaluatedVariables,
                 variableReferences: evaluated.variableReferences,
-                variableDefinitions: new Map<string, VariableDefinition>(),
+                variableDefinitions: [],
             },
             evaluatedAndMaybeError.error);
     } else if (isParsedStruct(rValue)) {
@@ -1381,7 +1382,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
                 range: rValue.range,
                 evaluatedVariables: evaluated.evaluatedVariables,
                 variableReferences: evaluated.variableReferences,
-                variableDefinitions: new Map<string, VariableDefinition>(),
+                variableDefinitions: [],
             },
             evaluatedAndMaybeError.error);
     } else if (isParsedArray(rValue)) {
@@ -1390,7 +1391,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             range: rValue.range,
             evaluatedVariables: [],
             variableReferences: [],
-            variableDefinitions: new Map<string, VariableDefinition>(),
+            variableDefinitions: [],
         };
         result.value = [];
         for (const item of rValue.value) {
@@ -1398,9 +1399,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             const evaluated = evaluatedAndMaybeError.data;
             result.evaluatedVariables.push(...evaluated.evaluatedVariables);
             result.variableReferences.push(...evaluated.variableReferences);
-            for (const [varName, varDefinition] of evaluated.variableDefinitions) {
-                result.variableDefinitions.set(varName, varDefinition);
-            }
+            result.variableDefinitions.push(...evaluated.variableDefinitions);
             if (evaluatedAndMaybeError.error !== null) {
                 return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
             }
@@ -1413,7 +1412,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             range: rValue.range,
             evaluatedVariables: [],
             variableReferences: [],
-            variableDefinitions: new Map<string, VariableDefinition>(),
+            variableDefinitions: [],
         });
     } else {
         const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
@@ -1428,8 +1427,6 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
             id: 0,
             range: SourceRange.create('', 0, 0, 0, 0)
         },
-        structMemberDefinitions: null,
-        usingRange: null,
     };
 
     const result: EvaluatedEvaluatedVariable = {
@@ -1469,7 +1466,6 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
 
     result.variableReferences.push({
         definition: result.valueScopeVariable.definition,
-        usingRange: result.valueScopeVariable.usingRange,
         range: parsedEvaluatedVariableRange,
     });
 
@@ -1511,13 +1507,14 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): DataA
         structScope = context.scopeStack.getCurrentScope();
     });
 
-    const evaluatedValue = new Struct();
+    const structMembers = new Map<VariableName, StructMember>();
     for (const [name, variable] of structScope.variables) {
-        //variable.definition.id
-        evaluatedValue.set(name, variable.value);
+        structMembers.set(name, new StructMember(variable.value, variable.definition));
     }
+    const evaluatedValue = new Struct(structMembers);
 
     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
+
     const result: EvaluatedRValue = {
         value: evaluatedValue,
         range: struct.range,
@@ -1558,9 +1555,7 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): DataAndMaybeEr
         result.value = maybeSum.getValue();
         result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
         result.variableReferences.push(...evaluatedSummand.variableReferences);
-        for (const [varName, varDefinition] of evaluatedSummand.variableDefinitions) {
-            result.variableDefinitions.set(varName, varDefinition);
-        }
+        result.variableDefinitions.push(...evaluatedSummand.variableDefinitions);
         previousSummand = summand;
     }
 
@@ -1575,9 +1570,9 @@ function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceR
         } else {
             existingValue.push(summand);
         }
-    } else if ((existingValue instanceof Map) && (summand instanceof Map)) {
-        for (const [key, value] of summand.entries()) {
-            existingValue.set(key, value);
+    } else if ((existingValue instanceof Struct) && (summand instanceof Struct)) {
+        for (const [structMemberName, structMember] of summand.members) {
+            existingValue.members.set(structMemberName, structMember);
         }
     } else if ((typeof existingValue == 'string') && (typeof summand == 'string')) {
         existingValue += summand;
@@ -1593,7 +1588,7 @@ function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceR
 function getValueTypeName(value: Value): ValueTypeName {
     if (value instanceof Array) {
         return 'Array';
-    } else if (value instanceof Map) {
+    } else if (value instanceof Struct) {
         return 'Struct';
     } else if (typeof value == 'string') {
         return 'String';
@@ -1615,11 +1610,11 @@ function deepCopyValue(value: Value): Value {
         }
         return copy;
     } else if (value instanceof Struct) {
-        const copy = new Struct();
-        for (const [itemKey, itemValue] of value.entries()) {
-            copy.set(itemKey, deepCopyValue(itemValue));
-        }
-        return copy;
+        const structMembers = new Map<VariableName, StructMember>(
+            Array.from(
+                value.members,
+                ([memberName, member]) => [memberName, new StructMember(deepCopyValue(member.value), member.definition)]));
+        return new Struct(structMembers);
     } else {
         return value;
     }

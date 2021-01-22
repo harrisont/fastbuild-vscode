@@ -1,13 +1,34 @@
 import * as assert from 'assert';
 
 import {
+    SourceRange,
     Struct,
+    StructMember,
     Value,
+    VariableDefinition,
 } from '../evaluator';
 
 import {
     valueToString,
 } from '../features/hoversProvider';
+
+type UriStr = string;
+
+function createRange(uri: UriStr, startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+    return new SourceRange(
+        uri,
+        {
+            start: {
+                line: startLine,
+                character: startCharacter
+            },
+            end: {
+                line: endLine,
+                character: endCharacter
+            }
+        }
+    );
+}
 
 describe('hoversProvider', () => {
     describe('valueToString', () => {
@@ -87,9 +108,10 @@ describe('hoversProvider', () => {
         });
         
         it('works for a struct', () => {
-            const value = new Struct(Object.entries({
-                A: 1,
-                B: 2
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0) };
+            const value = Struct.from(Object.entries({
+                A: new StructMember(1, dummyDefinition),
+                B: new StructMember(2, dummyDefinition)
             }));
             const str = valueToString(value);
             assert.strictEqual(
@@ -101,15 +123,16 @@ describe('hoversProvider', () => {
         });
         
         it('works for a struct of structs', () => {
-            const value = new Struct(Object.entries({
-                A: new Struct(Object.entries({
-                    A1: 1,
-                    A2: 2
-                })),
-                B: new Struct(Object.entries({
-                    B1: 1,
-                    B2: 2
-                }))
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0) };
+            const value = Struct.from(Object.entries({
+                A: new StructMember(Struct.from(Object.entries({
+                    A1: new StructMember(1, dummyDefinition),
+                    A2: new StructMember(2, dummyDefinition)
+                })), dummyDefinition),
+                B: new StructMember(Struct.from(Object.entries({
+                    B1: new StructMember(1, dummyDefinition),
+                    B2: new StructMember(2, dummyDefinition)
+                })), dummyDefinition)
             }));
             const str = valueToString(value);
             assert.strictEqual(

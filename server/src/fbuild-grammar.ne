@@ -225,7 +225,6 @@ function createLocation(token: Token): SourceLocation {
 }
 
 // Creates a range from tokenStart's location (inclusive) to tokenEnd's location (exclusive).
-// tokenStart and tokenEnd must be lexer tokens.
 function createRange(tokenStart: Token, tokenEnd: Token): SourceRange {
     return {
         start: createLocation(tokenStart),
@@ -234,7 +233,6 @@ function createRange(tokenStart: Token, tokenEnd: Token): SourceRange {
 }
 
 // Creates a range from tokenStart's location (inclusive) to tokenEnd's location (inclusive).
-// tokenStart and tokenEnd must be lexer tokens.
 function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRange {
     const end = createLocation(tokenEnd);
     end.character += 1;
@@ -244,8 +242,36 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
     };
 }
 
-function createString(value: string, range: SourceRange)
-{
+// Creates a range from tokenStart's location (inclusive) to a to-be-received-later token's location (exclusive).
+function createRangeStart(startToken: Token) {
+    const range = {
+        start: createLocation(startToken),
+        // Updated by the onNextToken callback
+        end: {
+            line: 0,
+            character: 0,
+        }
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        range.end = createLocation(token);
+    };
+
+    return [range, context];
+}
+
+function createCombinedContext(contexts: ParseContext[]): ParseContext {
+    const combinedContext = new ParseContext();
+    combinedContext.onNextToken = (token: Token) => {
+        for (const context of contexts) {
+            callOnNextToken(context, token);
+        }
+    };
+    return combinedContext;
+}
+
+function createString(value: string, range: SourceRange) {
     return {
         type: 'string',
         value,
@@ -254,22 +280,12 @@ function createString(value: string, range: SourceRange)
 }
 
 function createStringWithStartRange(nameToken: Token) {
+    const [range, context] = createRangeStart(nameToken);
+
     const result = {
         type: 'string',
         value: nameToken.value,
-        range: {
-            start: createLocation(nameToken),
-            // Updated by the onNextToken callback
-            end: {
-                line: 0,
-                character: 0,
-            }
-        },
-    };
-
-    const context = new ParseContext();
-    context.onNextToken = (token: Token) => {
-        result.range.end = createLocation(token);
+        range,
     };
 
     return [result, context];
@@ -304,44 +320,24 @@ variableAddition ->
 @{%
 
 function createInteger(token: Token) {
+    const [range, context] = createRangeStart(token);
+
     const result = {
         type: 'integer',
         value: token.value,
-        range: {
-            start: createLocation(token),
-            // Updated by the onNextToken callback
-            end: {
-                line: 0,
-                character: 0,
-            }
-        },
-    };
-
-    const context = new ParseContext();
-    context.onNextToken = (token: Token) => {
-        result.range.end = createLocation(token);
+        range,
     };
 
     return [result, context];
 }
 
 function createBoolean(value: boolean, token: Token) {
+    const [range, context] = createRangeStart(token);
+
     const result = {
         type: 'boolean',
         value,
-        range: {
-            start: createLocation(token),
-            // Updated by the onNextToken callback
-            end: {
-                line: 0,
-                character: 0,
-            }
-        },
-    };
-
-    const context = new ParseContext();
-    context.onNextToken = (token: Token) => {
-        result.range.end = createLocation(token);
+        range,
     };
 
     return [result, context];
@@ -731,11 +727,15 @@ directiveIfConditionTerm ->
   | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
   | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
 
-directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, context]]) => [{ type: 'define',       symbol }, context] %}
+directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, context]]) => [{ type: 'define',   symbol }, context] %}
 
-directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine',     symbol }, context] %}
+directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine', symbol }, context] %}
 
-directiveImport   -> %directiveImport   %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'importEnvVar', symbol }, context] %}
+directiveImport   -> %directiveImport   %whitespace variableName  {% ([directiveImport, space, [symbol, varNameContext]]) => {
+    const [range, statementContext] = createRangeStart(directiveImport);
+    const context = createCombinedContext([statementContext, varNameContext]);
+    return [{ type: 'importEnvVar', symbol, range }, context];
+} %}
 
 whitespaceOrNewline ->
     %whitespace                             {% id %}
