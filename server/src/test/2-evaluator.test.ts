@@ -144,12 +144,24 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
         
-        it('should be able to read a variable in a grandparent scope', () => {
+        it('should be able to read a variable in a grandparent scope (current scope reference)', () => {
             const input = `
                 .Var1 = 1
                 {
                     {
                         .Var2 = .Var1
+                    }
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1]);
+        });
+        
+        it('should be able to read a variable in a grandparent scope (parent scope reference)', () => {
+            const input = `
+                .Var1 = 1
+                {
+                    {
+                        .Var2 = ^Var1
                     }
                 }
             `;
@@ -210,23 +222,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [2]);
         });
 
-        it('should not be able to write a non-existant variable in a parent scope', () => {
-            const input = `
-                {
-                    ^Var1 = 1
-                }
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
-                    range: createRange(2, 20, 2, 25)
-                }
-            );
-        });
-
-        it('should not be able to write a variable in a grandparent scope', () => {
+        it('should be able to write an existing variable in a grandparent scope', () => {
             const input = `
                 .Var1 = 1
                 {
@@ -234,15 +230,89 @@ describe('evaluator', () => {
                         ^Var1 = 2
                     }
                 }
+                .Var2 = .Var1
+            `;
+            assertEvaluatedVariablesValueEqual(input, [2]);
+        });
+
+        it('should not be able to read a non-existant variable in a parent scope', () => {
+            const input = `
+                {
+                    .Var1 = 0
+                    .Var2 = ^Var1
+                }
             `;
             assert.throws(
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Cannot update variable "Var1" in parent scope because the variable does not exist in the parent scope.',
-                    range: createRange(4, 24, 4, 29)
+                    message: 'Referencing variable "Var1" in a parent scope that is not defined in any parent scope.',
+                    range: createRange(3, 28, 3, 33)
                 }
             );
+        });
+
+        it('should not be able to write a non-existant variable in a parent scope', () => {
+            const input = `
+                {
+                    .Var1 = 0
+                    ^Var1 = 1
+                }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Referencing variable "Var1" in a parent scope that is not defined in any parent scope.',
+                    range: createRange(3, 20, 3, 25)
+                }
+            );
+        });
+
+        it('should not be able to read a non-existant variable from the parent of the root scope ', () => {
+            const input = `
+                .Var1 = 0
+                .Var2 = ^Var1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot access parent scope because there is no parent scope.',
+                    range: createRange(2, 24, 2, 29)
+                }
+            );
+        });
+
+        it('should not be able to write a non-existant variable from the parent of the root scope ', () => {
+            const input = `
+                .Var1 = 0
+                ^Var1 = 1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot access parent scope because there is no parent scope.',
+                    range: createRange(2, 16, 2, 21)
+                }
+            );
+        });
+
+        it(`writing to a parent variable that has the same name as a variable in its parent's scope should only update the shadowing variable`, () => {
+            const input = `
+                .Var1 = 1
+                {
+                    .Var1 = 2
+                    {
+                        Print( .Var1)
+                        ^Var1 = 3
+                    }
+                    Print( .Var1)
+                }
+                Print( .Var1)
+            `;
+            assertEvaluatedVariablesValueEqual(input, [2, 3, 1]);
         });
 
         it('should correctly evaulate an empty string literal', () => {
@@ -842,7 +912,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is not defined in the parent scope.',
+                    message: 'Referencing variable "MyMessage" in a parent scope that is not defined in any parent scope.',
                     range: createRange(2, 20, 2, 30)
                 }
             );

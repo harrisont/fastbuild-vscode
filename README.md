@@ -61,25 +61,6 @@ TODO
 ### TODO
 
 Fix bugs:
-* Fix parent scope access to allow going up more than one level. Example test cases that should pass:
-    * Example 1:
-        ```
-        .A = 123
-        {
-            {
-                .B = ^A
-            }
-        }
-        ```
-    * Example 2:
-        ```
-        .A = 123
-        {
-            {
-                ^A = 4
-            }
-        }
-        ```
 * Disallow multiple struct members on a line. Similarly, disallow `,` after struct member.
 * Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
 

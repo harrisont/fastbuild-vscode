@@ -540,7 +540,7 @@ class ScopeStack {
         this.stack.pop();
     }
 
-    // Get a variable, searching from the current scope to its parents.
+    // Get a variable, searching from the current scope to the root.
     // Return EvaluationError if the variable is not defined.
     getVariableStartingFromCurrentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
@@ -551,6 +551,23 @@ class ScopeStack {
             }
         }
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`));
+    }
+
+    // Get a variable, searching from the parent scope to the root.
+    // Return EvaluationError if the variable is not defined.
+    getVariableStartingFromParentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
+        if (this.stack.length < 2) {
+            return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`));
+        }
+        
+        for (let scopeIndex = this.stack.length - 2; scopeIndex >= 0; --scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            const maybeVariable = scope.variables.get(variableName);
+            if (maybeVariable !== undefined) {
+                return Maybe.ok(maybeVariable);
+            }
+        }
+        return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`));
     }
 
     // Return EvaluationError if the variable is not defined.
@@ -565,26 +582,11 @@ class ScopeStack {
     }
 
     // Return EvaluationError if the variable is not defined.
-    getVariableInParentScope(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
-        const maybeParentScope = this.getParentScope(variableRange);
-        if (maybeParentScope.hasError) {
-            return Maybe.error(maybeParentScope.getError());
-        }
-        const parentScope = maybeParentScope.getValue();
-        const maybeVariable = parentScope.variables.get(variableName);
-        if (maybeVariable === undefined) {
-            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the parent scope.`));
-        } else {
-            return Maybe.ok(maybeVariable);
-        }
-    }
-
-    // Return EvaluationError if the variable is not defined.
     getVariableInScope(scope: ScopeLocation, variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         if (scope === 'current') {
             return this.getVariableInCurrentScope(variableName, variableRange);
         } else {
-            return this.getVariableInParentScope(variableName, variableRange);
+            return this.getVariableStartingFromParentScope(variableName, variableRange);
         }
     }
 
@@ -610,21 +612,6 @@ class ScopeStack {
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
             return Maybe.error(new EvaluationError(variableRange, `Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`));
-        }
-        existingVariable.value = value;
-        return Maybe.ok(existingVariable);
-    }
-
-    // Return EvaluationError if the variable is not defined.
-    updateExistingVariableInParentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
-        const maybeParentScope = this.getParentScope(variableRange);
-        if (maybeParentScope.hasError) {
-            return Maybe.error(maybeParentScope.getError());
-        }
-        const parentScope = maybeParentScope.getValue();
-        const existingVariable = parentScope.variables.get(name);
-        if (existingVariable === undefined) {
-            return Maybe.error(new EvaluationError(variableRange, `Cannot update variable "${name}" in parent scope because the variable does not exist in the parent scope.`));
         }
         existingVariable.value = value;
         return Maybe.ok(existingVariable);
@@ -758,11 +745,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         result.variableDefinitions.push(variable.definition);
                     }
                 } else {
-                    const maybeVariable = context.scopeStack.updateExistingVariableInParentScope(evaluatedLhsName.value, evaluatedRhs.value, lhsRange);
+                    const maybeVariable = context.scopeStack.getVariableStartingFromParentScope(evaluatedLhsName.value, lhsRange);
                     if (maybeVariable.hasError) {
                         return new DataAndMaybeError(result, maybeVariable.getError());
                     }
                     variable = maybeVariable.getValue();
+                    variable.value = evaluatedRhs.value;
                 }
 
                 // The definition's LHS is a variable reference.
@@ -1470,7 +1458,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
 
     const maybeValueScopeVariable = (parsedEvaluatedVariable.scope === 'current')
         ? context.scopeStack.getVariableStartingFromCurrentScope(evaluatedVariableName.value, evaluatedVariableRange)
-        : context.scopeStack.getVariableInParentScope(evaluatedVariableName.value, evaluatedVariableRange);
+        : context.scopeStack.getVariableStartingFromParentScope(evaluatedVariableName.value, evaluatedVariableRange);
     if (maybeValueScopeVariable.hasError) {
         return new DataAndMaybeError(result, maybeValueScopeVariable.getError());
     }
