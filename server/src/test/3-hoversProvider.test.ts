@@ -56,8 +56,7 @@ describe('hoversProvider', () => {
             const value: Value = [];
             const str = valueToString(value);
             assert.strictEqual(
-                `{
-}`,
+                `{}`,
                 str);
         });
         
@@ -102,8 +101,7 @@ describe('hoversProvider', () => {
             const value = new Struct();
             const str = valueToString(value);
             assert.strictEqual(
-                `[
-]`,
+                `[]`,
                 str);
         });
         

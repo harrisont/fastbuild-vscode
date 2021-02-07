@@ -13,8 +13,8 @@ It does not yet provide syntax highlighting. For that, I recommend the FASTBuild
 ## Limitations
 
 * The language server cannot know what environment variables will exist when FASTBuild is run, since they might be different than the environment variables that exist when the language server runs, so:
-	* `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
-	* `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
+    * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
+    * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
 
 ## Compatibility
 
@@ -50,18 +50,40 @@ TODO
 
 * Parses using [Nearley](https://nearley.js.org/), which lexes using [moo](https://github.com/no-context/moo).
     * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
-	* Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
+    * Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
 * VS Code language server extension resources:
     * [VS Code Language Server Extension Guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
-	* [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
-	* [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
+    * [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
+    * [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
 * Other resources:
     * [RegEx101](https://regex101.com/): regex playgound
 
 ### TODO
 
+Fix bugs:
+* Fix parent scope access to allow going up more than one level. Example test cases that should pass:
+    * Example 1:
+        ```
+        .A = 123
+        {
+            {
+                .B = ^A
+            }
+        }
+        ```
+    * Example 2:
+        ```
+        .A = 123
+        {
+            {
+                ^A = 4
+            }
+        }
+        ```
+* Disallow multiple struct members on a line. Similarly, disallow `,` after struct member.
+* Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
+
 Support full FASTBuild syntax:
-* Support variable subtraction ([docs](https://www.fastbuild.org/docs/syntaxguide.html#modification)).
 * Support the `ListDependencies` function ([docs](https://www.fastbuild.org/docs/functions/listdependencies.html)), which was added in FASTBuild v1.03.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
 

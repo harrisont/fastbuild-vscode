@@ -245,404 +245,6 @@ describe('evaluator', () => {
             );
         });
 
-        it('should work on adding an integer', () => {
-            const input = `
-                .MySum = 1
-                .MySum + 2
-                .Evaluated = .MySum
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                1,
-                3
-            ]);
-        });
-
-        it('should work on adding a string literal', () => {
-            const input = `
-                .MyMessage = 'hello'
-                .MyMessage + ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'hello',
-                'hello world'
-            ]);
-        });
-
-        it('should work on adding a string literal to a variable in the parent scope', () => {
-            const input = `
-                .MyMessage = 'hello'
-                {
-                    ^MyMessage + ' world'
-                }
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'hello',
-                'hello world'
-            ]);
-        });
-
-        it('should work on adding a string with a variable', () => {
-            const input = `
-                .MyName = 'Bobo'
-                .MyMessage = 'hello'
-                .MyMessage + .MyName
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'Bobo',
-                'hello',
-                'helloBobo'
-            ]);
-        });
-
-        it('should work on adding a string with a string template', () => {
-            const input = `
-                .MyName = 'Bobo'
-                .MyMessage = 'hello'
-                .MyMessage + ' $MyName$'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'Bobo',
-                'hello',
-                'hello Bobo'
-            ]);
-        });
-
-        it('adding a string literal should use the last referenced variable if none is specified', () => {
-            const input = `
-                .MyMessage = 'hello'
-                           + ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
-        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line)', () => {
-            const input = `
-                .MyMessage = 'hello' +
-                             ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
-        it('adding a string literal should use the last referenced variable if none is specified (with comments)', () => {
-            const input = `
-                .MyMessage = 'hello' // Comment 1
-                           // Comment 2
-                           + ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
-        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line, with comments)', () => {
-            const input = `
-                .MyMessage = 'hello' + // Comment 1
-                             // Comment 2
-                             ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
-        it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
-            const input = `
-                .MyMessage = 'hello'
-                           + ' world'
-                           + '!'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world!']);
-        });
-
-        it('adding an evaluated variable should use the last referenced variable if none is specified', () => {
-            const input = `
-                .MyVar = 'world'
-                .MyMessage = 'hello '
-                           + .MyVar
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['world', 'hello world']);
-        });
-
-        it('adding mulitple evaluated variables should use the last referenced variable if none is specified', () => {
-            const input = `
-                .MyVar1 = 'world'
-                .MyVar2 = '!'
-                .MyMessage = 'hello '
-                           + .MyVar1
-                           + .MyVar2
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
-        });
-
-        it('adding mulitple evaluated variables should use the last referenced variable if none is specified (with comments)', () => {
-            const input = `
-                .MyVar1 = 'world'
-                .MyVar2 = '!'
-                .MyMessage = 'hello ' // Comment 1
-                           + .MyVar1  // Comment 2
-                           + .MyVar2
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
-        });
-
-        it('should work on adding a string literal to a variable in the parent scope', () => {
-            const input = `
-                .MyMessage = 'hello'
-                {
-                    ^MyMessage + ' world'
-                    .Evaluated1 = .MyMessage
-                }
-                .Evaluated2 = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'hello',
-                'hello world',
-                'hello world'
-            ]);
-        });
-
-        it('should fail when adding a string to a variable not in scope (current scope)', () => {
-            const input = `
-                .MyMessage = 'hello'
-                {
-                    .MyMessage + ' world'
-                }
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is not defined in the current scope.',
-                    range: createRange(3, 20, 3, 30)
-                }
-            );
-        });
-
-        it('should fail when adding a string to a variable not in scope (parent scope)', () => {
-            const input = `
-                {
-                    ^MyMessage + ' world'
-                }
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Referencing varable "MyMessage" that is not defined in the parent scope.',
-                    range: createRange(2, 20, 2, 30)
-                }
-            );
-        });
-
-        it('should work on adding an item to an array', () => {
-            const input = `
-                .MyVar = {}
-                .MyVar + 'cow'
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                [],
-                ['cow']
-            ]);
-        });
-
-        it('should work on inline adding an item to an array', () => {
-            const input = `
-                .MyVar = {} + 'cow'
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [['cow']]);
-        });
-
-        it('should work on adding an array to an array', () => {
-            const input = `
-                .MyVar = {'a'}
-                .MyVar + {'b'}
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                ['a'],
-                ['a', 'b']
-            ]);
-        });
-
-        it('should work on inline adding an array to an array', () => {
-            const input = `
-                .MyVar = {'a'} + {'b'} + {'c'}
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [['a', 'b', 'c']]);
-        });
-
-        it('should work on adding an array with an evaluated variable to an array', () => {
-            const input = `
-                .B = 'b'
-                .MyVar = {'a'}
-                .MyVar + {.B, 'c'}
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'b',
-                ['a'],
-                ['a', 'b', 'c']
-            ]);
-        });
-
-        it('should work on inline adding an array with an evaluated variable to an array', () => {
-            const input = `
-                .B = 'b'
-                .MyVar = {'a'} + { .B , 'c'}
-                .Result = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                'b',
-                ['a', 'b', 'c']
-            ]);
-        });
-
-        it('should work on adding a struct to a struct', () => {
-            const input = `
-                .Struct1 = [ .A=0, .B=2 ]
-                .Struct2 = [ .A=1, .C=3 ]
-                .MyVar = .Struct1 + .Struct2
-                .Result = .MyVar
-            `;
-            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(1, 29, 1, 31) };
-            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(1, 35, 1, 37) };
-            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(2, 29, 2, 31) };
-            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(2, 35, 2, 37) };
-            assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    A: new StructMember(0, struct1ADefinition),
-                    B: new StructMember(2, struct1BDefinition),
-                })),
-                Struct.from(Object.entries({
-                    A: new StructMember(1, struct2ADefinition),
-                    C: new StructMember(3, struct2CDefinition),
-                })),
-                Struct.from(Object.entries({
-                    A: new StructMember(1, struct2ADefinition),
-                    B: new StructMember(2, struct1BDefinition),
-                    C: new StructMember(3, struct2CDefinition),
-                }))
-            ]);
-        });
-
-        it('should error on adding anything other than an integer to an integer', () => {
-            const input = `
-                .LHS = 123
-                .LHS + 'hi'
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a String ("hi") to a Integer (123).',
-                    range: createRange(2, 16, 2, 27)
-                }
-            );
-        });
-
-        it('should error on inline adding anything other than an integer to an integer (via evaluated variable)', () => {
-            const input = `
-                .LHS = 123
-                .RHS = 'hi'
-                .MyVar = .LHS + .RHS
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a String ("hi") to a Integer (123).',
-                    range: createRange(3, 25, 3, 36)
-                }
-            );
-        });
-
-        it('should error on adding anything other than a string to a string', () => {
-            const input = `
-                .LHS = 'hi'
-                .LHS + 123
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a Integer (123) to a String ("hi").',
-                    range: createRange(2, 16, 2, 26)
-                }
-            );
-        });
-
-        it('should error on inline adding anything other than a string to a string (via direct value)', () => {
-            const input = `
-                .MyVar = 'hi' + {}
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a Array ([]) to a String ("hi").',
-                    range: createRange(1, 25, 1, 34)
-                }
-            );
-        });
-
-        it('should error on inline adding anything other than a string to a string (via evaluated variable)', () => {
-            const input = `
-                .LHS = 'hi'
-                .RHS = 123
-                .MyVar = .LHS + .RHS
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a Integer (123) to a String ("hi").',
-                    range: createRange(3, 25, 3, 36)
-                }
-            );
-        });
-
-        it('should error on adding anything to a boolean', () => {
-            const input = `
-                .LHS = true
-                .LHS + 'hi'
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a String ("hi") to a Boolean (true).',
-                    range: createRange(2, 16, 2, 27)
-                }
-            );
-        });
-
-        it('should error on inline adding anything to a boolean (via evaluated variable)', () => {
-            const input = `
-                .LHS = true
-                .RHS = 'hi'
-                .MyVar = .LHS + .RHS
-            `;
-            assert.throws(
-                () => evaluateInput(input),
-                {
-                    name: 'EvaluationError',
-                    message: 'Cannot add a String ("hi") to a Boolean (true).',
-                    range: createRange(3, 25, 3, 36)
-                }
-            );
-        });
-
         it('should correctly evaulate an empty string literal', () => {
             const input = `
                 .MyVar = ''
@@ -1048,6 +650,1037 @@ describe('evaluator', () => {
         });
     });
 
+    describe('addition', () => {
+        it('should work on adding an integer', () => {
+            const input = `
+                .MySum = 1
+                .MySum + 2
+                .Evaluated = .MySum
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                1,
+                3
+            ]);
+        });
+
+        it('should work on adding a string literal', () => {
+            const input = `
+                .MyMessage = 'hello'
+                .MyMessage + ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world'
+            ]);
+        });
+
+        it('should work on adding a string literal to a variable in the parent scope', () => {
+            const input = `
+                .MyMessage = 'hello'
+                {
+                    ^MyMessage + ' world'
+                }
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world'
+            ]);
+        });
+
+        it('should work on adding a string with a variable', () => {
+            const input = `
+                .MyName = 'Bobo'
+                .MyMessage = 'hello'
+                .MyMessage + .MyName
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bobo',
+                'hello',
+                'helloBobo'
+            ]);
+        });
+
+        it('should work on adding a string with a string template', () => {
+            const input = `
+                .MyName = 'Bobo'
+                .MyMessage = 'hello'
+                .MyMessage + ' $MyName$'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bobo',
+                'hello',
+                'hello Bobo'
+            ]);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified', () => {
+            const input = `
+                .MyMessage = 'hello'
+                            + ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line)', () => {
+            const input = `
+                .MyMessage = 'hello' +
+                                ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified (with comments)', () => {
+            const input = `
+                .MyMessage = 'hello' // Comment 1
+                            // Comment 2
+                            + ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line, with comments)', () => {
+            const input = `
+                .MyMessage = 'hello' + // Comment 1
+                                // Comment 2
+                                ' world'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world']);
+        });
+
+        it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+            const input = `
+                .MyMessage = 'hello'
+                            + ' world'
+                            + '!'
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['hello world!']);
+        });
+
+        it('adding an evaluated variable should use the last referenced variable if none is specified', () => {
+            const input = `
+                .MyVar = 'world'
+                .MyMessage = 'hello '
+                            + .MyVar
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['world', 'hello world']);
+        });
+
+        it('adding mulitple evaluated variables should use the last referenced variable if none is specified', () => {
+            const input = `
+                .MyVar1 = 'world'
+                .MyVar2 = '!'
+                .MyMessage = 'hello '
+                            + .MyVar1
+                            + .MyVar2
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
+        });
+
+        it('adding mulitple evaluated variables should use the last referenced variable if none is specified (with comments)', () => {
+            const input = `
+                .MyVar1 = 'world'
+                .MyVar2 = '!'
+                .MyMessage = 'hello ' // Comment 1
+                            + .MyVar1  // Comment 2
+                            + .MyVar2
+                .Evaluated = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
+        });
+
+        it('should work on adding a string literal to a variable in the parent scope', () => {
+            const input = `
+                .MyMessage = 'hello'
+                {
+                    ^MyMessage + ' world'
+                    .Evaluated1 = .MyMessage
+                }
+                .Evaluated2 = .MyMessage
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world',
+                'hello world'
+            ]);
+        });
+
+        it('should fail when adding a string to a variable not in scope (current scope)', () => {
+            const input = `
+                .MyMessage = 'hello'
+                {
+                    .MyMessage + ' world'
+                }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Referencing varable "MyMessage" that is not defined in the current scope.',
+                    range: createRange(3, 20, 3, 30)
+                }
+            );
+        });
+
+        it('should fail when adding a string to a variable not in scope (parent scope)', () => {
+            const input = `
+                {
+                    ^MyMessage + ' world'
+                }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Referencing varable "MyMessage" that is not defined in the parent scope.',
+                    range: createRange(2, 20, 2, 30)
+                }
+            );
+        });
+
+        it('should work on adding an item to an array', () => {
+            const input = `
+                .MyVar = {}
+                .MyVar + 'cow'
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                [],
+                ['cow']
+            ]);
+        });
+
+        it('should work on inline adding an item to an array', () => {
+            const input = `
+                .MyVar = {} + 'cow'
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [['cow']]);
+        });
+
+        it('should work on adding an array to an array', () => {
+            const input = `
+                .MyVar = {'a'}
+                .MyVar + {'b'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a'],
+                ['a', 'b']
+            ]);
+        });
+
+        it('should work on inline adding an array to an array', () => {
+            const input = `
+                .MyVar = {'a'} + {'b'} + {'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [['a', 'b', 'c']]);
+        });
+
+        it('should work on adding an array with an evaluated variable to an array', () => {
+            const input = `
+                .B = 'b'
+                .MyVar = {'a'}
+                .MyVar + {.B, 'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'b',
+                ['a'],
+                ['a', 'b', 'c']
+            ]);
+        });
+
+        it('should work on inline adding an array with an evaluated variable to an array', () => {
+            const input = `
+                .B = 'b'
+                .MyVar = {'a'} + { .B , 'c'}
+                .Result = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'b',
+                ['a', 'b', 'c']
+            ]);
+        });
+
+        it('should work on adding a struct to a struct', () => {
+            const input = `
+                .Struct1 = [ .A=0, .B=2 ]
+                .Struct2 = [ .A=1, .C=3 ]
+                .MyVar = .Struct1 + .Struct2
+                .Result = .MyVar
+            `;
+            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(1, 29, 1, 31) };
+            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(1, 35, 1, 37) };
+            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(2, 29, 2, 31) };
+            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(2, 35, 2, 37) };
+            assertEvaluatedVariablesValueEqual(input, [
+                Struct.from(Object.entries({
+                    A: new StructMember(0, struct1ADefinition),
+                    B: new StructMember(2, struct1BDefinition),
+                })),
+                Struct.from(Object.entries({
+                    A: new StructMember(1, struct2ADefinition),
+                    C: new StructMember(3, struct2CDefinition),
+                })),
+                Struct.from(Object.entries({
+                    A: new StructMember(1, struct2ADefinition),
+                    B: new StructMember(2, struct1BDefinition),
+                    C: new StructMember(3, struct2CDefinition),
+                }))
+            ]);
+        });
+
+        it('should error on adding anything other than an integer (string) to an integer', () => {
+            const input = `
+                .LHS = 123
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String to an Integer. Can only add an Integer.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on adding anything other than an integer (boolean) to an integer', () => {
+            const input = `
+                .LHS = 123
+                .LHS + true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Boolean to an Integer. Can only add an Integer.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on adding anything other than an integer (struct) to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = [ .A = 1 ]
+                .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Struct to an Integer. Can only add an Integer.',
+                    range: createRange(3, 16, 3, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer (boolean) to an integer', () => {
+            const input = `
+                .LHS = 123
+                     + true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Boolean to an Integer. Can only add an Integer.',
+                    range: createRange(1, 23, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer (string) to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String to an Integer. Can only add an Integer.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer (boolean) to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = true
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Boolean to an Integer. Can only add an Integer.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than an integer (struct) to an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = [ .A = 1 ]
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Struct to an Integer. Can only add an Integer.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything other than a string to a string', () => {
+            const input = `
+                .LHS = 'hi'
+                .LHS + 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add an Integer to a String. Can only add a String.',
+                    range: createRange(2, 16, 2, 26)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string (Integer) to a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' + 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add an Integer to a String. Can only add a String.',
+                    range: createRange(1, 25, 1, 35)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string (Boolean) to a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' + true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a Boolean to a String. Can only add a String.',
+                    range: createRange(1, 25, 1, 36)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string (array) to a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' + {}
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add an Array to a String. Can only add a String.',
+                    range: createRange(1, 25, 1, 34)
+                }
+            );
+        });
+
+        it('should error on inline adding anything other than a string to a string (via evaluated variable)', () => {
+            const input = `
+                .LHS = 'hi'
+                .RHS = 123
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add an Integer to a String. Can only add a String.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything to a boolean', () => {
+            const input = `
+                .LHS = true
+                .LHS + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add to a Boolean.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything (string) to a boolean (via direct value)', () => {
+            const input = `
+                .LHS = true
+                     + 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add to a Boolean.',
+                    range: createRange(1, 23, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline adding anything to a boolean (via evaluated variable)', () => {
+            const input = `
+                .LHS = true
+                .RHS = 'hi'
+                .MyVar = .LHS + .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add to a Boolean.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on adding anything other than a struct to a struct', () => {
+            const input = `
+                .Struct = [ .A = 1 ]
+                .Struct + "hi"
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot add a String to a Struct. Can only add a Struct.',
+                    range: createRange(2, 16, 2, 30)
+                }
+            );
+        });
+    });
+
+    describe('subtraction', () => {
+        it('integer subtraction', () => {
+            const input = `
+                .Value = 3
+                .Value - 2
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                3,
+                1
+            ]);
+        });
+
+        it('inline integer subtraction', () => {
+            const input = `
+                .Value = 3
+                       - 2
+                Print( .Value )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                1
+            ]);
+        });
+
+        it('Substring removal', () => {
+            const input = `
+                .String = 'Good Bad Good'
+                .String - 'Bad'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good Bad Good',
+                'Good  Good',
+            ]);
+        });
+
+        it('Substring removal using variable', () => {
+            const input = `
+                .String = 'Good Bad Good'
+                .Bad = 'Bad'
+                .String - .Bad
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bad',
+                'Good Bad Good',
+                'Good  Good',
+            ]);
+        });
+        
+        it('Multiple string removals', () => {
+            const input = `
+                .String = 'Good Bad Good Bad Bad Good'
+                .String - 'Bad'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good Bad Good Bad Bad Good',
+                'Good  Good   Good',
+            ]);
+        });
+        
+        it('Multiple string removals using variable', () => {
+            const input = `
+                .String = 'Good Bad Good Bad Bad Good'
+                .Bad = 'Bad'
+                .String - .Bad
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bad',
+                'Good Bad Good Bad Bad Good',
+                'Good  Good   Good',
+            ]);
+        });
+        
+        it('String remove not found', () => {
+            const input = `
+                .String = 'Good'
+                .String - 'NotFound'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good',
+                'Good',
+            ]);
+        });
+        
+        it('String remove from empty string', () => {
+            const input = `
+                .String = ''
+                .String - 'NotFound'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '',
+                '',
+            ]);
+        });
+        
+        it('Inline string subtraction', () => {
+            const input = `
+                .String = 'Good Bad'
+                        - 'Bad'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good ',
+            ]);
+        });
+        
+        it('Inline string subtraction within words', () => {
+            const input = `
+                .String = 'GoBADod'
+                        - 'BAD'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good',
+            ]);
+        });
+        
+        it('Inline string subtraction must match case', () => {
+            const input = `
+                .String = 'Good'
+                        - 'GOOD'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Good',
+            ]);
+        });
+        
+        it('Inline string addition then subtraction', () => {
+            const input = `
+                .String = '1 2'
+                        + ' 3'
+                        - ' 2'
+                        + ' 4'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '1 3 4',
+            ]);
+        });
+        
+        it('Inline string subtraction then addition', () => {
+            const input = `
+                .String = '1 2'
+                        - ' 2'
+                        + ' 3'
+                        - '1 '
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '3',
+            ]);
+        });
+        
+        it('Remove from array of strings', () => {
+            const input = `
+                .Strings = { 'Good', 'Bad', 'Good' }
+                .Strings - 'Bad'
+                Print( .Strings )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['Good', 'Bad', 'Good'],
+                ['Good', 'Good'],
+            ]);
+        });
+        
+        it('Remove from array of strings inline', () => {
+            const input = `
+                .Strings = { 'Good', 'Bad', 'Good' }
+                         - 'Bad'
+                Print( .Strings )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['Good', 'Good'],
+            ]);
+        });
+        
+        it('Remove from array of strings using variable', () => {
+            const input = `
+                .Bad = 'Bad'
+                .Strings = { 'Good', 'Bad', 'Good' }
+                .Strings - .Bad
+                Print( .Strings )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bad',
+                ['Good', 'Bad', 'Good'],
+                ['Good', 'Good'],
+            ]);
+        });
+        
+        it('Remove from array of strings inline using variable', () => {
+            const input = `
+                .Bad = 'Bad'
+                .Strings = { 'Good', 'Bad', 'Good' }
+                         - .Bad
+                Print( .Strings )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Bad',
+                ['Good', 'Good'],
+            ]);
+        });
+        
+        it('Remove from empty array of strings', () => {
+            const input = `
+                .Strings = {}
+                .Strings - 'NotFound'
+                Print( .Strings )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                [],
+                [],
+            ]);
+        });
+
+        it('should error on subtracting anything other than an integer from an integer', () => {
+            const input = `
+                .LHS = 123
+                .LHS - 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a String from an Integer. Can only subtract an Integer.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than an integer from an integer (via direct value)', () => {
+            const input = `
+                .LHS = 123
+                     - 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a String from an Integer. Can only subtract an Integer.',
+                    range: createRange(1, 23, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than an integer from an integer (via evaluated variable)', () => {
+            const input = `
+                .LHS = 123
+                .RHS = 'hi'
+                .MyVar = .LHS - .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a String from an Integer. Can only subtract an Integer.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on subtracting anything other than a string from a string', () => {
+            const input = `
+                .LHS = 'hi'
+                .LHS - 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Integer from a String. Can only subtract a String.',
+                    range: createRange(2, 16, 2, 26)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string (Integer) from a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' - 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Integer from a String. Can only subtract a String.',
+                    range: createRange(1, 25, 1, 35)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string (Boolean) from a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' - true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a Boolean from a String. Can only subtract a String.',
+                    range: createRange(1, 25, 1, 36)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string (Array) from a string (via direct value)', () => {
+            const input = `
+                .MyVar = 'hi' - {}
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Array from a String. Can only subtract a String.',
+                    range: createRange(1, 25, 1, 34)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string from a string (via evaluated variable)', () => {
+            const input = `
+                .LHS = 'hi'
+                .RHS = 123
+                .MyVar = .LHS - .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Integer from a String. Can only subtract a String.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on subtracting anything other than a string (boolean) from an array of strings', () => {
+            const input = `
+                .LHS = { 'a' }
+                .LHS - true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a Boolean from an Array of Strings. Can only subtract a String.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on subtracting anything other than a string (integer) from an array of strings', () => {
+            const input = `
+                .LHS = { 'a' }
+                .LHS - 123
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Integer from an Array of Strings. Can only subtract a String.',
+                    range: createRange(2, 16, 2, 26)
+                }
+            );
+        });
+
+        it('should error on subtracting anything other than a string (array) from an array of strings', () => {
+            const input = `
+                .LHS = { 'a' }
+                .LHS - { 'b' }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract an Array from an Array of Strings. Can only subtract a String.',
+                    range: createRange(2, 16, 2, 30)
+                }
+            );
+        });
+
+        it('should error on subtracting anything other than a string (struct) from an array of strings', () => {
+            const input = `
+                .LHS = { 'a' }
+                .LHS - [.A=1]
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a Struct from an Array of Strings. Can only subtract a String.',
+                    range: createRange(2, 16, 2, 29)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string from an array of strings', () => {
+            const input = `
+                .LHS = { 'a' }
+                     - true
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a Boolean from an Array of Strings. Can only subtract a String.',
+                    range: createRange(1, 23, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything other than a string (via evaluated variable) from an array of strings', () => {
+            const input = `
+                .RHS = true
+                .LHS = { 'a' }
+                     - .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract a Boolean from an Array of Strings. Can only subtract a String.',
+                    range: createRange(2, 23, 3, 27)
+                }
+            );
+        });
+
+        // The only type of array that can be subtracted from is an array of strings.
+        it('should error on subtracting anything from an array of structs', () => {
+            const input = `
+                .LHS = { [.A=1] }
+                     - 'a'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract from an Array of Structs. Can only subtract from an Array if it is an Array of Strings.',
+                    range: createRange(1, 23, 2, 26)
+                }
+            );
+        });
+
+        it('should error on subtracting anything from a boolean', () => {
+            const input = `
+                .LHS = true
+                .LHS - 'hi'
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract from a Boolean.',
+                    range: createRange(2, 16, 2, 27)
+                }
+            );
+        });
+
+        it('should error on inline subtracting anything from a boolean (via evaluated variable)', () => {
+            const input = `
+                .LHS = true
+                .RHS = 'hi'
+                .MyVar = .LHS - .RHS
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract from a Boolean.',
+                    range: createRange(3, 25, 3, 36)
+                }
+            );
+        });
+
+        it('should error on subtracting anything from a struct', () => {
+            const input = `
+                .Struct1 = [ .A = 1 ]
+                .Struct2 = []
+                .Struct1 - .Struct2
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot subtract from a Struct.',
+                    range: createRange(3, 16, 3, 35)
+                }
+            );
+        });
+    });
+
     describe('evaluatedVariables range', () => {
         it('should be detected in a string with multiple variables', () => {
             const input = `
@@ -1384,7 +2017,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `'Using' parameter must be a struct, but instead is 1`,
+                    message: `'Using' parameter must be a Struct, but instead is an Integer`,
                     range: createRange(2, 23, 2, 29)
                 }
             );
@@ -1501,7 +2134,7 @@ describe('evaluator', () => {
                 () => evaluateInput(input),
                 {
                     name: 'EvaluationError',
-                    message: `'ForEach' variable to loop over must be an array, but instead is 123`,
+                    message: `'ForEach' variable to loop over must be an Array, but instead is an Integer`,
                     range: createRange(2, 34, 2, 42)
                 }
             );
@@ -1577,7 +2210,7 @@ describe('evaluator', () => {
                         () => evaluateInput(input),
                         {
                             name: 'EvaluationError',
-                            message: `Alias must evaluate to a string, but instead is 123`,
+                            message: `Alias must evaluate to a String, but instead evaluates to an Integer`,
                             range: createRange(2, 26 + functionName.length, 2, 38 + functionName.length)
                         }
                     );
@@ -1725,7 +2358,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `Condition must evaluate to a boolean, but instead is 123`,
+                        message: `Condition must evaluate to a Boolean, but instead evaluates to an Integer`,
                         range: createRange(2, 24, 2, 30)
                     }
                 );
@@ -2477,7 +3110,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' condition comparison must compare variables of the same type, but LHS is "dog" and RHS is 123`,
+                        message: `'If' condition comparison must compare variables of the same type, but LHS is a String and RHS is an Integer`,
                         range: createRange(3, 24, 3, 42)
                     }
                 );
@@ -2749,7 +3382,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is [123]`,
+                        message: `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Array of Integers`,
                         range: createRange(3, 24, 3, 31)
                     }
                 );
@@ -2767,7 +3400,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition left-hand-side variable must be either a string or an array of strings, but instead is 123`,
+                        message: `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Integer`,
                         range: createRange(3, 24, 3, 31)
                     }
                 );
@@ -2785,7 +3418,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is [123]`,
+                        message: `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Array of Integers`,
                         range: createRange(3, 35, 3, 44)
                     }
                 );
@@ -2803,7 +3436,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition right-hand-side variable must be an array of strings, but instead is 123`,
+                        message: `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Integer`,
                         range: createRange(3, 35, 3, 44)
                     }
                 );

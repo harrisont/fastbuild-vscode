@@ -31,6 +31,7 @@ const lexer = moo.states({
 
         operatorAssignment: '=',
         operatorAddition: '+',
+        operatorSubtraction: '-',
 
         arrayOrStructItemSeparator: ',',
         structStart: '[',
@@ -182,7 +183,7 @@ statementAndOrCommentAndNewline ->
 statement ->
     scopedStatements          {% ([value]) => [ value, new ParseContext() ] %}
   | variableDefinition        {% ([valueWithContext]) => valueWithContext %}
-  | variableAddition          {% ([valueWithContext]) => valueWithContext %}
+  | variableBinaryOperator    {% ([valueWithContext]) => valueWithContext %}
   | functionError             {% ([value]) => [ value, new ParseContext() ] %}
   | functionForEach           {% ([value]) => [ value, new ParseContext() ] %}
   | functionIf                {% ([value]) => [ value, new ParseContext() ] %}
@@ -303,19 +304,21 @@ variableReference ->
     %variableReferenceCurrentScope variableName  {% ([scopeToken, [varName, context]]) => [scopeToken, 'current', varName, context] %}
   | %variableReferenceParentScope  variableName  {% ([scopeToken, [varName, context]]) => [scopeToken, 'parent',  varName, context] %}
 
-lhsWithOperatorAssignment ->
+lhsWithAssignmentOperator ->
     variableReference                     %operatorAssignment  {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
   | variableReference whitespaceOrNewline %operatorAssignment  {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
 
-lhsWithOperatorAddition ->
-    variableReference                     %operatorAddition    {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return { name: varName, scope, range: createRange(scopeToken, operator) }; } %}
-  | variableReference whitespaceOrNewline %operatorAddition    {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return { name: varName, scope, range: createRange(scopeToken, space)    }; } %}
+lhsWithBinaryOperator ->
+    variableReference                     %operatorAddition       {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return [ { name: varName, scope, range: createRange(scopeToken, operator) }, '+' ]; } %}
+  | variableReference whitespaceOrNewline %operatorAddition       {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return [ { name: varName, scope, range: createRange(scopeToken, space)    }, '+' ]; } %}
+  | variableReference                     %operatorSubtraction    {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return [ { name: varName, scope, range: createRange(scopeToken, operator) }, '-' ]; } %}
+  | variableReference whitespaceOrNewline %operatorSubtraction    {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return [ { name: varName, scope, range: createRange(scopeToken, space)    }, '-' ]; } %}
 
 variableDefinition ->
-    lhsWithOperatorAssignment optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: 'variableDefinition', lhs: lhs, rhs: rValue }, context ]; } %}
+    lhsWithAssignmentOperator optionalWhitespaceOrNewline rValue  {% ([lhs,             space, [rValue, context]]) => { return [ { type: 'variableDefinition', lhs: lhs, rhs: rValue           }, context ]; } %}
 
-variableAddition ->
-    lhsWithOperatorAddition   optionalWhitespaceOrNewline rValue  {% ([lhs, space, [rValue, context]]) => { return [ { type: 'variableAddition',   lhs: lhs, rhs: rValue }, context ]; } %}
+variableBinaryOperator ->
+    lhsWithBinaryOperator     optionalWhitespaceOrNewline rValue  {% ([[lhs, operator], space, [rValue, context]]) => { return [ { type: 'binaryOperator',     lhs: lhs, rhs: rValue, operator }, context ]; } %}
 
 @{%
 
@@ -345,47 +348,55 @@ function createBoolean(value: boolean, token: Token) {
 
 %}
 
-rValue ->
-    %integer  {% ([token]) => createInteger(token) %}
-  | bool      {% ([valueWithContext]) => valueWithContext %}
-  # sum is the sum of 1 or more strings, evaluated variables, or arrays.
-  | sum       {% ([valueWithContext]) => valueWithContext %}
-  | struct    {% ([valueWithContext]) => valueWithContext %}
-
 bool ->
     %keywordTrue   {% ([token]) => createBoolean(true,  token) %}
   | %keywordFalse  {% ([token]) => createBoolean(false, token) %}
 
-# A single item or multiple items added together.
-sum -> sumHelper  {% ([[parts, context]]) => {
-    if (parts.length == 1) {
-        return [parts[0], context];
+# A single item or multiple items added/subtracted together.
+rValue -> sumHelper  {% ([[first, rest, context]]) => {
+    if (rest.length == 0) {
+        return [first, context];
     } else {
         const sum = {
             type: 'sum',
-            summands: parts,
+            first,
+            summands: rest,
         };
         return [sum, context];
     }
 } %}
 
+# Returns [first, rest, context], where rest is {operator, value}[]
 sumHelper ->
     # Single item
-    summand  {% ([[value, context]]) => [value, context] %}
+    summand  {% ([[value, context]]) => [value, [], context] %}
     # Multiple items added together
-  | summand                                                                                                                         %operatorAddition optionalWhitespaceOrNewline                                            sumHelper  {% ([[lhs, lhsContext],                                          operator, space3,    [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand                                                                                                                         %operatorAddition (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[lhs, lhsContext],                                          operator, comments2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition optionalWhitespaceOrNewline                                            sumHelper  {% ([[lhs, lhsContext],         comment1, space2, extraComments, operator, space3,    [rValue, rhsContext]]) => { callOnNextToken(lhsContext, comment);  return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[lhs, lhsContext],         comment1, space2, extraComments, operator, comments2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, comment);  return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorAddition optionalWhitespaceOrNewline                                            sumHelper  {% ([[lhs, lhsContext], space1,                                  operator, space3,    [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorAddition (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[lhs, lhsContext], space1,                                  operator, comments2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition optionalWhitespaceOrNewline                                            sumHelper  {% ([[lhs, lhsContext], space1, comment1, space2, extraComments, operator, space3,    [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[lhs, lhsContext], space1, comment1, space2, extraComments, operator, comments2, [rValue, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [[...lhs, ...rValue], rhsContext]; } %}
+  | summand                                                                                                                         %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],                                          operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                                                                                                                         %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],                                          operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                                                                                                                         %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],                                          operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                                                                                                                         %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],                                          operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline                                                                                                     %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1,                                  operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline                                                                                                     %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1,                                  operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline                                                                                                     %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1,                                  operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline                                                                                                     %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1,                                  operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
 
 summand ->
-    string             {% ([value]) => [ [value], new ParseContext() ] %}
-  | evaluatedVariable  {% ([[value, context]]) => [ [value], context] %}
-  | array              {% ([[value, context]]) => [ [value], context] %}
+    %integer           {% ([token]) => createInteger(token) %}
+  | string             {% ([value]) => [ value, new ParseContext() ] %}
+  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+  | array              {% ([valueWithContext]) => valueWithContext %}
+  # bool and struct are valid as single items, but not for addition/subtraction.
+  # Allow them anyways for addition/subtraction here and fail in evaluation instead, in order to give better error messages.
+  | bool      {% ([valueWithContext]) => valueWithContext %}
+  | struct    {% ([valueWithContext]) => valueWithContext %}
 
 @{%
 

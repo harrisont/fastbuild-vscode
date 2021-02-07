@@ -20,27 +20,35 @@ const INDENTATION = ' '.repeat(4);
 
 export function valueToString(value: Value, indentation = ''): string {
     if (value instanceof Struct) {
-        const itemIndentation = indentation + INDENTATION;
-        const items = Array.from(value.members,
-            ([structMemberName, structMember]) => `${itemIndentation}.${structMemberName} = ${valueToString(structMember.value, itemIndentation)}`
-        );
-        const lines = [
-            '[',
-            ...items,
-            indentation + ']'
-        ];
-        return lines.join('\n');
+        if (value.members.size === 0) {
+            return '[]';
+        } else {
+            const itemIndentation = indentation + INDENTATION;
+            const items = Array.from(value.members,
+                ([structMemberName, structMember]) => `${itemIndentation}.${structMemberName} = ${valueToString(structMember.value, itemIndentation)}`
+            );
+            const lines = [
+                '[',
+                ...items,
+                indentation + ']'
+            ];
+            return lines.join('\n');
+        }
     } else if (value instanceof Array) {
-        const itemIndentation = indentation + INDENTATION;
-        const items = value.map(
-            (itemValue) => `${itemIndentation}${valueToString(itemValue, itemIndentation)}`
-        );
-        const lines = [
-            '{',
-            ...items,
-            indentation + '}'
-        ];
-        return lines.join('\n');
+        if (value.length === 0) {
+            return '{}';
+        } else {
+            const itemIndentation = indentation + INDENTATION;
+            const items = value.map(
+                (itemValue) => `${itemIndentation}${valueToString(itemValue, itemIndentation)}`
+            );
+            const lines = [
+                '{',
+                ...items,
+                indentation + '}'
+            ];
+            return lines.join('\n');
+        }
     } else {
         // Handle JSON.stringify doubling raw escape characters.
         return JSON.stringify(value).replace(/\\\\/g, '\\');

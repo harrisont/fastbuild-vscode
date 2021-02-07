@@ -1340,7 +1340,7 @@ describe('parser', () => {
                 }
             },
             {
-                type: 'variableAddition',
+                type: 'binaryOperator',
                 lhs: {
                     name: {
                         type: 'string',
@@ -1354,7 +1354,8 @@ describe('parser', () => {
                     type: 'string',
                     value: ' world',
                     range: createRange(2, 25, 2, 33)
-                }
+                },
+                operator: '+',
             }
         ]);
     });
@@ -1388,7 +1389,7 @@ describe('parser', () => {
                 type: 'scopedStatements',
                 statements: [
                     {
-                        type: 'variableAddition',
+                        type: 'binaryOperator',
                         lhs: {
                             name: {
                                 type: 'string',
@@ -1402,7 +1403,8 @@ describe('parser', () => {
                             type: 'string',
                             value: ' world',
                             range: createRange(3, 29, 3, 37)
-                        }
+                        },
+                        operator: '+',
                     }
                 ],
             },
@@ -1451,7 +1453,7 @@ describe('parser', () => {
                 }
             },
             {
-                type: 'variableAddition',
+                type: 'binaryOperator',
                 lhs: {
                     name: {
                         type: 'string',
@@ -1477,7 +1479,8 @@ describe('parser', () => {
                         }
                     ],
                     range: createRange(3, 25, 3, 36),
-                }
+                },
+                operator: '+',
             }
         ]);
     });
@@ -1501,16 +1504,19 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello',
+                        range: createRange(1, 25, 1, 32)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello',
-                            range: createRange(1, 25, 1, 32)
-                        },
-                        {
-                            type: 'string',
-                            value: ' world',
-                            range: createRange(2, 25, 2, 33)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: ' world',
+                                range: createRange(2, 25, 2, 33)
+                            }
                         }
                     ],
                 }
@@ -1534,16 +1540,19 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello',
+                        range: createRange(0, 13, 0, 20)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello',
-                            range: createRange(0, 13, 0, 20)
-                        },
-                        {
-                            type: 'string',
-                            value: ' world',
-                            range: createRange(0, 23, 0, 31)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: ' world',
+                                range: createRange(0, 23, 0, 31)
+                            }
                         }
                     ],
                 }
@@ -1571,22 +1580,28 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello',
+                        range: createRange(1, 25, 1, 32)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello',
-                            range: createRange(1, 25, 1, 32)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: ' world',
+                                range: createRange(2, 25, 2, 33)
+                            }
                         },
                         {
-                            type: 'string',
-                            value: ' world',
-                            range: createRange(2, 25, 2, 33)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: '!',
+                                range: createRange(3, 25, 3, 28)
+                            }
                         },
-                        {
-                            type: 'string',
-                            value: '!',
-                            range: createRange(3, 25, 3, 28)
-                        }
                     ],
                 }
             }
@@ -1610,22 +1625,85 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello',
+                        range: createRange(0, 9, 0, 16)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello',
-                            range: createRange(0, 9, 0, 16)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: ' world',
+                                range: createRange(0, 19, 0, 27)
+                            }
                         },
                         {
-                            type: 'string',
-                            value: ' world',
-                            range: createRange(0, 19, 0, 27)
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: '!',
+                                range: createRange(0, 28, 0, 31)
+                            }
+                        },
+                    ],
+                }
+            }
+        ]);
+    });
+
+    it('adding and subtracting mulitple string literals should use the last referenced variable if none is specified', () => {
+        const input = `
+            .MyMessage = 'hello world!'
+                       - ' world'
+                       - '!'
+                       + '?'
+        `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyMessage',
+                        range: createRange(1, 13, 1, 22)
+                    },
+                    scope: 'current',
+                    range: createRange(1, 12, 1, 22),
+                },
+                rhs: {
+                    type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello world!',
+                        range: createRange(1, 25, 1, 39)
+                    },
+                    summands: [
+                        {
+                            operator: '-',
+                            value: {
+                                type: 'string',
+                                value: ' world',
+                                range: createRange(2, 25, 2, 33)
+                            }
                         },
                         {
-                            type: 'string',
-                            value: '!',
-                            range: createRange(0, 28, 0, 31)
-                        }
+                            operator: '-',
+                            value: {
+                                type: 'string',
+                                value: '!',
+                                range: createRange(3, 25, 3, 28)
+                            }
+                        },
+                        {
+                            operator: '+',
+                            value: {
+                                type: 'string',
+                                value: '?',
+                                range: createRange(4, 25, 4, 28)
+                            }
+                        },
                     ],
                 }
             }
@@ -1648,22 +1726,25 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello ',
+                        range: createRange(0, 13, 0, 21)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello ',
-                            range: createRange(0, 13, 0, 21)
+                            operator: '+',
+                            value: {
+                                type: 'evaluatedVariable',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyVar',
+                                    range: createRange(0, 25, 0, 30)
+                                },
+                                scope: 'current',
+                                range: createRange(0, 24, 0, 30),
+                            }
                         },
-                        {
-                            type: 'evaluatedVariable',
-                            name: {
-                                type: 'string',
-                                value: 'MyVar',
-                                range: createRange(0, 25, 0, 30)
-                            },
-                            scope: 'current',
-                            range: createRange(0, 24, 0, 30),
-                        }
                     ],
                 }
             }
@@ -1686,32 +1767,38 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'string',
+                        value: 'hello ',
+                        range: createRange(0, 13, 0, 21)
+                    },
                     summands: [
                         {
-                            type: 'string',
-                            value: 'hello ',
-                            range: createRange(0, 13, 0, 21)
+                            operator: '+',
+                            value: {
+                                type: 'evaluatedVariable',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyVar1',
+                                    range: createRange(0, 25, 0, 31)
+                                },
+                                scope: 'current',
+                                range: createRange(0, 24, 0, 31),
+                            }
                         },
                         {
-                            type: 'evaluatedVariable',
-                            name: {
-                                type: 'string',
-                                value: 'MyVar1',
-                                range: createRange(0, 25, 0, 31)
-                            },
-                            scope: 'current',
-                            range: createRange(0, 24, 0, 31),
+                            operator: '+',
+                            value: {
+                                type: 'evaluatedVariable',
+                                name: {
+                                    type: 'string',
+                                    value: 'MyVar2',
+                                    range: createRange(0, 35, 0, 41)
+                                },
+                                scope: 'current',
+                                range: createRange(0, 34, 0, 41),
+                            }
                         },
-                        {
-                            type: 'evaluatedVariable',
-                            name: {
-                                type: 'string',
-                                value: 'MyVar2',
-                                range: createRange(0, 35, 0, 41)
-                            },
-                            scope: 'current',
-                            range: createRange(0, 34, 0, 41),
-                        }
                     ],
                 }
             }
@@ -2062,7 +2149,7 @@ describe('parser', () => {
         `;
         assertParseResultsEqual(input, [
             {
-                type: 'variableAddition',
+                type: 'binaryOperator',
                 lhs: {
                     name: {
                         type: 'string',
@@ -2082,7 +2169,8 @@ describe('parser', () => {
                         }
                     ],
                     range: createRange(1, 21, 1, 28)
-                }
+                },
+                operator: '+',
             }
         ]);
     });
@@ -2093,7 +2181,7 @@ describe('parser', () => {
         `;
         assertParseResultsEqual(input, [
             {
-                type: 'variableAddition',
+                type: 'binaryOperator',
                 lhs: {
                     name: {
                         type: 'string',
@@ -2123,7 +2211,8 @@ describe('parser', () => {
                         }
                     ],
                     range: createRange(1, 21, 1, 30)
-                }
+                },
+                operator: '+',
             }
         ]);
     });
@@ -2146,40 +2235,43 @@ describe('parser', () => {
                 },
                 rhs: {
                     type: 'sum',
+                    first: {
+                        type: 'array',
+                        value: [
+                            {
+                                type: 'string',
+                                value: 'a',
+                                range: createRange(1, 22, 1, 25)
+                            }
+                        ],
+                        range: createRange(1, 21, 1, 26)
+                    },
                     summands: [
                         {
-                            type: 'array',
-                            value: [
-                                {
-                                    type: 'string',
-                                    value: 'a',
-                                    range: createRange(1, 22, 1, 25)
-                                }
-                            ],
-                            range: createRange(1, 21, 1, 26)
-                        },
-                        {
-                            type: 'array',
-                            value: [
-                                {
-                                    type: 'evaluatedVariable',
-                                    name: {
-                                        type: 'string',
-                                        value: 'B',
-                                        range: createRange(1, 32, 1, 33)
+                            operator: '+',
+                            value: {
+                                type: 'array',
+                                value: [
+                                    {
+                                        type: 'evaluatedVariable',
+                                        name: {
+                                            type: 'string',
+                                            value: 'B',
+                                            range: createRange(1, 32, 1, 33)
+                                        },
+                                        scope: 'current',
+                                        range: createRange(1, 31, 1, 33),
                                     },
-                                    scope: 'current',
-                                    range: createRange(1, 31, 1, 33),
-                                },
-                                {
-                                    type: 'string',
-                                    value: 'c',
-                                    range: createRange(1, 36, 1, 39)
-                                }
-                            ],
-                            range: createRange(1, 29, 1, 40)
-                        }
-                    ]
+                                    {
+                                        type: 'string',
+                                        value: 'c',
+                                        range: createRange(1, 36, 1, 39)
+                                    }
+                                ],
+                                range: createRange(1, 29, 1, 40)
+                            }
+                        },
+                    ],
                 }
             }
         ]);
