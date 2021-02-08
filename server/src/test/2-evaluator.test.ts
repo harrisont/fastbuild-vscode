@@ -885,9 +885,8 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('should fail when adding a string to a variable not in scope (current scope)', () => {
+        it('should fail when adding to a non-existent, current-scope variable', () => {
             const input = `
-                .MyMessage = 'hello'
                 {
                     .MyMessage + ' world'
                 }
@@ -897,14 +896,15 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Referencing varable "MyMessage" that is not defined in the current scope.',
-                    range: createRange(3, 20, 3, 30)
+                    range: createRange(2, 20, 2, 30)
                 }
             );
         });
 
-        it('should fail when adding a string to a variable not in scope (parent scope)', () => {
+        it('should fail when adding to a non-existent, parent-scope variable', () => {
             const input = `
                 {
+                    .MyMessage = 'hello'
                     ^MyMessage + ' world'
                 }
             `;
@@ -913,9 +913,41 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Referencing variable "MyMessage" in a parent scope that is not defined in any parent scope.',
-                    range: createRange(2, 20, 2, 30)
+                    range: createRange(3, 20, 3, 30)
                 }
             );
+        });
+
+        it('adding to a current-scope non-existant, parent-scope existant, current-scope variable defines it in the current scope to be the sum', () => {
+            const input = `
+                .MyMessage = 'hello'
+                {
+                    .MyMessage + ' world'
+                    Print( .MyMessage )
+                }
+                Print( .MyMessage )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world',
+                'hello',
+            ]);
+        });
+
+        it('adding to a current-scope non-existant, parent-scope existant, current-scope struct variable defines it in the current scope to be the sum', () => {
+            const input = `
+                .MyMessage = 'hello'
+                .MyStruct = [
+                    .MyMessage + ' world'
+                    Print( .MyMessage )
+                ]
+                Print( .MyMessage )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello',
+                'hello world',
+                'hello',
+            ]);
         });
 
         it('should work on adding an item to an array', () => {
