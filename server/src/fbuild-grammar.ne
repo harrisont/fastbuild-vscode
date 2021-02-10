@@ -33,7 +33,7 @@ const lexer = moo.states({
         operatorAddition: '+',
         operatorSubtraction: '-',
 
-        arrayOrStructItemSeparator: ',',
+        arrayItemSeparator: ',',
         structStart: '[',
         structEnd: ']',
         functionParametersStart: '(',
@@ -508,14 +508,14 @@ arrayContents ->
 
 nonEmptyArrayContents ->
     # Single item. Optional trailing item separator (",").
-    optionalWhitespaceOrNewline rValue                                                                              {% ([space1, [content, context]                           ]) => {                                      return [[content], context]; } %}
-  | optionalWhitespaceOrNewline rValue whitespaceOrNewline                                                          {% ([space1, [content, context], space2                   ]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
-  | optionalWhitespaceOrNewline rValue                     %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context],         separator, space3]) => { callOnNextToken(context, separator); return [[content], context]; } %}
-  | optionalWhitespaceOrNewline rValue whitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context], space2, separator, space3]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
+    optionalWhitespaceOrNewline rValue                                                                      {% ([space1, [content, context]                           ]) => {                                      return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rValue whitespaceOrNewline                                                  {% ([space1, [content, context], space2                   ]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rValue                     %arrayItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context],         separator, space3]) => { callOnNextToken(context, separator); return [[content], context]; } %}
+  | optionalWhitespaceOrNewline rValue whitespaceOrNewline %arrayItemSeparator optionalWhitespaceOrNewline  {% ([space1, [content, context], space2, separator, space3]) => { callOnNextToken(context, space2);    return [[content], context]; } %}
     # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
-  | optionalWhitespaceOrNewline rValue %optionalWhitespaceAndMandatoryNewline                             nonEmptyArrayContents  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
-  | optionalWhitespaceOrNewline rValue                                        %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[first, ...rest], restContext]; } %}
-  | optionalWhitespaceOrNewline rValue whitespaceOrNewline                    %arrayOrStructItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline rValue %optionalWhitespaceAndMandatoryNewline                     nonEmptyArrayContents  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline rValue                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[first, ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline rValue whitespaceOrNewline                    %arrayItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
     # Single comment.
   | optionalWhitespaceOrNewline %comment optionalWhitespaceOrNewline                                   {% () => [[], new ParseContext()] %}
     # Comment and then another item(s).
@@ -536,15 +536,11 @@ structContents ->
   | nonEmptyStructStatements  {% ([statementsWithContext]) => statementsWithContext %}
 
 nonEmptyStructStatements ->
-    # Single item. Optional trailing item separator (",").
-    optionalWhitespaceOrNewline statementAndOptionalComment                                                                              {% ([space1, [statement, context]                           ]) => {                                      return [[statement], context]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline                                                          {% ([space1, [statement, context], space2                   ]) => { callOnNextToken(context, space2);    return [[statement], context]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment                     %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [statement, context],         separator, space3]) => { callOnNextToken(context, separator); return [[statement], context]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline %arrayOrStructItemSeparator optionalWhitespaceOrNewline  {% ([space1, [statement, context], space2, separator, space3]) => { callOnNextToken(context, space2);    return [[statement], context]; } %}
-    # Item and then another item(s). The items must be separated by a newline and/or an item separator (",").
-  | optionalWhitespaceOrNewline statementAndOptionalComment %optionalWhitespaceAndMandatoryNewline                             nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2,            [restStatements, restContext]]) => { callOnNextToken(firstContext, space2);    return [[firstStatement, ...restStatements], restContext]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment                                        %arrayOrStructItemSeparator nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext],         separator, [restStatements, restContext]]) => { callOnNextToken(firstContext, separator); return [[firstStatement, ...restStatements], restContext]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline                    %arrayOrStructItemSeparator nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, separator, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2);    return [[firstStatement, ...restStatements], restContext]; } %}
+    # Single item.
+    optionalWhitespaceOrNewline statementAndOptionalComment                      {% ([space1, [statement, context]        ]) => {                                   return [[statement], context]; } %}
+  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline  {% ([space1, [statement, context], space2]) => { callOnNextToken(context, space2); return [[statement], context]; } %}
+    # Item and then another item(s), separated by a newline.
+  | optionalWhitespaceOrNewline statementAndOptionalComment %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2); return [[firstStatement, ...restStatements], restContext]; } %}
     # Single comment.
   | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline {% () => [[], new ParseContext()] %}
     # Comment and then another item(s).

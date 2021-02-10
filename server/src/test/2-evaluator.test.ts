@@ -1018,15 +1018,21 @@ describe('evaluator', () => {
 
         it('should work on adding a struct to a struct', () => {
             const input = `
-                .Struct1 = [ .A=0, .B=2 ]
-                .Struct2 = [ .A=1, .C=3 ]
+                .Struct1 = [
+                    .A=0
+                    .B=2
+                ]
+                .Struct2 = [
+                    .A=1
+                    .C=3
+                ]
                 .MyVar = .Struct1 + .Struct2
                 .Result = .MyVar
             `;
-            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(1, 29, 1, 31) };
-            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(1, 35, 1, 37) };
-            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(2, 29, 2, 31) };
-            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(2, 35, 2, 37) };
+            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22) };
+            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22) };
+            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22) };
+            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22) };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     A: new StructMember(0, struct1ADefinition),

@@ -61,7 +61,6 @@ TODO
 ### TODO
 
 Fix bugs:
-* Disallow multiple struct members on a line. Similarly, disallow `,` after struct member.
 * Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
 
 Support full FASTBuild syntax:

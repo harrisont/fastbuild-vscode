@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import { create } from 'domain';
 
 import {
     parse,
@@ -22,6 +21,17 @@ function createRange(startLine: number, startCharacter: number, endLine: number,
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
     const result = parse(input, { enableDiagnostics: true} );
     assert.deepStrictEqual(result.statements, expectedResult);
+}
+
+function assertParseError(input: string, expectedErrorMessageStart: string): void {
+    assert.throws(
+        () => parse(input, { enableDiagnostics: false} ),
+        error => {
+            assert.strictEqual(error.name, 'ParseError');
+            assert(error.message.startsWith(expectedErrorMessageStart), `Error message <${error.message}> should start with: <${expectedErrorMessageStart}>`);
+            return true;
+        }
+    );
 }
 
 describe('parser', () => {
@@ -553,6 +563,33 @@ describe('parser', () => {
         ]);
     });
 
+    it('should work on assigning an empty struct with the starting brace on the next line', () => {
+        const input = `
+            .MyVar =
+            [
+            ]
+            `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
+                    scope: 'current',
+                    range: createRange(1, 12, 1, 18),
+                },
+                rhs: {
+                    type: 'struct',
+                    statements: [],
+                    range: createRange(2, 12, 3, 13),
+                }
+            }
+        ]);
+    });
+
     it('should work on assigning a struct with a single item', () => {
         const input = `
             .MyVar = [
@@ -679,87 +716,6 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a struct with commas', () => {
-        const input = `
-            .MyVar = [
-                .MyBool = true,
-                .MyInt = 123,
-                .MyStr = 'Hello world!'
-            ]
-            `;
-        assertParseResultsEqual(input, [
-            {
-                type: 'variableDefinition',
-                lhs: {
-                    name: {
-                        type: 'string',
-                        value: 'MyVar',
-                        range: createRange(1, 13, 1, 18)
-                    },
-                    scope: 'current',
-                    range: createRange(1, 12, 1, 18),
-                },
-                rhs: {
-                    type: 'struct',
-                    statements: [
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'MyBool',
-                                    range: createRange(2, 17, 2, 23)
-                                },
-                                scope: 'current',
-                                range: createRange(2, 16, 2, 23),
-                            },
-                            rhs: {
-                                type: 'boolean',
-                                value: true,
-                                range: createRange(2, 26, 2, 30)
-                            }
-                        },
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'MyInt',
-                                    range: createRange(3, 17, 3, 22)
-                                },
-                                scope: 'current',
-                                range: createRange(3, 16, 3, 22),
-                            },
-                            rhs: {
-                                type: 'integer',
-                                value: 123,
-                                range: createRange(3, 25, 3, 28)
-                            }
-                        },
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'MyStr',
-                                    range: createRange(4, 17, 4, 22)
-                                },
-                                scope: 'current',
-                                range: createRange(4, 16, 4, 22),
-                            },
-                            rhs: {
-                                type: 'string',
-                                value: 'Hello world!',
-                                range: createRange(4, 25, 4, 39),
-                            }
-                        },
-                    ],
-                    range: createRange(1, 21, 5, 13),
-                }
-            }
-        ]);
-    });
-
     it('should work on assigning a struct with comments', () => {
         const input = `
             .MyVar = [
@@ -825,10 +781,20 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a struct with a single item with a trailing comma', () => {
+    it('should error on using commas to separate struct items', () => {
+        const input = `.MyVar = [ .A=1, .B=2 ]`;
+        const expectedErrorMessageStart = `Error: Syntax error at line 1 col 16:
+
+  .MyVar = [ .A=1,
+                 ^
+Unexpected arrayItemSeparator token: ",".`;
+        assertParseError(input, expectedErrorMessageStart);
+    });
+
+    it('should work on assigning a struct with one evaluated variable', () => {
         const input = `
             .MyVar = [
-                .MyBool = true,
+                .A = .B
             ]
             `;
         assertParseResultsEqual(input, [
@@ -851,16 +817,21 @@ describe('parser', () => {
                             lhs: {
                                 name: {
                                     type: 'string',
-                                    value: 'MyBool',
-                                    range: createRange(2, 17, 2, 23)
+                                    value: 'A',
+                                    range: createRange(2, 17, 2, 18)
                                 },
                                 scope: 'current',
-                                range: createRange(2, 16, 2, 23),
+                                range: createRange(2, 16, 2, 18),
                             },
                             rhs: {
-                                type: 'boolean',
-                                value: true,
-                                range: createRange(2, 26, 2, 30)
+                                type: 'evaluatedVariable',
+                                name: {
+                                    type: 'string',
+                                    value: 'B',
+                                    range: createRange(2, 22, 2, 23)
+                                },
+                                scope: 'current',
+                                range: createRange(2, 21, 2, 23),
                             }
                         }
                     ],
@@ -870,112 +841,13 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a struct on a single line with commas', () => {
-        const input = `.MyVar = [.A=1, .B=2]`;
-        assertParseResultsEqual(input, [
-            {
-                type: 'variableDefinition',
-                lhs: {
-                    name: {
-                        type: 'string',
-                        value: 'MyVar',
-                        range: createRange(0, 1, 0, 6)
-                    },
-                    scope: 'current',
-                    range: createRange(0, 0, 0, 6),
-                },
-                rhs: {
-                    type: 'struct',
-                    statements: [
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'A',
-                                    range: createRange(0, 11, 0, 12)
-                                },
-                                scope: 'current',
-                                range: createRange(0, 10, 0, 12),
-                            },
-                            rhs: {
-                                type: 'integer',
-                                value: 1,
-                                range: createRange(0, 13, 0, 14)
-                            }
-                        },
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'B',
-                                    range: createRange(0, 17, 0, 18)
-                                },
-                                scope: 'current',
-                                range: createRange(0, 16, 0, 18),
-                            },
-                            rhs: {
-                                type: 'integer',
-                                value: 2,
-                                range: createRange(0, 19, 0, 20)
-                            }
-                        }
-                    ],
-                    range: createRange(0, 9, 0, 21),
-                }
-            }
-        ]);
-    });
-
-    it('should work on assigning a struct with one evaluated variable', () => {
-        const input = `.MyVar = [.A=.B]`;
-        assertParseResultsEqual(input, [
-            {
-                type: 'variableDefinition',
-                lhs: {
-                    name: {
-                        type: 'string',
-                        value: 'MyVar',
-                        range: createRange(0, 1, 0, 6)
-                    },
-                    scope: 'current',
-                    range: createRange(0, 0, 0, 6),
-                },
-                rhs: {
-                    type: 'struct',
-                    statements: [
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'A',
-                                    range: createRange(0, 11, 0, 12)
-                                },
-                                scope: 'current',
-                                range: createRange(0, 10, 0, 12),
-                            },
-                            rhs: {
-                                type: 'evaluatedVariable',
-                                name: {
-                                    type: 'string',
-                                    value: 'B',
-                                    range: createRange(0, 14, 0, 15)
-                                },
-                                scope: 'current',
-                                range: createRange(0, 13, 0, 15),
-                            }
-                        }
-                    ],
-                    range: createRange(0, 9, 0, 16),
-                }
-            }
-        ]);
-    });
-
     it('should work on assigning a struct with multiple evaluated variables', () => {
-        const input = `.MyVar = [.A=.B, .C=.D]`;
+        const input = `
+            .MyVar = [
+                .A = .B
+                .C = .D
+            ]
+            `;
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
@@ -983,10 +855,10 @@ describe('parser', () => {
                     name: {
                         type: 'string',
                         value: 'MyVar',
-                        range: createRange(0, 1, 0, 6)
+                        range: createRange(1, 13, 1, 18)
                     },
                     scope: 'current',
-                    range: createRange(0, 0, 0, 6),
+                    range: createRange(1, 12, 1, 18),
                 },
                 rhs: {
                     type: 'struct',
@@ -997,20 +869,20 @@ describe('parser', () => {
                                 name: {
                                     type: 'string',
                                     value: 'A',
-                                    range: createRange(0, 11, 0, 12)
+                                    range: createRange(2, 17, 2, 18)
                                 },
                                 scope: 'current',
-                                range: createRange(0, 10, 0, 12),
+                                range: createRange(2, 16, 2, 18),
                             },
                             rhs: {
                                 type: 'evaluatedVariable',
                                 name: {
                                     type: 'string',
                                     value: 'B',
-                                    range: createRange(0, 14, 0, 15)
+                                    range: createRange(2, 22, 2, 23)
                                 },
                                 scope: 'current',
-                                range: createRange(0, 13, 0, 15),
+                                range: createRange(2, 21, 2, 23),
                             }
                         },
                         {
@@ -1019,24 +891,24 @@ describe('parser', () => {
                                 name: {
                                     type: 'string',
                                     value: 'C',
-                                    range: createRange(0, 18, 0, 19)
+                                    range: createRange(3, 17, 3, 18)
                                 },
                                 scope: 'current',
-                                range: createRange(0, 17, 0, 19),
+                                range: createRange(3, 16, 3, 18),
                             },
                             rhs: {
                                 type: 'evaluatedVariable',
                                 name: {
                                     type: 'string',
                                     value: 'D',
-                                    range: createRange(0, 21, 0, 22)
+                                    range: createRange(3, 22, 3, 23)
                                 },
                                 scope: 'current',
-                                range: createRange(0, 20, 0, 22),
+                                range: createRange(3, 21, 3, 23),
                             }
                         }
                     ],
-                    range: createRange(0, 9, 0, 23),
+                    range: createRange(1, 21, 4, 13),
                 }
             }
         ]);
