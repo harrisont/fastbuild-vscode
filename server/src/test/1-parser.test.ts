@@ -785,11 +785,7 @@ describe('parser', () => {
 
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
-        const expectedErrorMessageStart = `Syntax error at line 1 col 16:
-
-  .MyVar = [ .A=1,
-                 ^
-Unexpected arrayItemSeparator token: ",".`;
+        const expectedErrorMessageStart = `Syntax error: Unexpected arrayItemSeparator token: ",".`;
         assertParseSyntaxError(input, expectedErrorMessageStart, 0, 15);
     });
 

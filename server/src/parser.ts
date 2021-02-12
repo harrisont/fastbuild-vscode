@@ -102,12 +102,17 @@ export function parse(input: string, options: ParseOptions): ParseData {
         //             ^
         //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
         //     ...
-        const match = error.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):/);
+        const match = error.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n.+\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
         if (match !== null) {
             // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
             const line = parseInt(match[1]) - 1;
             const character = parseInt(match[2]) - 1;
             const position: SourcePosition = { line, character };
+        
+            const errorReason: string = match[3];
+            const expected: string = match[4];
+            error.message = `Syntax error: ${errorReason}\nInstead, I was expecting to see one of the following:\n${expected}`;
+        
             throw new ParseSyntaxError(error.message, position);
         } else {
             // We were unable to parse the location from the error, so use the whole document as the error range.
