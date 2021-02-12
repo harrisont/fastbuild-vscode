@@ -23,12 +23,14 @@ function assertParseResultsEqual(input: string, expectedResult: any[]): void {
     assert.deepStrictEqual(result.statements, expectedResult);
 }
 
-function assertParseError(input: string, expectedErrorMessageStart: string): void {
+function assertParseSyntaxError(input: string, expectedErrorMessageStart: string, line: number, character: number): void {
     assert.throws(
         () => parse(input, { enableDiagnostics: false} ),
         error => {
-            assert.strictEqual(error.name, 'ParseError');
+            assert.strictEqual(error.name, 'ParseSyntaxError');
             assert(error.message.startsWith(expectedErrorMessageStart), `Error message <${error.message}> should start with: <${expectedErrorMessageStart}>`);
+            assert.strictEqual(error.position.line, line);
+            assert.strictEqual(error.position.character, character);
             return true;
         }
     );
@@ -783,12 +785,12 @@ describe('parser', () => {
 
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
-        const expectedErrorMessageStart = `Error: Syntax error at line 1 col 16:
+        const expectedErrorMessageStart = `Syntax error at line 1 col 16:
 
   .MyVar = [ .A=1,
                  ^
 Unexpected arrayItemSeparator token: ",".`;
-        assertParseError(input, expectedErrorMessageStart);
+        assertParseSyntaxError(input, expectedErrorMessageStart, 0, 15);
     });
 
     it('should work on assigning a struct with one evaluated variable', () => {

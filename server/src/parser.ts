@@ -24,7 +24,7 @@ export type Statement = Record<string, any>;
 export class ParseError extends Error {
     fileUri: UriStr = '';
 
-    constructor(message: string, readonly isNumParsesError=false) {
+    constructor(readonly message: string, readonly isNumParsesError=false) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseError.name;
@@ -32,6 +32,22 @@ export class ParseError extends Error {
 
     setFile(uri: UriStr): void {
         this.fileUri = uri;
+    }
+}
+
+export class ParseSyntaxError extends ParseError {
+    constructor(message: string, readonly position: SourcePosition) {
+        super(message);
+        Object.setPrototypeOf(this, new.target.prototype);
+        this.name = ParseSyntaxError.name;
+    }
+}
+
+export class ParseNumParsesError extends ParseError {
+    constructor(message: string) {
+        super(message);
+        Object.setPrototypeOf(this, new.target.prototype);
+        this.name = ParseNumParsesError.name;
     }
 }
 
@@ -77,7 +93,26 @@ export function parse(input: string, options: ParseOptions): ParseData {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw new ParseError(error);
+
+        // Example error message:
+        //
+        //     Syntax error at line 6 col 7:
+        //     
+        //       Print()
+        //             ^
+        //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
+        //     ...
+        const match = error.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):/);
+        if (match !== null) {
+            // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
+            const line = parseInt(match[1]) - 1;
+            const character = parseInt(match[2]) - 1;
+            const position: SourcePosition = { line, character };
+            throw new ParseSyntaxError(error.message, position);
+        } else {
+            // We were unable to parse the location from the error, so use the whole document as the error range.
+            throw new ParseError(`Failed to parse error location from ParseError: ${error.message}`);
+        }
     }
 
     const numResults = parser.results.length;
@@ -85,7 +120,7 @@ export function parse(input: string, options: ParseOptions): ParseData {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw new ParseError(`Should parse to exactly 1 result, but parsed to ${numResults}`, true /*isNumParsesError*/);
+        throw new ParseNumParsesError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
     }
     const statements = parser.results[0];
     return {

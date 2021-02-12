@@ -5,12 +5,13 @@ import {
 } from 'vscode-languageserver';
 
 import {
-    Position,
     Range,
 } from 'vscode-languageserver-types';
 
 import {
-    ParseError
+    ParseError,
+    ParseSyntaxError,
+    ParseNumParsesError,
 } from '../parser';
 
 import {
@@ -36,15 +37,11 @@ function createDiagnosticError(message: string, range: Range): Diagnostic {
 }
 
 function createDiagnosticFromParseError(error: ParseError): Diagnostic {
-    let match: RegExpMatchArray | null = null;
-    if (error.isNumParsesError) {
+    if (error instanceof ParseNumParsesError) {
         // We don't know the location that causes the wrong number of parses, so use the whole document as the error range.
         return createDiagnosticError(error.message, createWholeDocumentRange());
-    } else if ((match = error.message.match(/Error: (?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):/)) !== null) {
-        // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
-        const startLine = parseInt(match[1]) - 1;
-        const startCharacter = parseInt(match[2]) - 1;
-        const rangeStart = Position.create(startLine, startCharacter);
+    } else if (error instanceof ParseSyntaxError) {
+        const rangeStart = error.position;
         // Use the same end as the start in order to have VS Code auto-match the word.
         const range = Range.create(rangeStart, rangeStart);
         return createDiagnosticError(error.message, range);
