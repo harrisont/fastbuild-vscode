@@ -2,6 +2,19 @@
 
 Contains a language server and Visual Studio Code client for the [FASTBuild](https://www.fastbuild.org/) language.
 
+  * [Functionality](#functionality)
+  * [Limitations](#limitations)
+  * [Compatibility](#compatibility)
+  * [Installing the Visual Studio Code Extension](#installing-the-visual-studio-code-extension)
+  * [Contributing](#contributing)
+    * [Running](#running)
+    * [Testing](#testing)
+    * [Releasing the Visual Studio Code Extension](#releasing-the-visual-studio-code-extension)
+    * [Implementation Notes](#implementation-notes)
+    * [TODO](#todo)
+
+## Functionality
+
 This provides the following functionality:
 * Go to definition of a variable.
 * Find references of a variable.
@@ -76,3 +89,7 @@ Add more language server provider features:
 * Support "go to definition" and "find references" for aliases.
 * Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
 * Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
+
+Improve docs:
+* Update the [Implementation Notes](#implementation-notes) section with a high-level architecture (lexer, parser, evaluator).
+* Update the [Implementation Notes](#implementation-notes) section with a file-layout overview.
