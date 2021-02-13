@@ -136,11 +136,6 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
     let evaluatedData = new EvaluatedData();
     let rootFbuildUriStr = '';
     try {
-        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
-        if (maybeChangedDocumentParseData.hasError) {
-            throw maybeChangedDocumentParseData.getError();
-        }
-    
         // We need to start evaluating from the root FASTBuild file, not from the changed one.
         // This is because changes to a file can affect other files.
         // A future optimization would be to support incremental evaluation.
@@ -150,6 +145,11 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
             throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`);
         }
         rootFbuildUriStr = rootFbuildUri.toString();
+
+        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
+        if (maybeChangedDocumentParseData.hasError) {
+            throw maybeChangedDocumentParseData.getError();
+        }
 
         // Clear all diagnostics for this root, since we don't know which will no longer applly after the change.
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
