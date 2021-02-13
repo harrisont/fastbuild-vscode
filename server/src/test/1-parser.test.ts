@@ -1,22 +1,9 @@
 import * as assert from 'assert';
 
 import {
+    createRange,
     parse,
-    ParseSourceRange,
 } from '../parser';
-
-function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): ParseSourceRange {
-    return {
-        start: {
-            line: startLine,
-            character: startCharacter
-        },
-        end: {
-            line: endLine,
-            character: endCharacter
-        }
-    };
-}
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
     const result = parse(input, { enableDiagnostics: true} );

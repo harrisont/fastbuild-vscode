@@ -36,27 +36,12 @@ function createDiagnosticError(message: string, range: Range): Diagnostic {
     };
 }
 
-function createDiagnosticFromParseError(error: ParseError): Diagnostic {
-    if (error instanceof ParseNumParsesError) {
-        // We don't know the location that causes the wrong number of parses, so use the whole document as the error range.
-        return createDiagnosticError(error.message, createWholeDocumentRange());
-    } else if (error instanceof ParseSyntaxError) {
-        const rangeStart = error.position;
-        // Use the same end as the start in order to have VS Code auto-match the word.
-        const range = Range.create(rangeStart, rangeStart);
-        return createDiagnosticError(error.message, range);
-    } else {
-        // We were unable to parse the location from the error, so use the whole document as the error range.
-        return createDiagnosticError(`Failed to parse error location from ParseError: ${error}`, createWholeDocumentRange());
-    }
-}
-
 export class DiagnosticProvider {
     hasDiagnosticRelatedInformationCapability = false;
     readonly _documentRootToDocumentsWithDiagnosticsMap = new Map<UriStr, Set<UriStr>>();
 
     addParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
-        const diagnostic = createDiagnosticFromParseError(error);
+        const diagnostic = createDiagnosticError(error.message, error.range);
         const diagnostics = [diagnostic];
         this._addDiagnostics(rootUri, error.fileUri, diagnostics, connection);
     }
