@@ -2,12 +2,12 @@ import * as nearley from 'nearley';
 import fbuildGrammar from './fbuild-grammar';
 import { UriStr } from './parseDataProvider';
 
+// Certain tokens are optional, so they should not be listed as expected.
 const IGNORED_EXPECTED_TOKENS = new Set<string>([
-    'whitespace',
-    'whitespaceOrNewline',
     'optionalWhitespaceOrNewline',
     'comment',
     'optionalComment',
+    'startTemplatedVariable'
 ]);
 
 const LEXER_TOKEN_NAME_TO_VALUE = new Map<string, string>([
