@@ -87,26 +87,26 @@ const lexer = moo.states({
     },
     singleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
-        stringEnd: { match: "'", pop: 1 },
+        singleQuotedStringEnd: { match: "'", pop: 1 },
         // Handle escaping ', $, ^ with ^
         stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
     },
     doubleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
-        stringEnd: { match: '"', pop: 1 },
+        doubleQuotedStringEnd: { match: '"', pop: 1 },
         // Handle escaping ", $, ^ with ^
         stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
     },
     // Same as "...ThenPop" but instead of popping, goes to "main".
     singleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
-        stringEnd: { match: "'", next: 'main' },
+        singleQuotedStringEnd: { match: "'", next: 'main' },
         // Handle escaping ', $, ^ with ^
         stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
     },
     doubleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
-        stringEnd: { match: '"', next: 'main' },
+        doubleQuotedStringEnd: { match: '"', next: 'main' },
         // Handle escaping ", $, ^ with ^
         stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
     },
@@ -427,12 +427,12 @@ function createStringOrStringExpression(parts: any[], startToken: Token, endToke
 %}
 
 stringLiteral ->
-    %singleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
-  | %doubleQuotedStringStart %stringLiteral %stringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
+    %singleQuotedStringStart %stringLiteral %singleQuotedStringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
+  | %doubleQuotedStringStart %stringLiteral %doubleQuotedStringEnd  {% ([quoteStart, content, quoteEnd]) => createString(unescapeString(content.value), createRangeEndInclusive(quoteStart, quoteEnd)) %}
 
 string ->
-    %singleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
-  | %doubleQuotedStringStart stringContents %stringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
+    %singleQuotedStringStart stringContents %singleQuotedStringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
+  | %doubleQuotedStringStart stringContents %doubleQuotedStringEnd  {% ([quoteStart, content, quoteEnd]) => createStringOrStringExpression(content, quoteStart, quoteEnd) %}
 
 # Generates an array of either string or evaluatedVariables: (string | evaluatedVariable)[]
 stringContents ->

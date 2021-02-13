@@ -2,6 +2,90 @@ import * as nearley from 'nearley';
 import fbuildGrammar from './fbuild-grammar';
 import { UriStr } from './parseDataProvider';
 
+const IGNORED_EXPECTED_TOKENS = new Set<string>([
+    'whitespace',
+    'whitespaceOrNewline',
+    'optionalWhitespaceOrNewline',
+    'comment',
+    'optionalComment',
+]);
+
+const LEXER_TOKEN_NAME_TO_VALUE = new Map<string, string>([
+    ['whitespace', ' '],
+    ['whitespaceOrNewline', ' '],
+    ['optionalWhitespaceAndMandatoryNewline', '\\n'],
+    ['comment', '// My informative comment'],
+    ['scopeOrArrayStart', '{'],
+    ['scopeOrArrayEnd', '}'],
+    ['integer', '123'],
+    ['singleQuotedStringStart', "'"],
+    ['singleQuotedStringEnd', "'"],
+    ['doubleQuotedStringStart', '"'],
+    ['doubleQuotedStringEnd', '"'],
+    ['startTemplatedVariable', '$'],
+    ['endTemplatedVariable', '$'],
+    ['stringLiteral', 'abc'],
+    ['variableReferenceCurrentScope', '.'],
+    ['variableReferenceParentScope', '^'],
+    ['variableName', 'MyVarName'],
+    ['operatorEqual', '=='],
+    ['operatorNotEqual', '!='],
+    ['operatorLessOrEqual', '<='],
+    ['operatorLess', '<'],
+    ['operatorGreaterOrEqual', '>='],
+    ['operatorGreater', '>'],
+    ['operatorNot', '!'],
+    ['operatorAssignment', '='],
+    ['operatorAddition', '+'],
+    ['operatorSubtraction', '-'],
+    ['arrayItemSeparator', ','],
+    ['structStart', '['],
+    ['structEnd', ']'],
+    ['functionParametersStart', '('],
+    ['functionParametersEnd', ')'],
+    ['keywordTrue', 'true'],
+    ['keywordFalse', 'false'],
+    ['keywordIn', 'in'],
+    ['keywordNot', 'not'],
+    ['keywordAlias', 'Alias'],
+    ['keywordCompiler', 'Compiler'],
+    ['keywordCopyDir', 'CopyDir'],
+    ['keywordCopy', 'Copy'],
+    ['keywordCSAssembly', 'CSAssembly'],
+    ['keywordDLL', 'DLL'],
+    ['keywordError', 'Error'],
+    ['keywordExecutable', 'Executable'],
+    ['keywordExec', 'Exec'],
+    ['keywordForEach', 'ForEach'],
+    ['keywordIf', 'If'],
+    ['keywordLibrary', 'Library'],
+    ['keywordObjectList', 'ObjectList'],
+    ['keywordPrint', 'Print'],
+    ['keywordRemoveDir', 'RemoveDir'],
+    ['keywordSettings', 'Settings'],
+    ['keywordTest', 'Test'],
+    ['keywordTextFile', 'TextFile'],
+    ['keywordUnity', 'Unity'],
+    ['keywordUsing', 'Using'],
+    ['keywordVCXProject', 'VCXProject'],
+    ['keywordVSProjectExternal', 'VSProjectExternal'],
+    ['keywordVSSolution', 'VSSolution'],
+    ['keywordXCodeProject', 'XCodeProject'],
+    ['directiveInclude', '#include'],
+    ['directiveOnce', '#once'],
+    ['directiveIf', '#if'],
+    ['directiveElse', '#else'],
+    ['directiveEndIf', '#endif'],
+    ['directiveDefine', '#define'],
+    ['directiveUndefine', '#undef'],
+    ['directiveImport', '#import'],
+    ['operatorNot', '!'],
+    ['operatorAnd', '&&'],
+    ['operatorOr', '||'],
+    ['parametersStart', '('],
+    ['parametersEnd', ')'],
+]);
+
 export interface SourcePosition {
     line: number;
     character: number;
@@ -111,8 +195,21 @@ export function parse(input: string, options: ParseOptions): ParseData {
         
             const errorReason: string = match[3];
             const expected: string = match[4];
-            error.message = `Syntax error: ${errorReason}\nInstead, I was expecting to see one of the following:\n${expected}`;
-        
+            const expectedTokens = new Set<string>();
+            // Until string.prototype.matchAll is available, use string.prototype.replace.
+            expected.replace(
+                /A (.+) token based on:(\n {4}.+)+/g,
+                function(matchedStr: string, expectedToken: string) {
+                    expectedTokens.add(expectedToken);
+                    return '';
+                }
+            );
+            const filteredExpectedTokens = [...expectedTokens.values()].filter(token => !IGNORED_EXPECTED_TOKENS.has(token));
+            const sortedFilteredExpectedTokens = filteredExpectedTokens.sort();
+            error.message = `Syntax error: ${errorReason}\n`
+                + 'Instead, I was expecting to see one of the following:\n'
+                + sortedFilteredExpectedTokens.map(token => ` • ${token} ("${LEXER_TOKEN_NAME_TO_VALUE.get(token)}")`).join('\n');
+
             throw new ParseSyntaxError(error.message, position);
         } else {
             // We were unable to parse the location from the error, so use the whole document as the error range.
