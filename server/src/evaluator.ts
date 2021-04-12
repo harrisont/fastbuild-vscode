@@ -1439,7 +1439,12 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             if (evaluatedAndMaybeError.error !== null) {
                 return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
             }
-            result.value.push(evaluated.value);
+            
+            if (evaluated.value instanceof Array) {
+                result.value.push(...evaluated.value);
+            } else {
+                result.value.push(evaluated.value);
+            }
         }
         return new DataAndMaybeError(result);
     } else if (isParsedBoolean(rValue) || isParsedInteger(rValue)) {

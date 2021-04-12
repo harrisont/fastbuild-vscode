@@ -379,6 +379,26 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('an array in an array should expand its items', () => {
+            const input = `
+                .Parts1 = { 'thing1', 'thing2' }
+                .Parts2 = 'thing3'
+                .Parts3 = { 'thing4' }
+                .Combined = {
+                    .Parts1
+                    .Parts2
+                    .Parts3
+                }
+                .Copy = .Combined
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['thing1', 'thing2'],
+                'thing3',
+                ['thing4'],
+                ['thing1', 'thing2', 'thing3', 'thing4'],
+            ]);
+        });
+
         it('should evaluate an empty struct', () => {
             const input = `
                 .MyVar = []
