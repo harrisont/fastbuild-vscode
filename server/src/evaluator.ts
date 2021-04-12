@@ -1439,7 +1439,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             if (evaluatedAndMaybeError.error !== null) {
                 return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
             }
-            
+
             if (evaluated.value instanceof Array) {
                 result.value.push(...evaluated.value);
             } else {
@@ -1669,8 +1669,9 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
     } else if (typeof existingValue === 'string') {
         if (typeof valueToSubtract === 'string') {
             // Remove all substrings of |valueToSubtract|.
-            // This code can be refactored to use replaceAll once on Node version 15+.
-            existingValue = existingValue.replace(new RegExp(valueToSubtract, 'g'), '');
+            // This code can be refactored to use replaceAll once on Node version 15+: existingValue.replaceAll(valueToSubtract, '')
+            const escapedValueToSubtract = valueToSubtract.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
+            existingValue = existingValue.replace(new RegExp(escapedValueToSubtract, 'g'), '');
         } else {
             return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from a String. Can only subtract a String.`));
         }

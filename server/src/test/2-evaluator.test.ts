@@ -1271,6 +1271,18 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('Substring with special (regex) characters removal', () => {
+            const input = `
+                .String = 'Java C++ Python'
+                .String - 'C++'
+                Print( .String )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'Java C++ Python',
+                'Java  Python',
+            ]);
+        });
+
         it('Substring removal using variable', () => {
             const input = `
                 .String = 'Good Bad Good'
