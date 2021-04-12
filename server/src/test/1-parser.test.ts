@@ -3,6 +3,7 @@ import * as assert from 'assert';
 import {
     createRange,
     parse,
+    ParseSourceRange,
 } from '../parser';
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
@@ -10,14 +11,19 @@ function assertParseResultsEqual(input: string, expectedResult: any[]): void {
     assert.deepStrictEqual(result.statements, expectedResult);
 }
 
-function assertParseSyntaxError(input: string, expectedErrorMessageStart: string, line: number, character: number): void {
+function assertInputsGenerateSameParseResult(input1: string, input2: string): void {
+    const result1 = parse(input1, { enableDiagnostics: true} );
+    const result2 = parse(input2, { enableDiagnostics: true} );
+    assert.deepStrictEqual(result1.statements, result2.statements);
+}
+
+function assertParseSyntaxError(input: string, expectedErrorMessageStart: string, range: ParseSourceRange): void {
     assert.throws(
         () => parse(input, { enableDiagnostics: false} ),
         error => {
             assert.strictEqual(error.name, 'ParseSyntaxError');
             assert(error.message.startsWith(expectedErrorMessageStart), `Error message <${error.message}> should start with: <${expectedErrorMessageStart}>`);
-            assert.strictEqual(error.position.line, line);
-            assert.strictEqual(error.position.character, character);
+            assert.deepStrictEqual(error.range, range);
             return true;
         }
     );
@@ -155,6 +161,70 @@ describe('parser', () => {
                 }
             }
         ]);
+    });
+
+    it('should work on assigning an integer across multiple lines, with comments (spaces before comments)', () => {
+        const withComments = `
+            .MyVar // Comment 1
+
+                // Comment 2
+                // Comment 3
+                =
+                
+                // Comment 4
+
+                // Comment 5
+                123 // Comment 6
+                // Comment 7
+                // Comment 8
+        `;
+        const withoutComments = `
+            .MyVar
+
+
+
+                =
+
+
+
+            
+                123
+
+
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
+    });
+
+    it('should work on assigning an integer across multiple lines, with comments (no spaces before comments)', () => {
+        const withComments = `
+            .MyVar// Comment 1
+
+// Comment 2
+// Comment 3
+                =
+                
+// Comment 4
+
+// Comment 5
+                123// Comment 6
+// Comment 7
+// Comment 8
+        `;
+        const withoutComments = `
+            .MyVar
+
+
+
+                =
+
+
+
+            
+                123
+
+
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
     });
 
     it('should work on assigning true', () => {
@@ -705,75 +775,34 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a struct with comments', () => {
-        const input = `
-            .MyVar = [
-                // Comment 1
-                .MyBool = true
-                // Comment 2
+    it('comments have no affect on a struct', () => {
+        const withComments = `
+            .MyVar = // Comment 1
+            [ // Comment 2
+                // Comment 3
+                .MyBool = true // Comment 4
+                // Comment 5
+                // Comment 6
+                .MyInt = 123// Comment 7
+            ]// Comment 8
+            `;
+        const withoutComments = `
+            .MyVar =
+            [
+
+                .MyBool = true 
+
+
                 .MyInt = 123
             ]
             `;
-        assertParseResultsEqual(input, [
-            {
-                type: 'variableDefinition',
-                lhs: {
-                    name: {
-                        type: 'string',
-                        value: 'MyVar',
-                        range: createRange(1, 13, 1, 18)
-                    },
-                    scope: 'current',
-                    range: createRange(1, 12, 1, 18),
-                },
-                rhs: {
-                    type: 'struct',
-                    statements: [
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'MyBool',
-                                    range: createRange(3, 17, 3, 23)
-                                },
-                                scope: 'current',
-                                range: createRange(3, 16, 3, 23),
-                            },
-                            rhs: {
-                                type: 'boolean',
-                                value: true,
-                                range: createRange(3, 26, 3, 30)
-                            }
-                        },
-                        {
-                            type: 'variableDefinition',
-                            lhs: {
-                                name: {
-                                    type: 'string',
-                                    value: 'MyInt',
-                                    range: createRange(5, 17, 5, 22)
-                                },
-                                scope: 'current',
-                                range: createRange(5, 16, 5, 22),
-                            },
-                            rhs: {
-                                type: 'integer',
-                                value: 123,
-                                range: createRange(5, 25, 5, 28)
-                            }
-                        }
-                    ],
-                    range: createRange(1, 21, 6, 13),
-                }
-            }
-        ]);
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
     });
 
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
         const expectedErrorMessageStart = `Syntax error: Unexpected arrayItemSeparator token: ",".`;
-        assertParseSyntaxError(input, expectedErrorMessageStart, 0, 15);
+        assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
     });
 
     it('should work on assigning a struct with one evaluated variable', () => {
@@ -1215,6 +1244,34 @@ describe('parser', () => {
                 operator: '+',
             }
         ]);
+    });
+
+    it('comments have no affect when adding string literals', () => {
+        const withComments = `
+            .MyMessage = 'hello' + // Comment 1
+                         // Comment 2
+                         ' world'
+        `;
+        const withoutComments = `
+            .MyMessage = 'hello' +
+
+                         ' world'
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
+    });
+
+    it('comments have no affect when adding string literals (+ on same line)', () => {
+        const withComments = `
+            .MyMessage = 'hello' // Comment 1
+                         // Comment 2
+                         + ' world'
+        `;
+        const withoutComments = `
+            .MyMessage = 'hello'
+
+                         + ' world'
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
     });
 
     it('should work on adding a string literal to a variable in the parent scope', () => {
@@ -1662,6 +1719,28 @@ describe('parser', () => {
         ]);
     });
 
+    it('comments have no affect when adding evaluated variables', () => {
+        const withComments = `
+                .MyMessage = 'hello ' // Comment 1
+                                      // Comment 2
+                           + .MyVar1  // Comment 3
+                                      // Comment 4
+                                      // Comment 5
+                           + .MyVar2
+                                      // Comment 6
+                                      // Comment 7
+        `;
+        const withoutComments = `
+                .MyMessage = 'hello '
+
+                           + .MyVar1
+
+
+                           + .MyVar2
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
+    });
+
     it('should work on assigning an empty array', () => {
         const input = `.MyVar = {}`;
         assertParseResultsEqual(input, [
@@ -2000,6 +2079,44 @@ describe('parser', () => {
         ]);
     });
 
+    it('comments have no affect in an empty array', () => {
+        const withComments = `
+            .MyVar = {// Comment 1
+                // Comment 2
+                // Comment 3
+            } // Comment 4
+        `;
+        const withoutComments = `
+            .MyVar = {
+
+
+            }
+        `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
+    });
+
+    it('comments have no affect in a non-empty array', () => {
+        const withComments = `
+            .MyVar = // Comment 1
+            { // Comment 2
+                'str1' // Comment 3
+                // Comment 4
+                //Comment 5
+                'str2'// Comment 6
+            } //Comment 7
+            `;
+        const withoutComments = `
+            .MyVar =
+            {
+                'str1'
+
+
+                'str2'
+            }
+            `;
+        assertInputsGenerateSameParseResult(withComments, withoutComments);
+    });
+
     it('should work on adding an array', () => {
         const input = `
             .MyVar + {'cow'}
@@ -2333,6 +2450,157 @@ describe('parser', () => {
                     }
                 }
             ]);
+        });
+    });
+
+    describe('ForEach', () => {
+        it('comments have no affect in a non-empty array', () => {
+            const withComments = `
+                ForEach( .Item in .MyArray ) // Comment 1
+                { // Comment 2
+                    .Copy1 = .Item
+                    // Comment 3
+                    // Comment 4
+                    .Copy2 = .Item
+                } // Comment 5
+            `;
+            const withoutComments = `
+                ForEach( .Item in .MyArray )
+                {
+                    .Copy1 = .Item
+
+
+                    .Copy2 = .Item
+                }
+            `;
+            assertInputsGenerateSameParseResult(withComments, withoutComments);
+        });
+    });
+
+    describe('If', () => {
+        describe('Boolean expression', () => {
+            it('comments have no affect', () => {
+                const withComments = `
+                    If( .Value ) // Comment 1
+                    { // Comment 2
+                        // Comment 3
+                        // Comment 4
+                        ^Result = true
+                        // Comment 5
+                    } // Comment 6
+                `;
+                const withoutComments = `
+                    If( .Value ) // 
+                    {
+
+
+                        ^Result = true
+
+                    }
+                `;
+                assertInputsGenerateSameParseResult(withComments, withoutComments);
+            });
+        });
+    });
+
+    describe('Generic functions', () => {
+        const genericFunctionNames = [
+            'Alias',
+            'Compiler',
+            'Copy',
+            'CopyDir',
+            'CSAssembly',
+            'DLL',
+            'Exec',
+            'Executable',
+            'Library',
+            'ObjectList',
+            'RemoveDir',
+            'Test',
+            'TextFile',
+            'Unity',
+            'VCXProject',
+            'VSProjectExternal',
+            'VSSolution',
+            'XCodeProject',
+        ];
+
+        for (const functionName of genericFunctionNames) {
+            describe(functionName, () => {
+                it('comments have no affect', () => {
+                    const withComments = `
+                        ${functionName}('MyAliasName') // Comment 1
+                        { //Comment 2
+                            // Comment 3
+                            //Comment 4
+                        } // Comment 5
+                    `;
+                    const withoutComments = `
+                        ${functionName}('MyAliasName')
+                        {
+
+
+                        }
+                    `;
+                    assertInputsGenerateSameParseResult(withComments, withoutComments);
+                });
+            });
+        }
+    });
+
+    describe('Settings', () => {
+        it('comments have no affect', () => {
+            const withComments = `
+                Settings // Comment 1
+                { // Comment 2
+                    // Comment 3
+                    .Copy = .Value
+                    //Comment 4
+                    // Comment 5
+                } // Comment 6
+            `;
+            const withoutComments = `
+                Settings
+                {
+
+                    .Copy = .Value
+
+
+                }
+            `;
+            assertInputsGenerateSameParseResult(withComments, withoutComments);
+        });
+    });
+
+    describe('#if', () => {
+        it('comments have no affect', () => {
+            const withComments = `
+                #if __WINDOWS__ // Comment 1
+                    // Comment 2
+                    //Comment 3
+                    .Value = 'if' // Comment 4
+                #else // Comment 5
+                    //Comment 6
+                    // Comment 7
+                    .Value = 'else' // Comment 8
+                    //Comment 9
+                    // Comment 10
+                #endif// Comment 5
+            `;
+            const withoutComments = `
+                #if __WINDOWS__
+
+
+                    .Value = 'if'
+                #else
+
+
+                    .Value = 'else'
+
+
+                #endif
+            `;
+            assertInputsGenerateSameParseResult(withComments, withoutComments);
         });
     });
 });

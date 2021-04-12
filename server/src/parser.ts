@@ -226,9 +226,14 @@ function createParseErrorFromNearlyParseError(nearlyParseError: Error): ParseErr
 
 // Parse the input and return the statements.
 export function parse(input: string, options: ParseOptions): ParseData {
-    // Make the input always end in a newline in order to make parsing easier.
-    // This lets the grammar assume that statements always end in a newline.
-    const modifiedInput = input + '\n';
+    // Pre-process the input:
+    //  * Remove comments.
+    //    BUG: This has a bug where it will remove input that looks like a comment even if it's inside a string.
+    //         For example, Print("// hi")
+    //  * Make the input always end in a newline in order to make parsing easier.
+    //    This lets the grammar assume that statements always end in a newline.
+    // This code can be refactored to use replaceAll once on Node version 15+.
+    const modifiedInput = input.replace(new RegExp(/(?:;|\/\/).*/, 'g'), '') + '\n';
 
     const parser = new nearley.Parser(
         nearley.Grammar.fromCompiled(fbuildGrammar),

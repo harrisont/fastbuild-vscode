@@ -378,33 +378,6 @@ describe('evaluator', () => {
                 ['thing1', 'thing2']
             ]);
         });
-    
-        it('should evaluate an array with just comments', () => {
-            const input = `
-                .MyVar = {
-                    // Some comment
-                }
-                .Copy = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                []
-            ]);
-        });
-    
-        it('should evaluate an array with comments and items', () => {
-            const input = `
-                .MyVar = {
-                    'a'
-                    // 2nd letter
-                    'b'
-                    // ...and so on...
-                }
-                .Copy = .MyVar
-            `;
-            assertEvaluatedVariablesValueEqual(input, [
-                ['a', 'b']
-            ]);
-        });
 
         it('should evaluate an empty struct', () => {
             const input = `
@@ -437,26 +410,6 @@ describe('evaluator', () => {
             ]);
         });
     
-        it('should evaluate a basic struct with comments', () => {
-            const input = `
-                .MyVar = [ // Comment 1
-                    .MyBool = true // Comment 2
-                    // Comment 3
-                    // Comment 4
-                    .MyInt = 123
-                ] // Comment 5
-                .Copy = .MyVar
-            `;
-            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27) };
-            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(5, 20, 5, 26) };
-            assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    MyBool: new StructMember(true, myVarMyBoolDefinition),
-                    MyInt: new StructMember(123, myVarMyIntDefinition),
-                }))
-            ]);
-        });
-
         it('should evaluate a struct with an evaluated variable', () => {
             const input = `
                 .B = 1
@@ -805,26 +758,6 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
         });
 
-        it('adding a string literal should use the last referenced variable if none is specified (with comments)', () => {
-            const input = `
-                .MyMessage = 'hello' // Comment 1
-                            // Comment 2
-                            + ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
-        it('adding a string literal should use the last referenced variable if none is specified ("+" on same line, with comments)', () => {
-            const input = `
-                .MyMessage = 'hello' + // Comment 1
-                                // Comment 2
-                                ' world'
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world']);
-        });
-
         it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyMessage = 'hello'
@@ -851,18 +784,6 @@ describe('evaluator', () => {
                 .MyVar2 = '!'
                 .MyMessage = 'hello '
                             + .MyVar1
-                            + .MyVar2
-                .Evaluated = .MyMessage
-            `;
-            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
-        });
-
-        it('adding mulitple evaluated variables should use the last referenced variable if none is specified (with comments)', () => {
-            const input = `
-                .MyVar1 = 'world'
-                .MyVar2 = '!'
-                .MyMessage = 'hello ' // Comment 1
-                            + .MyVar1  // Comment 2
                             + .MyVar2
                 .Evaluated = .MyMessage
             `;
@@ -2156,10 +2077,10 @@ describe('evaluator', () => {
         it('iterates over an array of strings', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
-                ForEach( .Item in .MyArray ) // Comment 1
-                { // Comment 2
+                ForEach( .Item in .MyArray )
+                {
                     .Copy = .Item
-                } // Comment 3
+                }
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
@@ -2172,10 +2093,10 @@ describe('evaluator', () => {
         it('iterates over an empty array', () => {
             const input = `
                 .MyArray = {}
-                ForEach( .Item in .MyArray )// Comment 1
-                {// Comment 2
+                ForEach( .Item in .MyArray )
+                {
                     .Copy = .Item
-                }// Comment 3
+                }
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 []
@@ -2276,9 +2197,9 @@ describe('evaluator', () => {
             describe(functionName, () => {
                 it('handles a literal alias name', () => {
                     const input = `
-                        ${functionName}('MyAliasName') // Comment 1
-                        { // Comment 2
-                        } // Comment 3
+                        ${functionName}('MyAliasName')
+                        {
+                        }
                     `;
                     assertEvaluatedVariablesValueEqual(input, []);
                 });
@@ -2286,9 +2207,9 @@ describe('evaluator', () => {
                 it('handles an evaluated variable alias name', () => {
                     const input = `
                         .MyAliasName = 'SomeName'
-                        ${functionName}(.MyAliasName)// Comment 1
-                        {// Comment 2
-                        }// Comment 3
+                        ${functionName}(.MyAliasName)
+                        {
+                        }
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['SomeName']);
                 });
@@ -2387,17 +2308,6 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
-            
-            it('Settings with comments', () => {
-                const input = `
-                    .Value = 1
-                    Settings // Comment 1
-                    { // Comment 2
-                        .Copy = .Value
-                    } // Comment 3
-                `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
-            });
         });
     });
 
@@ -2407,10 +2317,10 @@ describe('evaluator', () => {
                 const input = `
                     .Value = true
                     .Result = false
-                    If( .Value ) // Comment 1
-                    { // Comment 2
+                    If( .Value )
+                    {
                         ^Result = true
-                    } // Comment 3
+                    }
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [true, true]);
@@ -2420,10 +2330,10 @@ describe('evaluator', () => {
                 const input = `
                     .Value = false
                     .Result = false
-                    If( .Value )// Comment 1
-                    {// Comment 2
+                    If( .Value )
+                    {
                         ^Result = true
-                    }// Comment 3
+                    }
                     .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false, false]);
@@ -3938,20 +3848,6 @@ describe('evaluator', () => {
             `;
             
             assertEvaluatedVariablesValueEqual(input, ['else']);
-        });
-
-        it('#if with comments', () => {
-            const input = `
-                .Value = ''
-                #if ${builtInDefine} // My comment 1
-                    .Value = 'if' // My comment 2
-                #else // My comment 3
-                    .Value = 'else' // My comment 4
-                #endif// My comment 5
-                Print( .Value )
-            `;
-            
-            assertEvaluatedVariablesValueEqual(input, ['if']);
         });
     });
 

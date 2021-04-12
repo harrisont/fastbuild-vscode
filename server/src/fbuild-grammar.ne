@@ -5,7 +5,6 @@ const lexer = moo.states({
     main: {
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
         whitespace: /[ \t]+/,
-        comment: /(?:;|\/\/).*/,
         // The symbols for array/scope delimeters are the same.
         // We could distinguish them by pushing state when we're on the RHS of an operator (assignment/addition), to know that the symbols are array delimeters.
         // There doesn't seem to be a benefit to doing so though, so for now, use the same symbol for both.
@@ -131,7 +130,6 @@ const lexer = moo.states({
         })},
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true, pop: 1 },
         whitespace: /[ \t]+/,
-        comment: /(?:;|\/\/).*/,
         parametersStart: '(',
         parametersEnd: ')',
         singleQuotedStringStart: { match: "'", push: 'singleQuotedStringBodyThenPop' },
@@ -154,7 +152,7 @@ main -> lines  {% (d) => d[0] %}
 lines ->
     null  {% () => [] %}
   | whitespaceOrNewline lines  {% ([space, lines]) => lines %}
-  | statementAndOrCommentAndNewline lines  {% ([first, rest]) => [...first, ...rest] %}
+  | statementAndNewline lines  {% ([first, rest]) => [first, ...rest] %}
 
 @{%
 
@@ -171,14 +169,8 @@ function callOnNextToken(context: ParseContext, token: object) {
 
 %}
 
-# Returns either:
-#  * a 1-length array with the item being the statement
-#  * a 0-length array
-statementAndOrCommentAndNewline ->
-    statement                      %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context],                  space2]) => { callOnNextToken(context, space2);  return [statement]; } %}
-  | statement             %comment %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context],         comment, space2]) => { callOnNextToken(context, comment); return [statement]; } %}
-  | statement %whitespace %comment %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, comment, space2]) => { callOnNextToken(context, space1);  return [statement]; } %}
-  |                       %comment %optionalWhitespaceAndMandatoryNewline  {% () => [] %}
+statementAndNewline ->
+    statement %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space]) => { callOnNextToken(context, space);  return statement; } %}
 
 statement ->
     scopedStatements          {% ([value]) => [ value, new ParseContext() ] %}
@@ -198,7 +190,7 @@ statement ->
   | directiveUndefine         {% ([valueWithContext]) => valueWithContext %}
   | directiveImport           {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space1, comment, space2, statements, braceClose]) => { return { type: 'scopedStatements', statements }; } %}
+scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: 'scopedStatements', statements }; } %}
 
 @{%
 
@@ -371,22 +363,10 @@ sumHelper ->
     # Single item
     summand  {% ([[value, context]]) => [value, [], context] %}
     # Multiple items added together
-  | summand                                                                                                                         %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],                                          operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                                                                                                                         %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],                                          operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                                                                                                                         %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],                                          operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                                                                                                                         %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],                                          operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                     %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext],         comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, comment);  return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1,                                  operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1,                                  operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1,                                  operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline                                                                                                     %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1,                                  operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction optionalWhitespaceOrNewline                                            sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, space3,    [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorAddition    (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline (%comment %optionalWhitespaceAndMandatoryNewline):* %operatorSubtraction (optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline):+ sumHelper  {% ([[first, firstContext], space1, comment1, space2, extraComments, operator, comments2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand                     %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand whitespaceOrNewline %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
 
 summand ->
     %integer           {% ([token]) => createInteger(token) %}
@@ -516,10 +496,6 @@ nonEmptyArrayContents ->
   | optionalWhitespaceOrNewline rValue %optionalWhitespaceAndMandatoryNewline                     nonEmptyArrayContents  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
   | optionalWhitespaceOrNewline rValue                                        %arrayItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[first, ...rest], restContext]; } %}
   | optionalWhitespaceOrNewline rValue whitespaceOrNewline                    %arrayItemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
-    # Single comment.
-  | optionalWhitespaceOrNewline %comment optionalWhitespaceOrNewline                                   {% () => [[], new ParseContext()] %}
-    # Comment and then another item(s).
-  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyArrayContents  {% ([space, comment, newline, [rest, context]]) => [[...rest], context] %}
 
 struct -> %structStart structContents %structEnd  {% ([braceOpen, [statements, context], braceClose]) => {
     callOnNextToken(context, braceClose);
@@ -537,20 +513,10 @@ structContents ->
 
 nonEmptyStructStatements ->
     # Single item.
-    optionalWhitespaceOrNewline statementAndOptionalComment                      {% ([space1, [statement, context]        ]) => {                                   return [[statement], context]; } %}
-  | optionalWhitespaceOrNewline statementAndOptionalComment whitespaceOrNewline  {% ([space1, [statement, context], space2]) => { callOnNextToken(context, space2); return [[statement], context]; } %}
+    optionalWhitespaceOrNewline statement                      {% ([space1, [statement, context]        ]) => {                                   return [[statement], context]; } %}
+  | optionalWhitespaceOrNewline statement whitespaceOrNewline  {% ([space1, [statement, context], space2]) => { callOnNextToken(context, space2); return [[statement], context]; } %}
     # Item and then another item(s), separated by a newline.
-  | optionalWhitespaceOrNewline statementAndOptionalComment %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2); return [[firstStatement, ...restStatements], restContext]; } %}
-    # Single comment.
-  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline {% () => [[], new ParseContext()] %}
-    # Comment and then another item(s).
-  | optionalWhitespaceOrNewline %comment %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements {% ([space, comment, newline, restWithContext]) => restWithContext %}
-
-statementAndOptionalComment ->
-    statement                       {% ([statementWithContext,                ]) => {                                    return statementWithContext; } %}
-  | statement             %comment  {% ([[statement, context],         comment]) => { callOnNextToken(context, comment); return [statement, context]; } %}
-  | statement %whitespace %comment  {% ([[statement, context], space1, comment]) => { callOnNextToken(context, space1);  return [statement, context]; } %}
-  
+  | optionalWhitespaceOrNewline statement %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2); return [[firstStatement, ...restStatements], restContext]; } %}
 
 @{%
 
@@ -591,8 +557,7 @@ forEachLoopVar ->
   | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, [varName, varNameContext], space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
 functionBody ->
-                                optionalWhitespaceOrNewline            %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([                  space2, braceOpen, space3, comment2, space4, statements, braceClose]) => statements %}
-  | optionalWhitespace %comment %optionalWhitespaceAndMandatoryNewline %scopeOrArrayStart optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, comment1, space2, braceOpen, space3, comment2, space4, statements, braceClose]) => statements %}
+    optionalWhitespaceOrNewline %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, braceOpen, space2, statements, braceClose]) => statements %}
 
 @{%
 
@@ -708,8 +673,8 @@ directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral 
 directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
 
 directiveIf ->
-    %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines                                                                                                %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements,                                                          directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf) }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveElse optionalWhitespace optionalComment %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, comment1, space3, ifStatements, directiveElse, space4, comment2, space5, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf) }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements,                                        directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf) }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf) }; } %}
 
 directiveIfConditionOrExpression ->
     # Single item
@@ -755,7 +720,3 @@ optionalWhitespaceOrNewline ->
 optionalWhitespace ->
     null         {% () => null %}
   | %whitespace  {% () => null %}
-
-optionalComment ->
-    null      {% () => null %}
-  | %comment  {% () => null %}
