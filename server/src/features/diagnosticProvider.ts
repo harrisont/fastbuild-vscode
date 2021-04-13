@@ -48,7 +48,7 @@ export class DiagnosticProvider {
 
     addEvaluationErrorDiagnostic(rootUri: UriStr, error: EvaluationError, connection: Connection): void {
         const isInternalError = error instanceof InternalEvaluationError;
-        const message = isInternalError ? `Internal error: ${error.message}` : error.message;
+        const message = isInternalError ? `Internal error: ${error.stack}` : error.message;
         const diagnostic = createDiagnosticError(message, error.range);
         const diagnostics = [diagnostic];
         this._addDiagnostics(rootUri, error.range.uri, diagnostics, connection);
@@ -57,7 +57,7 @@ export class DiagnosticProvider {
     addUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
         // We do not know which URI caused the error, so use a dummy error range.
         const uri = '';
-        const message = `Internal error: ${error.message}`;
+        const message = `Internal error: ${error.stack}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
         const diagnostics = [diagnostic];
         this._addDiagnostics(rootUri, uri, diagnostics, connection);
