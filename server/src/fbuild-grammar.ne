@@ -88,26 +88,26 @@ const lexer = moo.states({
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         singleQuotedStringEnd: { match: "'", pop: 1 },
         // Handle escaping ', $, ^ with ^
-        stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
+        stringLiteral: /(?:[^'$^\n]|\^['$^])+/,
     },
     doubleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         doubleQuotedStringEnd: { match: '"', pop: 1 },
         // Handle escaping ", $, ^ with ^
-        stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
+        stringLiteral: /(?:[^"$^\n]|\^["$^])+/,
     },
     // Same as "...ThenPop" but instead of popping, goes to "main".
     singleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         singleQuotedStringEnd: { match: "'", next: 'main' },
         // Handle escaping ', $, ^ with ^
-        stringLiteral: /(?:[^'\$\^\n]|\^['$\^])+/,
+        stringLiteral: /(?:[^'$^\n]|\^['$^])+/,
     },
     doubleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         doubleQuotedStringEnd: { match: '"', next: 'main' },
         // Handle escaping ", $, ^ with ^
-        stringLiteral: /(?:[^"\$\^\n]|\^["$\^])+/,
+        stringLiteral: /(?:[^"$^\n]|\^["$^])+/,
     },
     templatedVariable: {
         endTemplatedVariable: { match: '$', pop: 1 },
