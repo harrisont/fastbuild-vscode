@@ -10,8 +10,6 @@ import {
 
 import {
     ParseError,
-    ParseSyntaxError,
-    ParseNumParsesError,
 } from '../parser';
 
 import {
@@ -22,10 +20,6 @@ import {
 const SOURCE_NAME = 'FASTBuild';
 
 type UriStr = string;
-
-function createWholeDocumentRange(): Range {
-    return Range.create(0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
-}
 
 function createDiagnosticError(message: string, range: Range): Diagnostic {
     return {
