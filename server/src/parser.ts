@@ -228,12 +228,10 @@ function createParseErrorFromNearlyParseError(nearlyParseError: Error): ParseErr
 export function parse(input: string, options: ParseOptions): ParseData {
     // Pre-process the input:
     //  * Remove comments.
-    //    BUG: This has a bug where it will remove input that looks like a comment even if it's inside a string.
-    //         For example, Print("// hi")
     //  * Make the input always end in a newline in order to make parsing easier.
     //    This lets the grammar assume that statements always end in a newline.
     // This code can be refactored to use replaceAll once on Node version 15+.
-    const modifiedInput = input.replace(new RegExp(/(?:;|\/\/).*/, 'g'), '') + '\n';
+    const modifiedInput = removeComments(input) + '\n';
 
     const parser = new nearley.Parser(
         nearley.Grammar.fromCompiled(fbuildGrammar),
@@ -260,4 +258,33 @@ export function parse(input: string, options: ParseOptions): ParseData {
     return {
         statements
     };
+}
+
+// TODO: make this more efficient by moving it into the grammar.
+function removeComments(input: string): string {
+    const lines = input.split('\n');
+    const modifiedLines: string[] = [];
+    for (const line of lines) {
+        let inSingleQuotedString = false;
+        let inDoubleQuotedString = false;
+        let lineWithCommentRemoved = line;
+        for (let i = 0; i < line.length; ++i) {
+            const char = line[i];
+            if (char === "'") {
+                inSingleQuotedString = !inSingleQuotedString;
+            } else if (char === '"') {
+                inDoubleQuotedString = !inDoubleQuotedString;
+            } else if (!inSingleQuotedString
+                    && !inDoubleQuotedString
+                    && ((char === ';')
+                        || ((char === '/') && (i + 1 < line.length) && (line[i + 1] === '/'))))
+            {
+                // Comment. Strip the rest of the line.
+                lineWithCommentRemoved = line.substring(0, i);
+                break;
+            }
+        }
+        modifiedLines.push(lineWithCommentRemoved);
+    }
+    return modifiedLines.join('\n');
 }
