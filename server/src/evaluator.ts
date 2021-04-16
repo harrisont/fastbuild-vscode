@@ -724,9 +724,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             if (isParsedStatementVariableDefintion(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
-                result.variableReferences.push(...evaluatedRhs.variableReferences);
-                result.variableDefinitions.push(...evaluatedRhs.variableDefinitions);
+                pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+                pushToFirstArray(result.variableDefinitions, evaluatedRhs.variableDefinitions);
                 if (evaluatedRhsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                 }
@@ -736,8 +736,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 const evaluatedLhsNameAndMaybeError = evaluateRValue(lhs.name, context);
                 const evaluatedLhsName = evaluatedLhsNameAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
-                result.variableReferences.push(...evaluatedLhsName.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedLhsName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedLhsName.variableReferences);
                 if (evaluatedLhsNameAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
                 }
@@ -775,8 +775,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementBinaryOperator(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
-                result.variableReferences.push(...evaluatedRhs.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
                 if (evaluatedRhsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                 }
@@ -786,8 +786,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 const evaluatedLhsNameAndMaybeError = evaluateRValue(lhs.name, context);
                 const evaluatedLhsName = evaluatedLhsNameAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedLhsName.evaluatedVariables);
-                result.variableReferences.push(...evaluatedLhsName.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedLhsName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedLhsName.variableReferences);
                 if (evaluatedLhsNameAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedLhsNameAndMaybeError.error);
                 }
@@ -848,9 +848,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -865,8 +865,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 const evaluatedAndMaybeError = evaluateEvaluatedVariable(statement.struct, context);
                 const evaluated = evaluatedAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluated.evaluatedVariables);
-                result.variableReferences.push(...evaluated.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluated.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluated.variableReferences);
                 if (evaluatedAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
                 }
@@ -927,8 +927,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, arrayToLoopOver.range);
                 const evaluatedArrayToLoopOverAndMaybeError = evaluateEvaluatedVariable(arrayToLoopOver, context);
                 const evaluatedArrayToLoopOver = evaluatedArrayToLoopOverAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedArrayToLoopOver.evaluatedVariables);
-                result.variableReferences.push(...evaluatedArrayToLoopOver.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedArrayToLoopOver.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedArrayToLoopOver.variableReferences);
                 if (evaluatedArrayToLoopOverAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedArrayToLoopOverAndMaybeError.error);
                 }
@@ -938,8 +938,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the loop-variable name.
                 const evaluatedLoopVarNameAndMaybeError = evaluateRValue(statement.loopVar.name, context);
                 const evaluatedLoopVarName = evaluatedLoopVarNameAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedLoopVarName.evaluatedVariables);
-                result.variableReferences.push(...evaluatedLoopVarName.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedLoopVarName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedLoopVarName.variableReferences);
                 if (evaluatedLoopVarNameAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedLoopVarNameAndMaybeError.error);
                 }
@@ -971,9 +971,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                        result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                        result.variableReferences.push(...evaluatedStatements.variableReferences);
-                        result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                         if (evaluatedStatementsAndMaybeError.error !== null) {
                             error = evaluatedStatementsAndMaybeError.error;
                             return;
@@ -987,8 +987,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the alias.
                 const evaluatedAliasNameAndMaybeError = evaluateRValue(statement.alias, context);
                 const evaluatedAliasName = evaluatedAliasNameAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedAliasName.evaluatedVariables);
-                result.variableReferences.push(...evaluatedAliasName.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedAliasName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedAliasName.variableReferences);
                 if (evaluatedAliasNameAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedAliasNameAndMaybeError.error);
                 }
@@ -1004,9 +1004,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1014,8 +1014,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementError(statement)) {
                 const evaluatedValueAndMaybeError = evaluateRValue(statement.value, context);
                 const evaluatedValue = evaluatedValueAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
-                result.variableReferences.push(...evaluatedValue.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
                 if (evaluatedValueAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
                 }
@@ -1028,8 +1028,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const value = statement.value;
                 const evaluatedValueAndMaybeError = evaluateRValue(value, context);
                 const evaluatedValue = evaluatedValueAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedValue.evaluatedVariables);
-                result.variableReferences.push(...evaluatedValue.variableReferences);
+                pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
                 if (evaluatedValueAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
                 }
@@ -1045,9 +1045,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1065,8 +1065,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const conditionValue = condition.value;
                     const evaluatedConditionAndMaybeError = evaluateEvaluatedVariable(conditionValue, context);
                     const evaluatedCondition = evaluatedConditionAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedCondition.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedCondition.variableReferences);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedCondition.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedCondition.variableReferences);
                     if (evaluatedConditionAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
                     }
@@ -1087,8 +1087,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const lhs = condition.lhs;
                     const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
                     const evaluatedLhs = evaluatedLhsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedLhs.variableReferences);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
                     if (evaluatedLhsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
                     }
@@ -1102,8 +1102,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const rhs = condition.rhs;
                     const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
                     const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedRhs.variableReferences);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
                     if (evaluatedRhsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                     }
@@ -1161,8 +1161,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const lhs = condition.lhs;
                     const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
                     const evaluatedLhs = evaluatedLhsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedLhs.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedLhs.variableReferences);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
                     if (evaluatedLhsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
                     }
@@ -1176,8 +1176,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const rhs = condition.rhs;
                     const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
                     const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedRhs.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedRhs.variableReferences);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
                     if (evaluatedRhsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
                     }
@@ -1229,9 +1229,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         error = evaluatedStatementsAndMaybeError.error;
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                        result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                        result.variableReferences.push(...evaluatedStatements.variableReferences);
-                        result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                     });
                     if (error !== null) {
                         return new DataAndMaybeError(result, error);
@@ -1276,9 +1276,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const evaluatedStatementsAndMaybeError = evaluateStatements(includeParseData.statements, includeContext);
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                    result.variableReferences.push(...evaluatedStatements.variableReferences);
-                    result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                     if (evaluatedStatementsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
@@ -1336,9 +1336,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const statements = orExpressionResult ? statement.ifStatements : statement.elseStatements;
                 const evaluatedStatementsAndMaybeError = evaluateStatements(statements, context);
                 const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                result.evaluatedVariables.push(...evaluatedStatements.evaluatedVariables);
-                result.variableReferences.push(...evaluatedStatements.variableReferences);
-                result.variableDefinitions.push(...evaluatedStatements.variableDefinitions);
+                pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+                pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
                 if (evaluatedStatementsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                 }
@@ -1433,15 +1433,15 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
         for (const item of rValue.value) {
             const evaluatedAndMaybeError = evaluateRValue(item, context);
             const evaluated = evaluatedAndMaybeError.data;
-            result.evaluatedVariables.push(...evaluated.evaluatedVariables);
-            result.variableReferences.push(...evaluated.variableReferences);
-            result.variableDefinitions.push(...evaluated.variableDefinitions);
+            pushToFirstArray(result.evaluatedVariables, evaluated.evaluatedVariables);
+            pushToFirstArray(result.variableReferences, evaluated.variableReferences);
+            pushToFirstArray(result.variableDefinitions, evaluated.variableDefinitions);
             if (evaluatedAndMaybeError.error !== null) {
                 return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
             }
 
             if (evaluated.value instanceof Array) {
-                result.value.push(...evaluated.value);
+                pushToFirstArray(result.value, evaluated.value);
             } else {
                 result.value.push(evaluated.value);
             }
@@ -1529,8 +1529,8 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
             }
             const evaluated = evaluatedAndMaybeError.data;
             result.evaluatedString += String(evaluated.valueScopeVariable.value);
-            result.evaluatedVariables.push(...evaluated.evaluatedVariables);
-            result.variableReferences.push(...evaluated.variableReferences);
+            pushToFirstArray(result.evaluatedVariables, evaluated.evaluatedVariables);
+            pushToFirstArray(result.variableReferences, evaluated.variableReferences);
         } else {
             // Literal
             result.evaluatedString += part;
@@ -1603,9 +1603,9 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): DataAndMaybeEr
             return new DataAndMaybeError(result, maybeSum.getError());
         }
         result.value = maybeSum.getValue();
-        result.evaluatedVariables.push(...evaluatedSummand.evaluatedVariables);
-        result.variableReferences.push(...evaluatedSummand.variableReferences);
-        result.variableDefinitions.push(...evaluatedSummand.variableDefinitions);
+        pushToFirstArray(result.evaluatedVariables, evaluatedSummand.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedSummand.variableReferences);
+        pushToFirstArray(result.variableDefinitions, evaluatedSummand.variableDefinitions);
         previousSummandValue = summand.value;
     }
 
@@ -1749,5 +1749,15 @@ function convertFileSystemPathToUri(filePath: string, thisFbuildUri: UriStr): vs
     } else {
         const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
         return vscodeUri.Utils.resolvePath(thisFbuildUriDir, filePath);
+    }
+}
+
+// Use this when the arrays are very large, since arr1.push(...arr2) errors out with "RangeError: Maximum call stack size exceeded".
+function pushToFirstArray<T>(arr1: Array<T>, arr2: Array<T>): void {
+    const arr1Length = arr1.length;
+    const arr2Length = arr2.length;
+    arr1.length += arr2.length;
+    for (let i = 0; i < arr2Length; ++i) {
+        arr1[arr1Length + i] = arr2[i];
     }
 }
