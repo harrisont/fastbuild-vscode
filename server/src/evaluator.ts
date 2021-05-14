@@ -238,6 +238,17 @@ function isParsedStatementBinaryOperator(obj: Record<string, any>): obj is Parse
     return (obj as ParsedStatementBinaryOperator).type === 'binaryOperator';
 }
 
+interface ParsedStatementBinaryOperatorOnUnnamed {
+    type: 'binaryOperatorOnUnnamed';
+    rhs: any;
+    operator: OperatorPlusOrMinus;
+    rangeStart: SourcePosition;
+}
+
+function isParsedStatementBinaryOperatorOnUnnamed(obj: Record<string, any>): obj is ParsedStatementBinaryOperatorOnUnnamed {
+    return (obj as ParsedStatementBinaryOperatorOnUnnamed).type === 'binaryOperatorOnUnnamed';
+}
+
 // {...}
 interface ParsedStatementScopedStatements {
     type: 'scopedStatements';
@@ -703,6 +714,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
         fileSystem,
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
+        previousStatementLhsVariable: null,
     };
     return evaluateStatements(parseData.statements, context);
 }
@@ -715,12 +727,15 @@ interface EvaluationContext {
     fileSystem: IFileSystem,
     parseDataProvider: ParseDataProvider,
     onceIncludeUrisAlreadyIncluded: string[];
+    previousStatementLhsVariable: ScopeVariable | null;
 }
 
 function evaluateStatements(statements: Statement[], context: EvaluationContext): DataAndMaybeError<EvaluatedData> {
     const result = new EvaluatedData();
     try {
         for (const statement of statements) {
+            let statementLhsVariable = null;
+
             if (isParsedStatementVariableDefintion(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
@@ -766,6 +781,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     variable = maybeVariable.getValue();
                     variable.value = evaluatedRhs.value;
                 }
+                
+                statementLhsVariable = variable;
 
                 // The definition's LHS is a variable reference.
                 result.variableReferences.push({
@@ -773,14 +790,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     range: lhsRange,
                 });
             } else if (isParsedStatementBinaryOperator(statement)) {
-                const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
-                const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
-                if (evaluatedRhsAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
-                }
-
                 const lhs = statement.lhs;
                 const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
 
@@ -817,6 +826,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     previousValue = deepCopyValue(lhsVariable.value);
                 }
 
+                statementLhsVariable = lhsVariable;
+
+                const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
+                const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+                if (evaluatedRhsAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                }
+
                 const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
                 let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
                 switch (statement.operator) {
@@ -842,6 +861,39 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     definition: lhsVariable.definition,
                     range: lhsRange,
                 });
+            } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
+                if (context.previousStatementLhsVariable === null) {
+                    const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
+                    const error = new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.');
+                    return new DataAndMaybeError(result, error);
+                }
+                const lhsVariable = context.previousStatementLhsVariable;
+                // Allow chaining of unnamed operators.
+                statementLhsVariable = lhsVariable;
+
+                const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
+                const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+                if (evaluatedRhsAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+                }
+
+                const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
+                let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+                switch (statement.operator) {
+                    case '+':
+                        inPlaceBinaryOperatorFunc = inPlaceAdd;
+                        break;
+                    case '-':
+                        inPlaceBinaryOperatorFunc = inPlaceSubtract;
+                        break;
+                }
+                const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
+                if (maybeOperatorResult.hasError) {
+                    return new DataAndMaybeError(result, maybeOperatorResult.getError());
+                }
+                lhsVariable.value = maybeOperatorResult.getValue();
             } else if (isParsedStatementScopedStatements(statement)) {
                 let error: Error | null = null;
                 context.scopeStack.withScope(() => {
@@ -1272,6 +1324,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         fileSystem: context.fileSystem,
                         parseDataProvider: context.parseDataProvider,
                         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+                        previousStatementLhsVariable: context.previousStatementLhsVariable,
                     };
 
                     const evaluatedStatementsAndMaybeError = evaluateStatements(includeParseData.statements, includeContext);
@@ -1287,7 +1340,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
-            } else if (isParsedStatementDirectiveIf(statement)) {  // #if
+            } else if (isParsedStatementDirectiveIf(statement)) {  // #if                
                 // Evaluate the condition, which is an array of AND statements OR'd together.
                 const orExpressions = statement.condition;
                 let orExpressionResult = false;
@@ -1376,6 +1429,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const error = new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
                 return new DataAndMaybeError(result, error);
             }
+
+            context.previousStatementLhsVariable = statementLhsVariable;
         }
     } catch (error) {
         return new DataAndMaybeError(result, error);

@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 
 import {
+    createPosition,
     createRange,
     parse,
     ParseSourceRange,
@@ -1352,7 +1353,7 @@ describe('parser', () => {
         assertInputsGenerateSameParseResult(withComments, withoutComments);
     });
 
-    it('comments have no affect when adding string literals (+ on same line)', () => {
+    it('comments have no affect when adding string literals (+ on different line)', () => {
         const withComments = `
             .MyMessage = 'hello' // Comment 1
                          // Comment 2
@@ -1509,23 +1510,20 @@ describe('parser', () => {
                     range: createRange(1, 12, 1, 22),
                 },
                 rhs: {
-                    type: 'sum',
-                    first: {
-                        type: 'string',
-                        value: 'hello',
-                        range: createRange(1, 25, 1, 32)
-                    },
-                    summands: [
-                        {
-                            operator: '+',
-                            value: {
-                                type: 'string',
-                                value: ' world',
-                                range: createRange(2, 25, 2, 33)
-                            }
-                        }
-                    ],
-                }
+                    type: 'string',
+                    value: 'hello',
+                    range: createRange(1, 25, 1, 32)
+                },
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '+',
+                rhs: {
+                    type: 'string',
+                    value: ' world',
+                    range: createRange(2, 25, 2, 33)
+                },
+                rangeStart: createPosition(2, 23)
             }
         ]);
     });
@@ -1585,32 +1583,31 @@ describe('parser', () => {
                     range: createRange(1, 12, 1, 22),
                 },
                 rhs: {
-                    type: 'sum',
-                    first: {
-                        type: 'string',
-                        value: 'hello',
-                        range: createRange(1, 25, 1, 32)
-                    },
-                    summands: [
-                        {
-                            operator: '+',
-                            value: {
-                                type: 'string',
-                                value: ' world',
-                                range: createRange(2, 25, 2, 33)
-                            }
-                        },
-                        {
-                            operator: '+',
-                            value: {
-                                type: 'string',
-                                value: '!',
-                                range: createRange(3, 25, 3, 28)
-                            }
-                        },
-                    ],
+                    type: 'string',
+                    value: 'hello',
+                    range: createRange(1, 25, 1, 32)
                 }
-            }
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '+',
+                rhs: {
+                    type: 'string',
+                    value: ' world',
+                    range: createRange(2, 25, 2, 33)
+                },
+                rangeStart: createPosition(2, 23)
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '+',
+                rhs: {
+                    type: 'string',
+                    value: '!',
+                    range: createRange(3, 25, 3, 28)
+                },
+                rangeStart: createPosition(3, 23)
+            },
         ]);
     });
 
@@ -1679,40 +1676,41 @@ describe('parser', () => {
                     range: createRange(1, 12, 1, 22),
                 },
                 rhs: {
-                    type: 'sum',
-                    first: {
-                        type: 'string',
-                        value: 'hello world!',
-                        range: createRange(1, 25, 1, 39)
-                    },
-                    summands: [
-                        {
-                            operator: '-',
-                            value: {
-                                type: 'string',
-                                value: ' world',
-                                range: createRange(2, 25, 2, 33)
-                            }
-                        },
-                        {
-                            operator: '-',
-                            value: {
-                                type: 'string',
-                                value: '!',
-                                range: createRange(3, 25, 3, 28)
-                            }
-                        },
-                        {
-                            operator: '+',
-                            value: {
-                                type: 'string',
-                                value: '?',
-                                range: createRange(4, 25, 4, 28)
-                            }
-                        },
-                    ],
+                    type: 'string',
+                    value: 'hello world!',
+                    range: createRange(1, 25, 1, 39)
                 }
-            }
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '-',
+                rhs: {
+                    type: 'string',
+                    value: ' world',
+                    range: createRange(2, 25, 2, 33)
+                },
+                rangeStart: createPosition(2, 23)
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '-',
+                rhs: {
+                    type: 'string',
+                    value: '!',
+                    range: createRange(3, 25, 3, 28)
+                },
+                rangeStart: createPosition(3, 23)
+            },
+            {
+                type: 'binaryOperatorOnUnnamed',
+                operator: '+',
+                rhs: {
+                    type: 'string',
+                    value: '?',
+                    range: createRange(4, 25, 4, 28)
+                },
+                rangeStart: createPosition(4, 23)
+            },
         ]);
     });
 
@@ -2662,6 +2660,130 @@ describe('parser', () => {
             `;
             assertInputsGenerateSameParseResult(withComments, withoutComments);
         });
+    });
+
+    describe('adding/subtracting to an existing value', () => {
+        for (const operator of ['+', '-']) {
+            describe(operator, () => {
+                // This will parse but will fail to evaluate, since there's no existing value.
+                it('Simple (1)', () => {
+                    const input = `
+                        ${operator} 1
+                    `;
+                    assertParseResultsEqual(input, [
+                        {
+                            type: 'binaryOperatorOnUnnamed',
+                            operator,
+                            rhs: {
+                                type: 'integer',
+                                value: 1,
+                                range: createRange(1, 26, 1, 27)
+                            },
+                            rangeStart: createPosition(1, 24)
+                        }
+                    ]);
+                });
+
+                // This will parse but will fail to evaluate, since there's no existing value.
+                it('Simple (2)', () => {
+                    const input = `
+                        Print('hi')
+                        ${operator} 1
+                    `;
+                    assertParseResultsEqual(input, [
+                        {
+                            type: 'print',
+                            value: {
+                                type: 'string',
+                                value: 'hi',
+                                range: createRange(1, 30, 1, 34)
+                            },
+                            range: createRange(1, 24, 1, 35)
+                        },
+                        {
+                            type: 'binaryOperatorOnUnnamed',
+                            operator,
+                            rhs: {
+                                type: 'integer',
+                                value: 1,
+                                range: createRange(2, 26, 2, 27)
+                            },
+                            rangeStart: createPosition(2, 24)
+                        }
+                    ]);
+                });
+
+                it('#if', () => {
+                    const input = `
+                        .MyStr
+                            = '1'
+                        #if __WINDOWS__
+                            ${operator} ' 2'
+                        #else
+                            ${operator} ' 3'
+                        #endif
+                    `;
+                    assertParseResultsEqual(input, [
+                        {
+                            type: 'variableDefinition',
+                            lhs: {
+                                name: {
+                                    type: 'string',
+                                    value: 'MyStr',
+                                    range: createRange(1, 25, 1, 30)
+                                },
+                                scope: 'current',
+                                range: createRange(1, 24, 1, 30)
+                            },
+                            rhs: {
+                                type: 'string',
+                                value: '1',
+                                range: createRange(2, 30, 2, 33)
+                            }
+                        },
+                        {
+                            type: 'directiveIf',
+                            condition: [
+                                [
+                                    {
+                                        invert: false,
+                                        term: {
+                                            type: 'isSymbolDefined',
+                                            symbol: '__WINDOWS__'
+                                        }
+                                    }
+                                ]
+                            ],
+                            ifStatements: [
+                                {
+                                    type: 'binaryOperatorOnUnnamed',
+                                    operator,
+                                    rhs: {
+                                        type: 'string',
+                                        value: ' 2',
+                                        range: createRange(4, 30, 4, 34)
+                                    },
+                                    rangeStart: createPosition(4, 28)
+                                }
+                            ],
+                            elseStatements: [
+                                {
+                                    type: 'binaryOperatorOnUnnamed',
+                                    operator,
+                                    rhs: {
+                                        type: 'string',
+                                        value: ' 3',
+                                        range: createRange(6, 30, 6, 34)
+                                    },
+                                    rangeStart: createPosition(6, 28)
+                                }
+                            ],
+                            rangeStart: createPosition(3, 24)
+                        }
+                    ]);
+                });
+            });
+        }
     });
 
     describe('#if', () => {

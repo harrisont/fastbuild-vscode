@@ -1047,7 +1047,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot add a Boolean to an Integer. Can only add an Integer.',
-                    range: createRange(1, 23, 2, 27)
+                    range: createRange(2, 21, 2, 27)
                 }
             );
         });
@@ -1198,7 +1198,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot add to a Boolean.',
-                    range: createRange(1, 23, 2, 27)
+                    range: createRange(2, 21, 2, 27)
                 }
             );
         });
@@ -1493,7 +1493,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot subtract a String from an Integer. Can only subtract an Integer.',
-                    range: createRange(1, 23, 2, 27)
+                    range: createRange(2, 21, 2, 27)
                 }
             );
         });
@@ -1657,7 +1657,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot subtract a Boolean from an Array of Strings. Can only subtract a String.',
-                    range: createRange(1, 23, 2, 27)
+                    range: createRange(2, 21, 2, 27)
                 }
             );
         });
@@ -1673,7 +1673,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot subtract a Boolean from an Array of Strings. Can only subtract a String.',
-                    range: createRange(2, 23, 3, 27)
+                    range: createRange(3, 21, 3, 27)
                 }
             );
         });
@@ -1689,7 +1689,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot subtract from an Array of Structs. Can only subtract from an Array if it is an Array of Strings.',
-                    range: createRange(1, 23, 2, 26)
+                    range: createRange(2, 21, 2, 26)
                 }
             );
         });
@@ -1740,6 +1740,56 @@ describe('evaluator', () => {
                 }
             );
         });
+    });
+
+    describe('adding to an existing value', () => {
+        it('should work if there is an existing value', () => {
+            const builtInDefine = getPlatformSpecificDefineSymbol();
+            const input = `
+                .MyStr
+                    = '1'
+                #if ${builtInDefine}
+                    + ' 2'
+                #endif
+                Print( .MyStr )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '1 2'
+            ]);
+        });
+
+        it('should error if there is no existing value that can be added to (1)', () => {
+            const input = `
+                + 1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Unnamed modification must follow a variable assignment in the same scope.',
+                    range: createRange(1, 16, 1, 16)
+                }
+            );
+        });
+
+        it('should error if there is no existing value that can be added to (2)', () => {
+            const input = `
+                Print('hi')
+                + 1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Unnamed modification must follow a variable assignment in the same scope.',
+                    range: createRange(2, 16, 2, 16)
+                }
+            );
+        });
+    });
+
+    describe('subtracting from an existing value', () => {
+        // TODO
     });
 
     describe('evaluatedVariables range', () => {

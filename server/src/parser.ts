@@ -103,16 +103,17 @@ export function isPositionInRange(position: SourcePosition, range: ParseSourceRa
         && position.character <= range.end.character;
 }
 
+export function createPosition(line: number, character: number): SourcePosition {
+    return {
+        line,
+        character
+    };
+}
+
 export function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): ParseSourceRange {
     return {
-        start: {
-            line: startLine,
-            character: startCharacter
-        },
-        end: {
-            line: endLine,
-            character: endCharacter
-        }
+        start: createPosition(startLine, startCharacter),
+        end: createPosition(endLine, endCharacter)
     };
 }
 
@@ -268,11 +269,13 @@ function removeComments(input: string): string {
         let inSingleQuotedString = false;
         let inDoubleQuotedString = false;
         let lineWithCommentRemoved = line;
-        for (let i = 0; i < line.length; ++i) {
+
+        for (let i = 0, lastNonSpaceIndex = -1; i < line.length; ++i) {
             const char = line[i];
-            if (char === "'") {
+
+            if (char === "'" && !inDoubleQuotedString) {
                 inSingleQuotedString = !inSingleQuotedString;
-            } else if (char === '"') {
+            } else if (char === '"' && !inSingleQuotedString) {
                 inDoubleQuotedString = !inDoubleQuotedString;
             } else if (!inSingleQuotedString
                     && !inDoubleQuotedString
@@ -280,8 +283,12 @@ function removeComments(input: string): string {
                         || ((char === '/') && (i + 1 < line.length) && (line[i + 1] === '/'))))
             {
                 // Comment. Strip the rest of the line.
-                lineWithCommentRemoved = line.substring(0, i);
+                lineWithCommentRemoved = line.substring(0, lastNonSpaceIndex + 1);
                 break;
+            }
+
+            if (char !== ' ') {
+                lastNonSpaceIndex = i;
             }
         }
         modifiedLines.push(lineWithCommentRemoved);

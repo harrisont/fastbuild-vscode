@@ -173,22 +173,23 @@ statementAndNewline ->
     statement %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space]) => { callOnNextToken(context, space);  return statement; } %}
 
 statement ->
-    scopedStatements          {% ([value]) => [ value, new ParseContext() ] %}
-  | variableDefinition        {% ([valueWithContext]) => valueWithContext %}
-  | variableBinaryOperator    {% ([valueWithContext]) => valueWithContext %}
-  | functionError             {% ([value]) => [ value, new ParseContext() ] %}
-  | functionForEach           {% ([value]) => [ value, new ParseContext() ] %}
-  | functionIf                {% ([value]) => [ value, new ParseContext() ] %}
-  | functionPrint             {% ([value]) => [ value, new ParseContext() ] %}
-  | functionSettings          {% ([value]) => [ value, new ParseContext() ] %}
-  | functionUsing             {% ([value]) => [ value, new ParseContext() ] %}
-  | genericFunctionWithAlias  {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveInclude          {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveOnce             {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveIf               {% ([value]) => [ value, new ParseContext() ] %}
-  | directiveDefine           {% ([valueWithContext]) => valueWithContext %}
-  | directiveUndefine         {% ([valueWithContext]) => valueWithContext %}
-  | directiveImport           {% ([valueWithContext]) => valueWithContext %}
+    scopedStatements                 {% ([value]) => [ value, new ParseContext() ] %}
+  | variableDefinition               {% ([valueWithContext]) => valueWithContext %}
+  | variableBinaryOperator           {% ([valueWithContext]) => valueWithContext %}
+  | variableBinaryOperatorOnUnnamed  {% ([valueWithContext]) => valueWithContext %}
+  | functionError                    {% ([value]) => [ value, new ParseContext() ] %}
+  | functionForEach                  {% ([value]) => [ value, new ParseContext() ] %}
+  | functionIf                       {% ([value]) => [ value, new ParseContext() ] %}
+  | functionPrint                    {% ([value]) => [ value, new ParseContext() ] %}
+  | functionSettings                 {% ([value]) => [ value, new ParseContext() ] %}
+  | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithAlias         {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveOnce                    {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveIf                      {% ([value]) => [ value, new ParseContext() ] %}
+  | directiveDefine                  {% ([valueWithContext]) => valueWithContext %}
+  | directiveUndefine                {% ([valueWithContext]) => valueWithContext %}
+  | directiveImport                  {% ([valueWithContext]) => valueWithContext %}
 
 scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: 'scopedStatements', statements }; } %}
 
@@ -312,6 +313,10 @@ variableDefinition ->
 variableBinaryOperator ->
     lhsWithBinaryOperator     optionalWhitespaceOrNewline rValue  {% ([[lhs, operator], space, [rValue, context]]) => { return [ { type: 'binaryOperator',     lhs: lhs, rhs: rValue, operator }, context ]; } %}
 
+variableBinaryOperatorOnUnnamed ->
+    %operatorAddition         optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => { return [ { type: 'binaryOperatorOnUnnamed', rhs: rValue, operator: '+', rangeStart: createLocation(operator) }, context ]; } %}
+  | %operatorSubtraction      optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => { return [ { type: 'binaryOperatorOnUnnamed', rhs: rValue, operator: '-', rangeStart: createLocation(operator) }, context ]; } %}
+
 @{%
 
 function createInteger(token: Token) {
@@ -363,10 +368,12 @@ sumHelper ->
     # Single item
     summand  {% ([[value, context]]) => [value, [], context] %}
     # Multiple items added together
-  | summand                     %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand                     %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
-  | summand whitespaceOrNewline %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+    # A newline can occur after the operator, but not before, since a newline before the operator
+    # is the same as the `variableBinaryOperatorOnUnnamed` statement.
+  | summand             %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand             %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext],         operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, operator); return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
+  | summand %whitespace %operatorAddition    optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '+', value: restFirst}, ...restRest], restContext]; } %}
+  | summand %whitespace %operatorSubtraction optionalWhitespaceOrNewline sumHelper  {% ([[first, firstContext], space1, operator, space2, [restFirst, restRest, restContext]]) => { callOnNextToken(firstContext, space1);   return [first, [{operator: '-', value: restFirst}, ...restRest], restContext]; } %}
 
 summand ->
     %integer           {% ([token]) => createInteger(token) %}
