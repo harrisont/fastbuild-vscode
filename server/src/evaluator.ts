@@ -763,13 +763,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 let variable: ScopeVariable | null = null;
                 if (lhs.scope === 'current') {
-                    const maybeExistingVariable = context.scopeStack.getVariableInCurrentScopeOrError(evaluatedLhsName.value, lhsRange);
-                    const variableAlreadyDefined = !maybeExistingVariable.hasError;
+                    const noExistingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null;
 
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
-                    
-                    if (!variableAlreadyDefined) {
+
+                    if (noExistingVariable) {
                         // The definition's LHS is a variable definition.
                         result.variableDefinitions.push(variable.definition);
                     }
@@ -941,10 +940,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 for (const [structMemberName, structMember] of struct.members) {
                     // The definition will only be used if the variable does not already exist in the current scope.
                     let variableDefinition: VariableDefinition;
-                    const maybeExistingVariable = context.scopeStack.getVariableInCurrentScopeOrError(structMemberName, statementRange);
-                    const variableAlreadyDefined = !maybeExistingVariable.hasError;
-                    if (variableAlreadyDefined) {
-                        const existingVariable = maybeExistingVariable.getValue();
+                    const existingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName);
+                    if (existingVariable !== null) {
                         existingVariable.value = structMember.value;
                         variableDefinition = existingVariable.definition;
                     } else {
