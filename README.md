@@ -89,6 +89,10 @@ Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
 * Support "go to definition" and "find references" for aliases.
 * Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
+    * Keep running total of statement number
+    * Use metric to decide whether to cache. Maybe number of statements? Maybe every scope? Maybe by file?
+    * If cache, store (statement number, inputs, outputs), where inputs is the value of and variables read from outside the scope, and outputs is the value of variables modified outside the scope.
+    * On processing scope, if cached and inputs are the same, set the outputs and skip processing the scope.
 
 Improve docs:
 * Update the [Implementation Notes](#implementation-notes) section with a high-level architecture (lexer, parser, evaluator).
