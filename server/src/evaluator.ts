@@ -734,7 +734,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
     const result = new EvaluatedData();
     try {
         for (const statement of statements) {
-            let statementLhsVariable = null;
+            let statementLhsVariable: ScopeVariable | null = null;
 
             if (isParsedStatementVariableDefintion(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
@@ -762,11 +762,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 let variable: ScopeVariable | null = null;
+                // Copy the RHS value so that future modifications to the value do not modify the RHS value.
+                const value = deepCopyValue(evaluatedRhs.value);
                 if (lhs.scope === 'current') {
                     const noExistingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null;
 
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
-                    variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, evaluatedRhs.value, definition);
+                    variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
 
                     if (noExistingVariable) {
                         // The definition's LHS is a variable definition.
@@ -778,7 +780,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, maybeVariable.getError());
                     }
                     variable = maybeVariable.getValue();
-                    variable.value = evaluatedRhs.value;
+                    variable.value = value;
                 }
                 
                 statementLhsVariable = variable;

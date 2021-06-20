@@ -1743,7 +1743,35 @@ describe('evaluator', () => {
     });
 
     describe('adding to an existing value', () => {
-        it('should work if there is an existing value', () => {
+        it('should work if there is an existing string value', () => {
+            const input = `
+                .MyStr
+                    = '1'
+                    + ' 2'
+                Print( .MyStr )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '1 2'
+            ]);
+        });
+        
+        it('should work if there is an existing array evaluated variable value', () => {
+            const input = `
+                .MyArray = { 'a' }
+                .MyAugmentedArray
+                    = .MyArray
+                    + 'b'
+                Print( .MyArray )
+                Print( .MyAugmentedArray )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a'],
+                ['a'],
+                ['a', 'b'],
+            ]);
+        });
+        
+        it('should work if there is an existing value (with #if)', () => {
             const builtInDefine = getPlatformSpecificDefineSymbol();
             const input = `
                 .MyStr
@@ -1789,7 +1817,77 @@ describe('evaluator', () => {
     });
 
     describe('subtracting from an existing value', () => {
-        // TODO
+        it('should work if there is an existing string value', () => {
+            const input = `
+                .MyStr
+                    = '123'
+                    - '2'
+                Print( .MyStr )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '13'
+            ]);
+        });
+        
+        it('should work if there is an existing array evaluated variable value', () => {
+            const input = `
+                .MyArray = { 'a', 'b' }
+                .MyAugmentedArray
+                    = .MyArray
+                    - 'b'
+                Print( .MyArray )
+                Print( .MyAugmentedArray )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b'],
+                ['a', 'b'],
+                ['a'],
+            ]);
+        });
+        
+        it('should work if there is an existing value (with #if)', () => {
+            const builtInDefine = getPlatformSpecificDefineSymbol();
+            const input = `
+                .MyStr
+                    = '123'
+                #if ${builtInDefine}
+                    - '2'
+                #endif
+                Print( .MyStr )
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                '13'
+            ]);
+        });
+
+        it('should error if there is no existing value that can be added to (1)', () => {
+            const input = `
+                - 1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Unnamed modification must follow a variable assignment in the same scope.',
+                    range: createRange(1, 16, 1, 16)
+                }
+            );
+        });
+
+        it('should error if there is no existing value that can be added to (2)', () => {
+            const input = `
+                Print('hi')
+                - 1
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Unnamed modification must follow a variable assignment in the same scope.',
+                    range: createRange(2, 16, 2, 16)
+                }
+            );
+        });
     });
 
     describe('evaluatedVariables range', () => {
