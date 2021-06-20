@@ -34,38 +34,36 @@ export class DiagnosticProvider {
     hasDiagnosticRelatedInformationCapability = false;
     readonly _documentRootToDocumentsWithDiagnosticsMap = new Map<UriStr, Set<UriStr>>();
 
-    addParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
+    setParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
         const diagnostic = createDiagnosticError(error.message, error.range);
-        const diagnostics = [diagnostic];
-        this._addDiagnostics(rootUri, error.fileUri, diagnostics, connection);
+        this._setDiagnostic(rootUri, error.fileUri, diagnostic, connection);
     }
 
-    addEvaluationErrorDiagnostic(rootUri: UriStr, error: EvaluationError, connection: Connection): void {
+    setEvaluationErrorDiagnostic(rootUri: UriStr, error: EvaluationError, connection: Connection): void {
         const isInternalError = error instanceof InternalEvaluationError;
         const message = isInternalError ? `Internal error: ${error.stack}` : error.message;
         const diagnostic = createDiagnosticError(message, error.range);
-        const diagnostics = [diagnostic];
-        this._addDiagnostics(rootUri, error.range.uri, diagnostics, connection);
+        this._setDiagnostic(rootUri, error.range.uri, diagnostic, connection);
     }
 
-    addUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
+    setUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
         // We do not know which URI caused the error, so use a dummy error range.
         const uri = '';
         const message = `Internal error: ${error.stack}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
-        const diagnostics = [diagnostic];
-        this._addDiagnostics(rootUri, uri, diagnostics, connection);
+        this._setDiagnostic(rootUri, uri, diagnostic, connection);
     }
 
-    private _addDiagnostics(rootUri: UriStr, uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
+    // This currently only supports setting a single diagnostic.
+    // Ideally it would support setting multiple.
+    private _setDiagnostic(rootUri: UriStr, uri: UriStr, diagnostic: Diagnostic, connection: Connection): void {
+        const diagnostics = [diagnostic];
         connection.sendDiagnostics({ uri, diagnostics });
-        if (diagnostics.length > 0) {
-            const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
-            if (documentsForRoot === undefined) {
-                this._documentRootToDocumentsWithDiagnosticsMap.set(rootUri, new Set<UriStr>([uri]));
-            } else {
-                documentsForRoot.add(uri);
-            }
+        const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
+        if (documentsForRoot === undefined) {
+            this._documentRootToDocumentsWithDiagnosticsMap.set(rootUri, new Set<UriStr>([uri]));
+        } else {
+            documentsForRoot.add(uri);
         }
     }
 

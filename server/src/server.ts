@@ -151,26 +151,26 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
             throw maybeChangedDocumentParseData.getError();
         }
 
-        // Clear all diagnostics for this root, since we don't know which will no longer applly after the change.
-        state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
-
         const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
         if (maybeRootFbuildParseData.hasError) {
             throw maybeRootFbuildParseData.getError();
         }
         const rootFbuildParseData = maybeRootFbuildParseData.getValue();
+
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
         if (evaluatedDataAndMaybeError.error !== null) {
             throw evaluatedDataAndMaybeError.error;
         }
+        
+        state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     } catch (error) {
         if (error instanceof ParseError) {
-            state.diagnosticProvider.addParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
+            state.diagnosticProvider.setParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else if (error instanceof EvaluationError) {
-            state.diagnosticProvider.addEvaluationErrorDiagnostic(rootFbuildUriStr, error, state.connection);
+            state.diagnosticProvider.setEvaluationErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else {
-            state.diagnosticProvider.addUnknownErrorDiagnostic(rootFbuildUriStr, error, state.connection);
+            state.diagnosticProvider.setUnknownErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         }
     }
 
