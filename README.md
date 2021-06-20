@@ -88,11 +88,41 @@ Release a Visual Studio Code extension ([docs](https://code.visualstudio.com/api
 Add more language server provider features:
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
 * Support "go to definition" and "find references" for aliases.
+
+Improve performance:
+* Prevent unnecessarily re-evaluating on every keystroke while the user is typing. 
+    * Potential solution #1: When a document-update event occurs while an existing one is still being processed, cancel the existing processing. Do so by: pass through a cancellation token, intermittently check if it has been canceled, and either return or raise an exception if so.
+    * Potential solution #2: Add a "debounce". Wait until X milliseconds have passed since the last document change before processing the change.
 * Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
-    * Keep running total of statement number
-    * Use metric to decide whether to cache. Maybe number of statements? Maybe every scope? Maybe by file?
-    * If cache, store (statement number, inputs, outputs), where inputs is the value of and variables read from outside the scope, and outputs is the value of variables modified outside the scope.
-    * On processing scope, if cached and inputs are the same, set the outputs and skip processing the scope.
+    * Potential solution #1a: when editing a file, reuse the evaluation state that existed prior to importing the file.
+        * Keep a cache that maps a file URI to the evaluation state (result and context) prior to first importing that file.
+        * At least for the initial implementation, this cache has a size of 1, and we clear it before adding a new file.
+        * When a document-update event occurs to a file that exists in the cache, bootstrap the evaluation with the cached evaluation state.
+        * When evaluating an import statement, first call an `onBeforeImportFile` callback. The callback will check if the file is the same as the one being edited and if so, clear the cache and add the new file/state. It first clears the cache because the existing cached state might now be invalid.
+    * Potential solution #1b: when editing a file, reuse the evaluation state that existed prior to the second import of the file (or the final evaluation state if the file was only imported once), if the post-first-import evaluation state is the same as the previous evaluation state that existed prior to first importing the file.
+        * Keep a cache that maps a file URI to the following.
+            * The evaluation state (result and context) after first importing that file
+            * The evaluation state (result and context) prior to the second import of the file (or the final evaluation state if the file was only imported once)
+        * Strategy:
+            1. Before evaluating, run through the statements to calculate the first and second import, if any, of the file being edited.
+            2. After evaluating an import statement, call an `onAfterImportFile` callback.
+            3. The callback will check if the file is the same as the one being edited.
+                * If so, check if the cached state is the same as the new state.
+                    * If so, check if this is the first import of the file:
+                        * If so, return the following:
+                            * The cached evaluation state (result and context) prior to the second import of the file (or the final evaluation state if the file was only imported once).
+                            * A directive to skip evaluation ahead to just before the second import of the file (or the end if the file was only imported once).
+                        * Else:
+                            1. Clear the cached evaluation state (result and context) prior to the second import of the file. It first clears the cache because the existing cached state might now be invalid.
+                            2. Replace the evaluation state (result and context) after first importing that file.
+                    * Else, check if this is the second import of the file. If so:
+                        * Set the cached evaluation state (result and context) prior to the second import of the file.
+                * Else, clear the cache and add the new file and evaluation state (result and context) after first importing that file. It first clears the cache because the existing cached state might now be invalid.
+    * Potential solution #2:
+        * Keep running total of statement number
+        * Use metric to decide whether to cache. Maybe number of statements? Maybe every scope? Maybe by file?
+        * If cache, store (statement number, inputs, outputs), where inputs is the value of and variables read from outside the scope, and outputs is the value of variables modified outside the scope.
+        * On processing scope, if cached and inputs are the same, set the outputs and skip processing the scope.
 
 Improve docs:
 * Update the [Implementation Notes](#implementation-notes) section with a high-level architecture (lexer, parser, evaluator).
