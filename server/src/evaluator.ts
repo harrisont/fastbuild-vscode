@@ -638,17 +638,6 @@ class ScopeStack {
         }
     }
 
-    // Return EvaluationError if the variable is not defined.
-    updateExistingVariableInCurrentScope(name: string, value: Value, variableRange: SourceRange): Maybe<ScopeVariable> {
-        const currentScope = this.getCurrentScope();
-        const existingVariable = currentScope.variables.get(name);
-        if (existingVariable === undefined) {
-            return Maybe.error(new EvaluationError(variableRange, `Cannot update variable "${name}" in current scope because the variable does not exist in the current scope.`));
-        }
-        existingVariable.value = value;
-        return Maybe.ok(existingVariable);
-    }
-
     getCurrentScope(): Scope {
         return this.stack[this.stack.length - 1];
     }
@@ -1306,14 +1295,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                     const includeParseData = maybeIncludeParseData.getValue();
                 
+                    // Save the current `_CURRENT_BFF_DIR_` value so that we can restore it after processing the include.
                     const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-                    const maybeCurrentDirRelativeToRoot = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
-                    if (maybeCurrentDirRelativeToRoot.hasError) {
-                        return new DataAndMaybeError(result, maybeCurrentDirRelativeToRoot.getError());
+                    const maybeCurrentBffDirVariable = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
+                    if (maybeCurrentBffDirVariable.hasError) {
+                        return new DataAndMaybeError(result, maybeCurrentBffDirVariable.getError());
                     }
-                    const currentDirRelativeToRoot = maybeCurrentDirRelativeToRoot.getValue().value;
+                    const currentBffDirVariable = maybeCurrentBffDirVariable.getValue();
+                    const currentBffDirBeforeInclude = currentBffDirVariable.value;
+
+                    // Update the `_CURRENT_BFF_DIR_` value for the include.
                     const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', includeDirRelativeToRoot, dummyRange);
+                    currentBffDirVariable.value = includeDirRelativeToRoot;
 
                     const includeContext: EvaluationContext = {
                         scopeStack: context.scopeStack,
@@ -1335,7 +1328,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
                     
-                    context.scopeStack.updateExistingVariableInCurrentScope('_CURRENT_BFF_DIR_', currentDirRelativeToRoot, dummyRange);
+                    // Restore the `_CURRENT_BFF_DIR_` value.
+                    currentBffDirVariable.value = currentBffDirBeforeInclude;
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
