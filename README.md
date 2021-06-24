@@ -73,6 +73,8 @@ TODO
 
 ### TODO
 
+Add server tests. This will also be useful for using in benchmarks.
+
 Fix bugs:
 * Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
 
@@ -90,9 +92,11 @@ Add more language server provider features:
 * Support "go to definition" and "find references" for aliases.
 
 Improve performance:
+* Add server benchmarks.
 * Prevent unnecessarily re-evaluating on every keystroke while the user is typing. 
     * Potential solution #1: When a document-update event occurs while an existing one is still being processed, cancel the existing processing. Do so by: pass through a cancellation token, intermittently check if it has been canceled, and either return or raise an exception if so.
     * Potential solution #2: Add a "debounce". Wait until X milliseconds have passed since the last document change before processing the change.
+        * Example: https://github.com/microsoft/vscode/blob/7bd6470e00f9aca9d8a4661778b94f31836142ce/extensions/json-language-features/server/src/jsonServer.ts#L305-L336
 * Speed up evaluation by evaluating incrementally instead of re-evaluating everything any time any file changes.
     * Potential solution #1a: when editing a file, reuse the evaluation state that existed prior to importing the file.
         * Keep a cache that maps a file URI to the evaluation state (result and context) prior to first importing that file.
