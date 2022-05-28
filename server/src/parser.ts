@@ -59,6 +59,7 @@ const LEXER_TOKEN_NAME_TO_VALUE = new Map<string, string>([
     ['keywordForEach', 'ForEach'],
     ['keywordIf', 'If'],
     ['keywordLibrary', 'Library'],
+    ['keywordListDependencies', 'ListDependencies'],
     ['keywordObjectList', 'ObjectList'],
     ['keywordPrint', 'Print'],
     ['keywordRemoveDir', 'RemoveDir'],

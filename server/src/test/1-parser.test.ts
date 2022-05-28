@@ -2604,6 +2604,7 @@ describe('parser', () => {
             'Exec',
             'Executable',
             'Library',
+            'ListDependencies',
             'ObjectList',
             'RemoveDir',
             'Test',

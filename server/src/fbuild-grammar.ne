@@ -60,6 +60,7 @@ const lexer = moo.states({
         keywordForEach: 'ForEach',
         keywordIf: 'If',
         keywordLibrary: 'Library',
+        keywordListDependencies: 'ListDependencies',
         keywordObjectList: 'ObjectList',
         keywordPrint: 'Print',
         keywordRemoveDir: 'RemoveDir',
@@ -595,6 +596,7 @@ genericFunctionNameWithAlias ->
   | %keywordExec               {% id %}
   | %keywordExecutable         {% id %}
   | %keywordLibrary            {% id %}
+  | %keywordListDependencies   {% id %}
   | %keywordObjectList         {% id %}
   | %keywordRemoveDir          {% id %}
   | %keywordTest               {% id %}

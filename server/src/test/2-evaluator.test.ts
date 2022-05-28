@@ -2362,6 +2362,7 @@ describe('evaluator', () => {
             'Exec',
             'Executable',
             'Library',
+            'ListDependencies',
             'ObjectList',
             'RemoveDir',
             'Test',
