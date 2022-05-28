@@ -3641,6 +3641,55 @@ describe('evaluator', () => {
                 );
             });
         });
+        
+        describe('Compound expression', () => {
+            class Comparison {
+                constructor(
+                    readonly name: string,
+                    readonly condition: string,
+                    readonly compare: (value1: boolean, value2: boolean) => boolean
+                )
+                {
+                }
+            }
+
+            for (const value1 of [true, false]) {
+                for (const value2 of [true, false]) {
+                    const comparisons = [
+                        new Comparison(` ${value1} &&  ${value2}`, ' .Value1 &&  .Value2', (v1: boolean, v2: boolean) => ( v1 &&  v2)),
+                        new Comparison(`!${value1} &&  ${value2}`, '!.Value1 &&  .Value2', (v1: boolean, v2: boolean) => (!v1 &&  v2)),
+                        new Comparison(` ${value1} && !${value2}`, ' .Value1 && !.Value2', (v1: boolean, v2: boolean) => ( v1 && !v2)),
+                        new Comparison(`!${value1} && !${value2}`, '!.Value1 && !.Value2', (v1: boolean, v2: boolean) => (!v1 && !v2)),
+                        new Comparison(` ${value1} ||  ${value2}`, ' .Value1 ||  .Value2', (v1: boolean, v2: boolean) => ( v1 ||  v2)),
+                        new Comparison(`!${value1} ||  ${value2}`, '!.Value1 ||  .Value2', (v1: boolean, v2: boolean) => (!v1 ||  v2)),
+                        new Comparison(` ${value1} || !${value2}`, ' .Value1 || !.Value2', (v1: boolean, v2: boolean) => ( v1 || !v2)),
+                        new Comparison(`!${value1} || !${value2}`, '!.Value1 || !.Value2', (v1: boolean, v2: boolean) => (!v1 || !v2)),
+                    ];
+                    for (const comparison of comparisons) {
+                        it(comparison.name, () => {
+                            const result = comparison.compare(value1, value2);
+                            const input = `
+                                .Value1 = ${value1}
+                                .Value2 = ${value2}
+                                .Result = false
+                                If( ${comparison.condition} )
+                                {
+                                    ^Result = ${result}
+                                }
+                                .Copy = .Result
+                            `;
+                            assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
+                        });
+                    }
+                }
+            }
+
+            // TODO: add tests
+            //   * Parenthesis around expressions
+            //   * && has precedence over ||
+            //   * Comparisons
+            //   * Presence in ArrayOfStrings
+        });
     });
 
     describe('#include', () => {
