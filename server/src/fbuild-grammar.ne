@@ -634,11 +634,11 @@ ifConditionExpression ->
     # () group
   | %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, value, space2, braceClose]) => [value] %}
     # Multiple items &&'d together
-  | ifConditionTerm                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionTerm whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpression                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpression whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
     # Multiple items ||'d together
-  | ifConditionTerm                     %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionTerm whitespaceOrNewline %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpression                     %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpression whitespaceOrNewline %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
 
 @{%
 

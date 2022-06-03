@@ -359,6 +359,18 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
     return (obj as ParsedIfConditionIn).type === 'in';
 }
 
+interface ParsedIfOperatorAnd {
+    type: 'operator';
+    operator: '&&';
+    lhs: TODO;
+    rhs: TODO;
+}
+
+function isParsedIfOperatorAnd(obj: Record<string, any>): obj is ParsedIfOperatorAnd {
+    const castObj = obj as ParsedIfOperatorAnd;
+    return castObj.type === 'operator' && castObj.operator == '&&';
+}
+
 interface ParsedStatementIf {
     type: 'if';
     range: ParseSourceRange;
