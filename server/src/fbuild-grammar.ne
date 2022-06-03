@@ -629,19 +629,16 @@ functionIf ->
   | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 ifConditionExpression ->
-    # Single item 
-
-ifConditionOrExpression ->
     # Single item
-    ifConditionAndExpression  {% ([value]) => [value] %}
-    # Multiple items ||'d together
-  | ifConditionAndExpression optionalWhitespace %operatorOr optionalWhitespace ifConditionOrExpression  {% ([lhsValue, space1, or, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
-
-ifConditionAndExpression ->
-    # Single item
-    ifConditionTerm  {% ([value]) => [value] %}
+    ifConditionTerm  {% ([[value, context]]) => [value, context] %}
+    # () group
+  | %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, value, space2, braceClose]) => [value] %}
     # Multiple items &&'d together
-  | ifConditionTerm optionalWhitespace %operatorAnd optionalWhitespace ifConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+  | ifConditionTerm                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTerm whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+    # Multiple items ||'d together
+  | ifConditionTerm                     %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTerm whitespaceOrNewline %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', opterator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
 
 @{%
 
