@@ -362,13 +362,25 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
 interface ParsedIfOperatorAnd {
     type: 'operator';
     operator: '&&';
-    lhs: TODO;
-    rhs: TODO;
+    //lhs: TODO;
+    //rhs: TODO;
 }
 
 function isParsedIfOperatorAnd(obj: Record<string, any>): obj is ParsedIfOperatorAnd {
     const castObj = obj as ParsedIfOperatorAnd;
-    return castObj.type === 'operator' && castObj.operator == '&&';
+    return castObj.type === 'operator' && castObj.operator === '&&';
+}
+
+interface ParsedIfOperatorOr {
+    type: 'operator';
+    operator: '||';
+    //lhs: TODO;
+    //rhs: TODO;
+}
+
+function isParsedIfOperatorOr(obj: Record<string, any>): obj is ParsedIfOperatorOr {
+    const castObj = obj as ParsedIfOperatorOr;
+    return castObj.type === 'operator' && castObj.operator === '||';
 }
 
 interface ParsedStatementIf {
@@ -1269,6 +1281,80 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     if (condition.invert) {
                         evaluatedConditionBool = !evaluatedConditionBool;
                     }
+                } else if (isParsedIfOperatorAnd(condition)) {
+                    // TODO
+                    /*
+                    {
+	"type": "operator",
+	"operator": "&&",
+	"lhs": {
+		"type": "boolean",
+		"value": {
+			"type": "evaluatedVariable",
+			"scope": "current",
+			"name": {
+				"type": "string",
+				"value": "Value1",
+				"range": {
+					"start": {
+						"line": 4,
+						"character": 38
+					},
+					"end": {
+						"line": 4,
+						"character": 44
+					}
+				}
+			},
+			"range": {
+				"start": {
+					"line": 4,
+					"character": 37
+				},
+				"end": {
+					"line": 4,
+					"character": 44
+				}
+			}
+		},
+		"invert": false
+	},
+	"rhs": {
+		"type": "boolean",
+		"value": {
+			"type": "evaluatedVariable",
+			"scope": "current",
+			"name": {
+				"type": "string",
+				"value": "Value2",
+				"range": {
+					"start": {
+						"line": 4,
+						"character": 50
+					},
+					"end": {
+						"line": 4,
+						"character": 56
+					}
+				}
+			},
+			"range": {
+				"start": {
+					"line": 4,
+					"character": 49
+				},
+				"end": {
+					"line": 4,
+					"character": 56
+				}
+			}
+		},
+		"invert": false
+	}
+}
+                    */
+                } else if (isParsedIfOperatorOr(condition)) {
+                    // TODO
                 } else {
                     const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
                     return new DataAndMaybeError(result, error);
