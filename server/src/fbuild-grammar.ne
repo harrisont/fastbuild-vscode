@@ -27,6 +27,8 @@ const lexer = moo.states({
         operatorGreaterOrEqual: '>=',
         operatorGreater: '>',
         operatorNot: '!',
+        operatorAnd: '&&',
+        operatorOr: '||',
 
         operatorAssignment: '=',
         operatorAddition: '+',
@@ -623,8 +625,23 @@ functionPrint ->
 functionSettings -> %keywordSettings functionBody  {% ([functionName, statements]) => { return { type: 'settings', statements }; } %}
 
 functionIf ->
-    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
-  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifCondition whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+
+ifConditionExpression ->
+    # Single item 
+
+ifConditionOrExpression ->
+    # Single item
+    ifConditionAndExpression  {% ([value]) => [value] %}
+    # Multiple items ||'d together
+  | ifConditionAndExpression optionalWhitespace %operatorOr optionalWhitespace ifConditionOrExpression  {% ([lhsValue, space1, or, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+
+ifConditionAndExpression ->
+    # Single item
+    ifConditionTerm  {% ([value]) => [value] %}
+    # Multiple items &&'d together
+  | ifConditionTerm optionalWhitespace %operatorAnd optionalWhitespace ifConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
 
 @{%
 
@@ -647,7 +664,7 @@ function createIfConditionComparison(operatorToken: Token, lhs: any, rhs: any) {
 
 %}
 
-ifCondition ->
+ifConditionTerm ->
     # Boolean expression: .Value
                                              evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: ! .Value 
