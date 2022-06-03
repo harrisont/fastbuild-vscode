@@ -359,34 +359,36 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
     return (obj as ParsedIfConditionIn).type === 'in';
 }
 
-interface ParsedIfOperatorAnd {
+interface ParsedIfConditionOperatorAnd {
     type: 'operator';
     operator: '&&';
     //lhs: TODO;
     //rhs: TODO;
 }
 
-function isParsedIfOperatorAnd(obj: Record<string, any>): obj is ParsedIfOperatorAnd {
-    const castObj = obj as ParsedIfOperatorAnd;
+function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is ParsedIfConditionOperatorAnd {
+    const castObj = obj as ParsedIfConditionOperatorAnd;
     return castObj.type === 'operator' && castObj.operator === '&&';
 }
 
-interface ParsedIfOperatorOr {
+interface ParsedIfConditionOperatorOr {
     type: 'operator';
     operator: '||';
     //lhs: TODO;
     //rhs: TODO;
 }
 
-function isParsedIfOperatorOr(obj: Record<string, any>): obj is ParsedIfOperatorOr {
-    const castObj = obj as ParsedIfOperatorOr;
+function isParsedIfConditionOperatorOr(obj: Record<string, any>): obj is ParsedIfConditionOperatorOr {
+    const castObj = obj as ParsedIfConditionOperatorOr;
     return castObj.type === 'operator' && castObj.operator === '||';
 }
+
+type ParsedIfCondtion = ParsedIfConditionBoolean | ParsedIfConditionComparison | ParsedIfConditionIn | ParsedIfConditionOperatorAnd | ParsedIfConditionOperatorOr;
 
 interface ParsedStatementIf {
     type: 'if';
     range: ParseSourceRange;
-    condition: ParsedIfConditionBoolean | ParsedIfConditionComparison | ParsedIfConditionIn;
+    condition: ParsedIfCondtion;
     statements: Statement[];
 }
 
@@ -1120,245 +1122,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the condition.
                 const condition = statement.condition;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                let evaluatedConditionBool = false;
-                if (isParsedIfConditionBoolean(condition)) {
-                    if (condition.value.type !== 'evaluatedVariable') {
-                        const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-                    const conditionValue = condition.value;
-                    const evaluatedConditionAndMaybeError = evaluateEvaluatedVariable(conditionValue, context);
-                    const evaluatedCondition = evaluatedConditionAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedCondition.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedCondition.variableReferences);
-                    if (evaluatedConditionAndMaybeError.error !== null) {
-                        return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
-                    }
-                    const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
-                    if (typeof evaluatedConditionValue !== 'boolean') {
-                        const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
-                        const error = new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`);
-                        return new DataAndMaybeError(result, error);
-                    }
-
-                    evaluatedConditionBool = condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
-                } else if (isParsedIfConditionComparison(condition)) {
-                    // Evaluate LHS.
-                    if (condition.lhs.type !== 'evaluatedVariable') {
-                        const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-                    const lhs = condition.lhs;
-                    const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
-                    const evaluatedLhs = evaluatedLhsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
-                    if (evaluatedLhsAndMaybeError.error !== null) {
-                        return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
-                    }
-                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
-                    
-                    // Evaluate RHS.
-                    if (condition.rhs.type !== 'evaluatedVariable') {
-                        const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-                    const rhs = condition.rhs;
-                    const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
-                    const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
-                    if (evaluatedRhsAndMaybeError.error !== null) {
-                        return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
-                    }
-                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
-
-                    if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
-                        const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
-                        const error = new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`);
-                        return new DataAndMaybeError(result, error);
-                    }
-
-                    const operator = condition.operator;
-                    
-                    // Only allow '==' and '!=' operators for booleans, since {'>', '>=', '<', '<='} don't make sense.
-                    // Checking the LHS type also implicitly checks the RHS type since above we checked that the LHS and RHS types are equal.
-                    if (typeof evaluatedLhsValue === 'boolean'
-                        && operator.value !== '=='
-                        && operator.value !== '!=')
-                    {
-                        const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-                        const error = new EvaluationError(operatorRange, `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator.value}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-
-                    switch (operator.value) {
-                        case '==':
-                            evaluatedConditionBool = evaluatedLhsValue == evaluatedRhsValue;
-                            break;
-                        case '!=':
-                            evaluatedConditionBool = evaluatedLhsValue != evaluatedRhsValue;
-                            break;
-                        case '<':
-                            evaluatedConditionBool = evaluatedLhsValue < evaluatedRhsValue;
-                            break;
-                        case '<=':
-                            evaluatedConditionBool = evaluatedLhsValue <= evaluatedRhsValue;
-                            break;
-                        case '>':
-                            evaluatedConditionBool = evaluatedLhsValue > evaluatedRhsValue;
-                            break;
-                        case '>=':
-                            evaluatedConditionBool = evaluatedLhsValue >= evaluatedRhsValue;
-                            break;
-                        default: {
-                            const error = new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`);
-                            return new DataAndMaybeError(result, error);
-                        }
-                    }
-                } else if (isParsedIfConditionIn(condition)) {
-                    // Evaluate LHS.
-                    if (condition.lhs.type !== 'evaluatedVariable') {
-                        const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-                    const lhs = condition.lhs;
-                    const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
-                    const evaluatedLhs = evaluatedLhsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
-                    if (evaluatedLhsAndMaybeError.error !== null) {
-                        return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
-                    }
-                    const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
-                    
-                    // Evaluate RHS.
-                    if (condition.rhs.type !== 'evaluatedVariable') {
-                        const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-                        return new DataAndMaybeError(result, error);
-                    }
-                    const rhs = condition.rhs;
-                    const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
-                    const evaluatedRhs = evaluatedRhsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
-                    if (evaluatedRhsAndMaybeError.error !== null) {
-                        return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
-                    }
-                    const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
-                    const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
-
-                    // Check presence.
-                    if (evaluatedRhsValue instanceof Array) {
-                        if (evaluatedRhsValue.length === 0) {
-                            evaluatedConditionBool = false;
-                        } else if (typeof evaluatedRhsValue[0] === 'string') {
-                            const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
-                            if (typeof evaluatedLhsValue === 'string') {
-                                evaluatedConditionBool = evaluatedRhsValue.includes(evaluatedLhsValue);
-                            } else if (evaluatedLhsValue instanceof Array) {
-                                if (evaluatedLhsValue.length === 0) {
-                                    evaluatedConditionBool = false;
-                                } else if (typeof evaluatedLhsValue[0] === 'string') {
-                                    evaluatedConditionBool = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
-                                } else {
-                                    const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`);
-                                    return new DataAndMaybeError(result, error);
-                                }
-                            } else {
-                                const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`);
-                                return new DataAndMaybeError(result, error);
-                            }
-                        } else {
-                            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`);
-                            return new DataAndMaybeError(result, error);
-                        }
-                    } else {
-                        const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
-                        return new DataAndMaybeError(result, error);
-                    }
-
-                    if (condition.invert) {
-                        evaluatedConditionBool = !evaluatedConditionBool;
-                    }
-                } else if (isParsedIfOperatorAnd(condition)) {
-                    // TODO
-                    /*
-                    {
-	"type": "operator",
-	"operator": "&&",
-	"lhs": {
-		"type": "boolean",
-		"value": {
-			"type": "evaluatedVariable",
-			"scope": "current",
-			"name": {
-				"type": "string",
-				"value": "Value1",
-				"range": {
-					"start": {
-						"line": 4,
-						"character": 38
-					},
-					"end": {
-						"line": 4,
-						"character": 44
-					}
-				}
-			},
-			"range": {
-				"start": {
-					"line": 4,
-					"character": 37
-				},
-				"end": {
-					"line": 4,
-					"character": 44
-				}
-			}
-		},
-		"invert": false
-	},
-	"rhs": {
-		"type": "boolean",
-		"value": {
-			"type": "evaluatedVariable",
-			"scope": "current",
-			"name": {
-				"type": "string",
-				"value": "Value2",
-				"range": {
-					"start": {
-						"line": 4,
-						"character": 50
-					},
-					"end": {
-						"line": 4,
-						"character": 56
-					}
-				}
-			},
-			"range": {
-				"start": {
-					"line": 4,
-					"character": 49
-				},
-				"end": {
-					"line": 4,
-					"character": 56
-				}
-			}
-		},
-		"invert": false
-	}
-}
-                    */
-                } else if (isParsedIfOperatorOr(condition)) {
-                    // TODO
-                } else {
-                    const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
-                    return new DataAndMaybeError(result, error);
-                }
+                const evaluatedConditionBool = evaluateIfCondition(condition);
 
                 // Evaluate the function body if the condition was true.
                 if (evaluatedConditionBool === true) {
@@ -1834,6 +1598,239 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
     }
 
     return Maybe.ok(existingValue);
+}
+
+function evaluateIfCondition(condition: ParsedIfCondtion): boolean {
+    if (isParsedIfConditionBoolean(condition)) {
+        if (condition.value.type !== 'evaluatedVariable') {
+            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
+            return new DataAndMaybeError(result, error);
+        }
+        const conditionValue = condition.value;
+        const evaluatedConditionAndMaybeError = evaluateEvaluatedVariable(conditionValue, context);
+        const evaluatedCondition = evaluatedConditionAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedCondition.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedCondition.variableReferences);
+        if (evaluatedConditionAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
+        }
+        const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
+        if (typeof evaluatedConditionValue !== 'boolean') {
+            const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
+            const error = new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`);
+            return new DataAndMaybeError(result, error);
+        }
+
+        return condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
+    } else if (isParsedIfConditionComparison(condition)) {
+        // Evaluate LHS.
+        if (condition.lhs.type !== 'evaluatedVariable') {
+            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
+            return new DataAndMaybeError(result, error);
+        }
+        const lhs = condition.lhs;
+        const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+        const evaluatedLhs = evaluatedLhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
+        if (evaluatedLhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
+        }
+        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+    
+        // Evaluate RHS.
+        if (condition.rhs.type !== 'evaluatedVariable') {
+            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
+            return new DataAndMaybeError(result, error);
+        }
+        const rhs = condition.rhs;
+        const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+        const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+        if (evaluatedRhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+        }
+        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+
+        if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
+            const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
+            const error = new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`);
+            return new DataAndMaybeError(result, error);
+        }
+
+        const operator = condition.operator;
+    
+        // Only allow '==' and '!=' operators for booleans, since {'>', '>=', '<', '<='} don't make sense.
+        // Checking the LHS type also implicitly checks the RHS type since above we checked that the LHS and RHS types are equal.
+        if (typeof evaluatedLhsValue === 'boolean'
+            && operator.value !== '=='
+            && operator.value !== '!=')
+        {
+            const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
+            const error = new EvaluationError(operatorRange, `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator.value}'`);
+            return new DataAndMaybeError(result, error);
+        }
+
+        switch (operator.value) {
+            case '==':
+                return evaluatedLhsValue == evaluatedRhsValue;
+            case '!=':
+                return evaluatedLhsValue != evaluatedRhsValue;
+            case '<':
+                return evaluatedLhsValue < evaluatedRhsValue;
+            case '<=':
+                return evaluatedLhsValue <= evaluatedRhsValue;
+            case '>':
+                return evaluatedLhsValue > evaluatedRhsValue;
+            case '>=':
+                return evaluatedLhsValue >= evaluatedRhsValue;
+            default: {
+                const error = new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`);
+                return new DataAndMaybeError(result, error);
+            }
+        }
+    } else if (isParsedIfConditionIn(condition)) {
+        // Evaluate LHS.
+        if (condition.lhs.type !== 'evaluatedVariable') {
+            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
+            return new DataAndMaybeError(result, error);
+        }
+        const lhs = condition.lhs;
+        const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+        const evaluatedLhs = evaluatedLhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
+        if (evaluatedLhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
+        }
+        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+    
+        // Evaluate RHS.
+        if (condition.rhs.type !== 'evaluatedVariable') {
+            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
+            return new DataAndMaybeError(result, error);
+        }
+        const rhs = condition.rhs;
+        const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+        const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+        if (evaluatedRhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+        }
+        const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
+        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+
+        // Check presence.
+        let isPresent = true;
+        if (evaluatedRhsValue instanceof Array) {
+            if (evaluatedRhsValue.length === 0) {
+                isPresent = false;
+            } else if (typeof evaluatedRhsValue[0] === 'string') {
+                const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
+                if (typeof evaluatedLhsValue === 'string') {
+                    isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
+                } else if (evaluatedLhsValue instanceof Array) {
+                    if (evaluatedLhsValue.length === 0) {
+                        isPresent = false;
+                    } else if (typeof evaluatedLhsValue[0] === 'string') {
+                        isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
+                    } else {
+                        const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`);
+                        return new DataAndMaybeError(result, error);
+                    }
+                } else {
+                    const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`);
+                    return new DataAndMaybeError(result, error);
+                }
+            } else {
+                const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`);
+                return new DataAndMaybeError(result, error);
+            }
+        } else {
+            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
+            return new DataAndMaybeError(result, error);
+        }
+        return condition.invert ? !isPresent : isPresent;
+    } else if (isParsedIfConditionOperatorAnd(condition)) {
+        // TODO
+        /*
+{
+	"type": "operator",
+	"operator": "&&",
+	"lhs": {
+		"type": "boolean",
+		"value": {
+			"type": "evaluatedVariable",
+			"scope": "current",
+			"name": {
+				"type": "string",
+				"value": "Value1",
+				"range": {
+					"start": {
+						"line": 4,
+						"character": 38
+					},
+					"end": {
+						"line": 4,
+						"character": 44
+					}
+				}
+			},
+			"range": {
+				"start": {
+					"line": 4,
+					"character": 37
+				},
+				"end": {
+					"line": 4,
+					"character": 44
+				}
+			}
+		},
+		"invert": false
+	},
+	"rhs": {
+		"type": "boolean",
+		"value": {
+			"type": "evaluatedVariable",
+			"scope": "current",
+			"name": {
+				"type": "string",
+				"value": "Value2",
+				"range": {
+					"start": {
+						"line": 4,
+						"character": 50
+					},
+					"end": {
+						"line": 4,
+						"character": 56
+					}
+				}
+			},
+			"range": {
+				"start": {
+					"line": 4,
+					"character": 49
+				},
+				"end": {
+					"line": 4,
+					"character": 56
+				}
+			}
+		},
+		"invert": false
+	}
+}
+    */
+    } else if (isParsedIfConditionOperatorOr(condition)) {
+        // TODO
+    } else {
+        const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
+        return new DataAndMaybeError(result, error);
+    }
 }
 
 function getValueTypeName(value: Value): ValueTypeName {
