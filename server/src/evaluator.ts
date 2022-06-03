@@ -549,6 +549,12 @@ interface EvaluatedEvaluatedVariable {
     variableReferences: VariableReference[];
 }
 
+interface EvaluatedCondition {
+    condition: boolean;
+    evaluatedVariables: EvaluatedVariable[];
+    variableReferences: VariableReference[];
+}
+
 interface ScopeVariable {
     value: Value;
     definition: VariableDefinition;
@@ -1122,7 +1128,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the condition.
                 const condition = statement.condition;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const evaluatedConditionBool = evaluateIfCondition(condition);
+                const evaluatedConditionBool = evaluateIfCondition(condition, context, statementRange);
 
                 // Evaluate the function body if the condition was true.
                 if (evaluatedConditionBool === true) {
@@ -1600,7 +1606,12 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
     return Maybe.ok(existingValue);
 }
 
-function evaluateIfCondition(condition: ParsedIfCondtion): boolean {
+function evaluateIfCondition(
+    condition: ParsedIfCondtion,
+    context: EvaluationContext,
+    statementRange: SourceRange
+): DataAndMaybeError<EvaluatedCondition>
+{
     if (isParsedIfConditionBoolean(condition)) {
         if (condition.value.type !== 'evaluatedVariable') {
             const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
@@ -1756,75 +1767,75 @@ function evaluateIfCondition(condition: ParsedIfCondtion): boolean {
     } else if (isParsedIfConditionOperatorAnd(condition)) {
         // TODO
         /*
-{
-	"type": "operator",
-	"operator": "&&",
-	"lhs": {
-		"type": "boolean",
-		"value": {
-			"type": "evaluatedVariable",
-			"scope": "current",
-			"name": {
-				"type": "string",
-				"value": "Value1",
-				"range": {
-					"start": {
-						"line": 4,
-						"character": 38
-					},
-					"end": {
-						"line": 4,
-						"character": 44
-					}
-				}
-			},
-			"range": {
-				"start": {
-					"line": 4,
-					"character": 37
-				},
-				"end": {
-					"line": 4,
-					"character": 44
-				}
-			}
-		},
-		"invert": false
-	},
-	"rhs": {
-		"type": "boolean",
-		"value": {
-			"type": "evaluatedVariable",
-			"scope": "current",
-			"name": {
-				"type": "string",
-				"value": "Value2",
-				"range": {
-					"start": {
-						"line": 4,
-						"character": 50
-					},
-					"end": {
-						"line": 4,
-						"character": 56
-					}
-				}
-			},
-			"range": {
-				"start": {
-					"line": 4,
-					"character": 49
-				},
-				"end": {
-					"line": 4,
-					"character": 56
-				}
-			}
-		},
-		"invert": false
-	}
-}
-    */
+        {
+            "type": "operator",
+            "operator": "&&",
+            "lhs": {
+                "type": "boolean",
+                "value": {
+                    "type": "evaluatedVariable",
+                    "scope": "current",
+                    "name": {
+                        "type": "string",
+                        "value": "Value1",
+                        "range": {
+                            "start": {
+                                "line": 4,
+                                "character": 38
+                            },
+                            "end": {
+                                "line": 4,
+                                "character": 44
+                            }
+                        }
+                    },
+                    "range": {
+                        "start": {
+                            "line": 4,
+                            "character": 37
+                        },
+                        "end": {
+                            "line": 4,
+                            "character": 44
+                        }
+                    }
+                },
+                "invert": false
+            },
+            "rhs": {
+                "type": "boolean",
+                "value": {
+                    "type": "evaluatedVariable",
+                    "scope": "current",
+                    "name": {
+                        "type": "string",
+                        "value": "Value2",
+                        "range": {
+                            "start": {
+                                "line": 4,
+                                "character": 50
+                            },
+                            "end": {
+                                "line": 4,
+                                "character": 56
+                            }
+                        }
+                    },
+                    "range": {
+                        "start": {
+                            "line": 4,
+                            "character": 49
+                        },
+                        "end": {
+                            "line": 4,
+                            "character": 56
+                        }
+                    }
+                },
+                "invert": false
+            }
+        }
+        */
     } else if (isParsedIfConditionOperatorOr(condition)) {
         // TODO
     } else {
