@@ -1632,7 +1632,11 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, error);
         }
 
-        return condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
+        return new DataAndMaybeError({
+            condition: condition.invert ? !evaluatedConditionValue : evaluatedConditionValue,
+            evaluatedVariables: evaluatedVariables,
+            variableReferences: variableReferences,
+        });
     } else if (isParsedIfConditionComparison(condition)) {
         // Evaluate LHS.
         if (condition.lhs.type !== 'evaluatedVariable') {
@@ -1683,24 +1687,37 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, error);
         }
 
+        let comparisonResult = false;
         switch (operator.value) {
             case '==':
-                return evaluatedLhsValue == evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue == evaluatedRhsValue;
+                break;
             case '!=':
-                return evaluatedLhsValue != evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue != evaluatedRhsValue;
+                break;
             case '<':
-                return evaluatedLhsValue < evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue < evaluatedRhsValue;
+                break;
             case '<=':
-                return evaluatedLhsValue <= evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue <= evaluatedRhsValue;
+                break;
             case '>':
-                return evaluatedLhsValue > evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue > evaluatedRhsValue;
+                break;
             case '>=':
-                return evaluatedLhsValue >= evaluatedRhsValue;
+                comparisonResult = evaluatedLhsValue >= evaluatedRhsValue;
+                break;
             default: {
                 const error = new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`);
                 return new DataAndMaybeError(result, error);
             }
         }
+
+        return new DataAndMaybeError({
+            condition: comparisonResult,
+            evaluatedVariables: evaluatedVariables,
+            variableReferences: variableReferences,
+        });
     } else if (isParsedIfConditionIn(condition)) {
         // Evaluate LHS.
         if (condition.lhs.type !== 'evaluatedVariable') {
@@ -1763,7 +1780,12 @@ function evaluateIfCondition(
             const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
             return new DataAndMaybeError(result, error);
         }
-        return condition.invert ? !isPresent : isPresent;
+
+        return new DataAndMaybeError({
+            condition: condition.invert ? !isPresent : isPresent,
+            evaluatedVariables: evaluatedVariables,
+            variableReferences: variableReferences,
+        });
     } else if (isParsedIfConditionOperatorAnd(condition)) {
         // TODO
         /*
