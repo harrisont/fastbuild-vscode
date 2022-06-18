@@ -1128,10 +1128,16 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the condition.
                 const condition = statement.condition;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const evaluatedConditionBool = evaluateIfCondition(condition, context, statementRange);
+                const evaluatedConditionAndMaybeError = evaluateIfCondition(condition, context, statementRange);
+                const evaluatedCondition = evaluatedConditionAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedCondition.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedCondition.variableReferences);
+                if (evaluatedConditionAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
+                }
 
                 // Evaluate the function body if the condition was true.
-                if (evaluatedConditionBool === true) {
+                if (evaluatedCondition.condition === true) {
                     let error: Error | null = null;
                     context.scopeStack.withScope(() => {
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
@@ -1294,6 +1300,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             context.previousStatementLhsVariable = statementLhsVariable;
         }
     } catch (error) {
+        // error should be an instance of Error.
         return new DataAndMaybeError(result, error);
     }
 
