@@ -1619,6 +1619,12 @@ function evaluateIfCondition(
     statementRange: SourceRange
 ): DataAndMaybeError<EvaluatedCondition>
 {
+    const result: EvaluatedCondition = {
+        condition: false,
+        evaluatedVariables: [],
+        variableReferences: [],
+    };
+
     if (isParsedIfConditionBoolean(condition)) {
         if (condition.value.type !== 'evaluatedVariable') {
             const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
@@ -1638,12 +1644,8 @@ function evaluateIfCondition(
             const error = new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`);
             return new DataAndMaybeError(result, error);
         }
-
-        return new DataAndMaybeError({
-            condition: condition.invert ? !evaluatedConditionValue : evaluatedConditionValue,
-            evaluatedVariables: evaluatedVariables,
-            variableReferences: variableReferences,
-        });
+        result.condition = condition.invert ? !evaluatedConditionValue : evaluatedConditionValue;
+        return new DataAndMaybeError(result);
     } else if (isParsedIfConditionComparison(condition)) {
         // Evaluate LHS.
         if (condition.lhs.type !== 'evaluatedVariable') {
@@ -1720,11 +1722,8 @@ function evaluateIfCondition(
             }
         }
 
-        return new DataAndMaybeError({
-            condition: comparisonResult,
-            evaluatedVariables: evaluatedVariables,
-            variableReferences: variableReferences,
-        });
+        result.condition = comparisonResult;
+        return new DataAndMaybeError(result);
     } else if (isParsedIfConditionIn(condition)) {
         // Evaluate LHS.
         if (condition.lhs.type !== 'evaluatedVariable') {
@@ -1788,11 +1787,8 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, error);
         }
 
-        return new DataAndMaybeError({
-            condition: condition.invert ? !isPresent : isPresent,
-            evaluatedVariables: evaluatedVariables,
-            variableReferences: variableReferences,
-        });
+        result.condition = condition.invert ? !isPresent : isPresent;
+        return new DataAndMaybeError(result);
     } else if (isParsedIfConditionOperatorAnd(condition)) {
         // TODO
         /*
@@ -1865,8 +1861,13 @@ function evaluateIfCondition(
             }
         }
         */
+        /*TODO*/result.condition = false;
+        return new DataAndMaybeError(result);
     } else if (isParsedIfConditionOperatorOr(condition)) {
         // TODO
+        
+        /*TODO*/result.condition = false;
+        return new DataAndMaybeError(result);
     } else {
         const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
         return new DataAndMaybeError(result, error);
