@@ -165,6 +165,9 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
         
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     } catch (error) {
+        // Clear previous diagnostics because they are now potentially stale.
+        state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
+
         if (error instanceof ParseError) {
             state.diagnosticProvider.setParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else if (error instanceof EvaluationError) {
