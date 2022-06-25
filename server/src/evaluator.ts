@@ -1646,34 +1646,26 @@ function evaluateIfCondition(
         return new DataAndMaybeError(result);
     } else if (isParsedIfConditionComparison(condition)) {
         // Evaluate LHS.
-        if (condition.lhs.type !== 'evaluatedVariable') {
-            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-            return new DataAndMaybeError(result, error);
-        }
         const lhs = condition.lhs;
-        const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+        const evaluatedLhsAndMaybeError = evaluateRValue(lhs, context);
         const evaluatedLhs = evaluatedLhsAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
         if (evaluatedLhsAndMaybeError.error !== null) {
             return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
         }
-        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+        const evaluatedLhsValue = evaluatedLhs.value;
     
         // Evaluate RHS.
-        if (condition.rhs.type !== 'evaluatedVariable') {
-            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-            return new DataAndMaybeError(result, error);
-        }
         const rhs = condition.rhs;
-        const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+        const evaluatedRhsAndMaybeError = evaluateRValue(rhs, context);
         const evaluatedRhs = evaluatedRhsAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
         if (evaluatedRhsAndMaybeError.error !== null) {
             return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
         }
-        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+        const evaluatedRhsValue = evaluatedRhs.value;
 
         if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
             const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
