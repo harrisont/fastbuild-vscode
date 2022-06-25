@@ -3841,67 +3841,35 @@ describe('evaluator', () => {
         });
         
         describe('Compound expression', () => {
-            class Comparison {
-                constructor(
-                    readonly name: string,
-                    readonly condition: string,
-                    readonly compare: (values: boolean[]) => boolean
-                )
-                {
-                }
-            }
-
-            for (const value1 of [true, false]) {
-                for (const value2 of [true, false]) {
-                    const comparisons2Values = [
-                        new Comparison(` ${value1} &&  ${value2}`, ' .Value1 &&  .Value2', v => ( v[0] &&  v[1])),
-                        new Comparison(`!${value1} &&  ${value2}`, '!.Value1 &&  .Value2', v => (!v[0] &&  v[1])),
-                        new Comparison(` ${value1} && !${value2}`, ' .Value1 && !.Value2', v => ( v[0] && !v[1])),
-                        new Comparison(`!${value1} && !${value2}`, '!.Value1 && !.Value2', v => (!v[0] && !v[1])),
-                        new Comparison(` ${value1} ||  ${value2}`, ' .Value1 ||  .Value2', v => ( v[0] ||  v[1])),
-                        new Comparison(`!${value1} ||  ${value2}`, '!.Value1 ||  .Value2', v => (!v[0] ||  v[1])),
-                        new Comparison(` ${value1} || !${value2}`, ' .Value1 || !.Value2', v => ( v[0] || !v[1])),
-                        new Comparison(`!${value1} || !${value2}`, '!.Value1 || !.Value2', v => (!v[0] || !v[1])),
-                    ];
-                    for (const comparison of comparisons2Values) {
-                        it(comparison.name, () => {
-                            const result = comparison.compare([value1, value2]);
-                            const input = `
-                                .Value1 = ${value1}
-                                .Value2 = ${value2}
-                                .Result = false
-                                If( ${comparison.condition} )
-                                {
-                                    ^Result = ${result}
-                                }
-                                .Copy = .Result
-                            `;
-                            assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
-                        });
+            describe('Boolean compound expression', () => {
+                class Comparison {
+                    constructor(
+                        readonly name: string,
+                        readonly condition: string,
+                        readonly compare: (values: boolean[]) => boolean
+                    )
+                    {
                     }
                 }
-            }
-
-            for (const value1 of [true, false]) {
-                for (const value2 of [true, false]) {
-                    for (const value3 of [true, false]) {
-                        const comparisons3Values = [
-                            new Comparison(`${value1} && ${value2} && ${value3}`, '.Value1 && .Value2 && .Value3', v => (v[0] && v[1] && v[2])),
-                            new Comparison(`${value1} || ${value2} || ${value3}`, '.Value1 || .Value2 || .Value3', v => (v[0] || v[1] || v[2])),
-                            new Comparison(`${value1} && ${value2} || ${value3}`, '.Value1 && .Value2 || .Value3', v => (v[0] && v[1] || v[2])),
-                            new Comparison(`${value1} || ${value2} && ${value3}`, '.Value1 || .Value2 && .Value3', v => (v[0] || v[1] && v[2])),
-                            new Comparison(`(${value1} && ${value2}) || ${value3}`, '(.Value1 && .Value2) || .Value3', v => ((v[0] && v[1]) || v[2])),
-                            new Comparison(`${value1} && (${value2} || ${value3})`, '.Value1 && (.Value2 || .Value3)', v => (v[0] && (v[1] || v[2]))),
-                            new Comparison(`(${value1} || ${value2}) && ${value3}`, '(.Value1 || .Value2) && .Value3', v => ((v[0] || v[1]) && v[2])),
-                            new Comparison(`${value1} || (${value2} && ${value3})`, '.Value1 || (.Value2 && .Value3)', v => (v[0] || (v[1] && v[2]))),
+    
+                for (const value1 of [true, false]) {
+                    for (const value2 of [true, false]) {
+                        const comparisons2Values = [
+                            new Comparison(` ${value1} &&  ${value2}`, ' .Value1 &&  .Value2', v => ( v[0] &&  v[1])),
+                            new Comparison(`!${value1} &&  ${value2}`, '!.Value1 &&  .Value2', v => (!v[0] &&  v[1])),
+                            new Comparison(` ${value1} && !${value2}`, ' .Value1 && !.Value2', v => ( v[0] && !v[1])),
+                            new Comparison(`!${value1} && !${value2}`, '!.Value1 && !.Value2', v => (!v[0] && !v[1])),
+                            new Comparison(` ${value1} ||  ${value2}`, ' .Value1 ||  .Value2', v => ( v[0] ||  v[1])),
+                            new Comparison(`!${value1} ||  ${value2}`, '!.Value1 ||  .Value2', v => (!v[0] ||  v[1])),
+                            new Comparison(` ${value1} || !${value2}`, ' .Value1 || !.Value2', v => ( v[0] || !v[1])),
+                            new Comparison(`!${value1} || !${value2}`, '!.Value1 || !.Value2', v => (!v[0] || !v[1])),
                         ];
-                        for (const comparison of comparisons3Values) {
+                        for (const comparison of comparisons2Values) {
                             it(comparison.name, () => {
-                                const result = comparison.compare([value1, value2, value3]);
+                                const result = comparison.compare([value1, value2]);
                                 const input = `
                                     .Value1 = ${value1}
                                     .Value2 = ${value2}
-                                    .Value3 = ${value3}
                                     .Result = false
                                     If( ${comparison.condition} )
                                     {
@@ -3909,57 +3877,128 @@ describe('evaluator', () => {
                                     }
                                     .Copy = .Result
                                 `;
-                                assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
+                                assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
                             });
                         }
                     }
                 }
-            }
-
-            it('"(0 < 1) && (0 > 1)" evaluates to false', () => {
-                const input = `
-                    .Value1 = 0
-                    .Value2 = 1
-                    .Result = false
-                    If( (.Value1 < .Value2) && (.Value1 > .Value2) )
-                    {
-                        ^Result = true
+    
+                for (const value1 of [true, false]) {
+                    for (const value2 of [true, false]) {
+                        for (const value3 of [true, false]) {
+                            const comparisons3Values = [
+                                new Comparison(`${value1} && ${value2} && ${value3}`, '.Value1 && .Value2 && .Value3', v => (v[0] && v[1] && v[2])),
+                                new Comparison(`${value1} || ${value2} || ${value3}`, '.Value1 || .Value2 || .Value3', v => (v[0] || v[1] || v[2])),
+                                new Comparison(`${value1} && ${value2} || ${value3}`, '.Value1 && .Value2 || .Value3', v => (v[0] && v[1] || v[2])),
+                                new Comparison(`${value1} || ${value2} && ${value3}`, '.Value1 || .Value2 && .Value3', v => (v[0] || v[1] && v[2])),
+                                new Comparison(`(${value1} && ${value2}) || ${value3}`, '(.Value1 && .Value2) || .Value3', v => ((v[0] && v[1]) || v[2])),
+                                new Comparison(`${value1} && (${value2} || ${value3})`, '.Value1 && (.Value2 || .Value3)', v => (v[0] && (v[1] || v[2]))),
+                                new Comparison(`(${value1} || ${value2}) && ${value3}`, '(.Value1 || .Value2) && .Value3', v => ((v[0] || v[1]) && v[2])),
+                                new Comparison(`${value1} || (${value2} && ${value3})`, '.Value1 || (.Value2 && .Value3)', v => (v[0] || (v[1] && v[2]))),
+                            ];
+                            for (const comparison of comparisons3Values) {
+                                it(comparison.name, () => {
+                                    const result = comparison.compare([value1, value2, value3]);
+                                    const input = `
+                                        .Value1 = ${value1}
+                                        .Value2 = ${value2}
+                                        .Value3 = ${value3}
+                                        .Result = false
+                                        If( ${comparison.condition} )
+                                        {
+                                            ^Result = ${result}
+                                        }
+                                        .Copy = .Result
+                                    `;
+                                    assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
+                                });
+                            }
+                        }
                     }
-                    .Copy = .Result
-                `;
-                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+                }
             });
 
-            it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
-                const input = `
-                    .Value1 = 0
-                    .Value2 = 1
-                    .Result = false
-                    If( (.Value1 < .Value2) || (.Value1 > .Value2) )
-                    {
-                        ^Result = true
-                    }
-                    .Copy = .Result
-                `;
-                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+            describe('Comparison compound expression', () => {
+                it('"(0 < 1) && (0 > 1)" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 < .Value2) && (.Value1 > .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+                });
+
+                it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 < .Value2) || (.Value1 > .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                });
+
+                it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 > .Value2) || (.Value1 < .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                });
             });
 
-            it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
-                const input = `
-                    .Value1 = 0
-                    .Value2 = 1
-                    .Result = false
-                    If( (.Value1 > .Value2) || (.Value1 < .Value2) )
-                    {
-                        ^Result = true
-                    }
-                    .Copy = .Result
-                `;
-                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
-            });
+            describe('Presence-in-ArrayOfStrings compound expression', () => {
+                it('"(present-string in array of strings) && true" evaluates to true', () => {
+                    const input = `
+                        .Needle = 'b'
+                        .Haystack = {'a', 'b', 'c'}
+                        .Result = false
+                        If( (.Needle in .Haystack) && true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
+                        true
+                    ]);
+                });
 
-            // TODO: add tests
-            //   * Presence in ArrayOfStrings
+                it('"(present-string in array of strings) && false" evaluates to false', () => {
+                    const input = `
+                        .Needle = 'b'
+                        .Haystack = {'a', 'b', 'c'}
+                        .Result = false
+                        If( (.Needle in .Haystack) && false )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
+                        false
+                    ]);
+                });
+            });
 
             // TODO: add parser test expected-failures for comparisons without parenthesis
             // TODO: add parser test expected-failures for Presence in ArrayOfStrings without parenthesis
