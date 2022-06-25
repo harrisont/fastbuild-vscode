@@ -2494,6 +2494,30 @@ describe('evaluator', () => {
 
     describe('If', () => {
         describe('Boolean expression', () => {
+            it.only('evaluates a literal true to true', () => {
+                const input = `
+                    .Result = false
+                    If( true )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true]);
+            });
+
+            it('evaluates a literal false to false', () => {
+                const input = `
+                    .Result = false
+                    If( false )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false]);
+            });
+
             it('evaluates a true boolean variable to true', () => {
                 const input = `
                     .Value = true
@@ -2566,6 +2590,56 @@ describe('evaluator', () => {
         
         describe('Comparison', () => {
             describe('boolean', () => {
+                it('"{true-literal} == {true-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( true == true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{true-literal} == {false-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( true == false )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"true == {true-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Result = false
+                        If( .Value1 == true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                });
+
+                it('"{true-literal} == true" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Result = false
+                        If( true == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                });
+
                 it('"true == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
@@ -2706,6 +2780,56 @@ describe('evaluator', () => {
             });
 
             describe('integer', () => {
+                it('"{1-literal} == {1-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( 1 == 1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{1-literal} == {0-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( 1 == 0 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"1 == {1-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Result = false
+                        If( .Value1 == 1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                });
+
+                it('"{1-literal} == 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Result = false
+                        If( 1 == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                });
+
                 it('"1 == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
@@ -2932,6 +3056,56 @@ describe('evaluator', () => {
             });
 
             describe('string', () => {
+                it('"{cat-literal} == {cat-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( 'cat' == 'cat' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{cat-literal} == {dog-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( 'cat' == 'dog' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"cat == {cat-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Result = false
+                        If( .Value1 == 'cat' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                });
+
+                it('"{cat-literal} = cat" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Result = false
+                        If( 'cat' == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                });
+
                 it('"cat == cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3763,7 +3937,8 @@ describe('evaluator', () => {
             // TODO: add tests
             //   * Presence in ArrayOfStrings
 
-            // TODO: add parser test expected-failres for comparisons without parenthesis
+            // TODO: add parser test expected-failures for comparisons without parenthesis
+            // TODO: add parser test expected-failures for Presence in ArrayOfStrings without parenthesis
         });
     });
 
