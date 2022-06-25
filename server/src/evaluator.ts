@@ -362,8 +362,8 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
 interface ParsedIfConditionOperatorAnd {
     type: 'operator';
     operator: '&&';
-    //lhs: TODO;
-    //rhs: TODO;
+    lhs: ParsedIfCondtion;
+    rhs: ParsedIfCondtion;
 }
 
 function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is ParsedIfConditionOperatorAnd {
@@ -374,8 +374,8 @@ function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is Parsed
 interface ParsedIfConditionOperatorOr {
     type: 'operator';
     operator: '||';
-    //lhs: TODO;
-    //rhs: TODO;
+    lhs: ParsedIfCondtion;
+    rhs: ParsedIfCondtion;
 }
 
 function isParsedIfConditionOperatorOr(obj: Record<string, any>): obj is ParsedIfConditionOperatorOr {
@@ -1790,83 +1790,46 @@ function evaluateIfCondition(
         result.condition = condition.invert ? !isPresent : isPresent;
         return new DataAndMaybeError(result);
     } else if (isParsedIfConditionOperatorAnd(condition)) {
-        // TODO
-        /*
-        {
-            "type": "operator",
-            "operator": "&&",
-            "lhs": {
-                "type": "boolean",
-                "value": {
-                    "type": "evaluatedVariable",
-                    "scope": "current",
-                    "name": {
-                        "type": "string",
-                        "value": "Value1",
-                        "range": {
-                            "start": {
-                                "line": 4,
-                                "character": 38
-                            },
-                            "end": {
-                                "line": 4,
-                                "character": 44
-                            }
-                        }
-                    },
-                    "range": {
-                        "start": {
-                            "line": 4,
-                            "character": 37
-                        },
-                        "end": {
-                            "line": 4,
-                            "character": 44
-                        }
-                    }
-                },
-                "invert": false
-            },
-            "rhs": {
-                "type": "boolean",
-                "value": {
-                    "type": "evaluatedVariable",
-                    "scope": "current",
-                    "name": {
-                        "type": "string",
-                        "value": "Value2",
-                        "range": {
-                            "start": {
-                                "line": 4,
-                                "character": 50
-                            },
-                            "end": {
-                                "line": 4,
-                                "character": 56
-                            }
-                        }
-                    },
-                    "range": {
-                        "start": {
-                            "line": 4,
-                            "character": 49
-                        },
-                        "end": {
-                            "line": 4,
-                            "character": 56
-                        }
-                    }
-                },
-                "invert": false
-            }
+        // Evaluate LHS
+        const evaluatedLhsAndMaybeError = evaluateIfCondition(condition.lhs, context, statementRange);
+        const evaluatedLhs = evaluatedLhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
+        if (evaluatedLhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
         }
-        */
-        /*TODO*/result.condition = false;
+
+        // Evaluate RHS
+        const evaluatedRhsAndMaybeError = evaluateIfCondition(condition.rhs, context, statementRange);
+        const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+        if (evaluatedRhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+        }
+
+        result.condition = evaluatedLhs.condition && evaluatedRhs.condition;
         return new DataAndMaybeError(result);
     } else if (isParsedIfConditionOperatorOr(condition)) {
-        // TODO
-        
-        /*TODO*/result.condition = false;
+        // Evaluate LHS
+        const evaluatedLhsAndMaybeError = evaluateIfCondition(condition.lhs, context, statementRange);
+        const evaluatedLhs = evaluatedLhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
+        if (evaluatedLhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
+        }
+
+        // Evaluate RHS
+        const evaluatedRhsAndMaybeError = evaluateIfCondition(condition.rhs, context, statementRange);
+        const evaluatedRhs = evaluatedRhsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
+        if (evaluatedRhsAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
+        }
+
+        result.condition = evaluatedLhs.condition || evaluatedRhs.condition;
         return new DataAndMaybeError(result);
     } else {
         const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
