@@ -76,6 +76,7 @@ TODO
 Add server tests. This will also be useful for using in benchmarks.
 
 Fix bugs:
+* Literals (e.g. `123`, `true`) are not allowed in the `If()` condition.
 * Calling `Error("$Bool$")`, where `Bool` is a boolean value fails but should not:
     ```
     Internal error: InternalEvaluationError: 'Error' argument must evaluate to a String, but instead evaluates to a Boolean
