@@ -3688,14 +3688,14 @@ describe('evaluator', () => {
                 for (const value2 of [true, false]) {
                     for (const value3 of [true, false]) {
                         const comparisons3Values = [
-                            new Comparison(`${value1} && ${value2} && ${value3}`, '.Value1 && .Value2 && Value3', v => (v[0] && v[1] && v[2])),
-                            new Comparison(`${value1} || ${value2} || ${value3}`, '.Value1 || .Value2 || Value3', v => (v[0] || v[1] || v[2])),
-                            new Comparison(`${value1} && ${value2} || ${value3}`, '.Value1 && .Value2 || Value3', v => (v[0] && v[1] || v[2])),
-                            new Comparison(`${value1} || ${value2} && ${value3}`, '.Value1 || .Value2 && Value3', v => (v[0] || v[1] && v[2])),
-                            new Comparison(`(${value1} && ${value2}) || ${value3}`, '(.Value1 && .Value2) || Value3', v => ((v[0] && v[1]) || v[2])),
-                            new Comparison(`${value1} && (${value2} || ${value3})`, '.Value1 && (.Value2 || Value3)', v => (v[0] && (v[1] || v[2]))),
-                            new Comparison(`(${value1} || ${value2}) && ${value3}`, '(.Value1 || .Value2) && Value3', v => ((v[0] || v[1]) && v[2])),
-                            new Comparison(`${value1} || (${value2} && ${value3})`, '.Value1 || (.Value2 && Value3)', v => (v[0] || (v[1] && v[2]))),
+                            new Comparison(`${value1} && ${value2} && ${value3}`, '.Value1 && .Value2 && .Value3', v => (v[0] && v[1] && v[2])),
+                            new Comparison(`${value1} || ${value2} || ${value3}`, '.Value1 || .Value2 || .Value3', v => (v[0] || v[1] || v[2])),
+                            new Comparison(`${value1} && ${value2} || ${value3}`, '.Value1 && .Value2 || .Value3', v => (v[0] && v[1] || v[2])),
+                            new Comparison(`${value1} || ${value2} && ${value3}`, '.Value1 || .Value2 && .Value3', v => (v[0] || v[1] && v[2])),
+                            new Comparison(`(${value1} && ${value2}) || ${value3}`, '(.Value1 && .Value2) || .Value3', v => ((v[0] && v[1]) || v[2])),
+                            new Comparison(`${value1} && (${value2} || ${value3})`, '.Value1 && (.Value2 || .Value3)', v => (v[0] && (v[1] || v[2]))),
+                            new Comparison(`(${value1} || ${value2}) && ${value3}`, '(.Value1 || .Value2) && .Value3', v => ((v[0] || v[1]) && v[2])),
+                            new Comparison(`${value1} || (${value2} && ${value3})`, '.Value1 || (.Value2 && .Value3)', v => (v[0] || (v[1] && v[2]))),
                         ];
                         for (const comparison of comparisons3Values) {
                             it(comparison.name, () => {
