@@ -2494,7 +2494,7 @@ describe('evaluator', () => {
 
     describe('If', () => {
         describe('Boolean expression', () => {
-            it.only('evaluates a literal true to true', () => {
+            it('evaluates a literal true to true', () => {
                 const input = `
                     .Result = false
                     If( true )

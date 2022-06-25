@@ -1629,21 +1629,16 @@ function evaluateIfCondition(
     };
 
     if (isParsedIfConditionBoolean(condition)) {
-        if (condition.value.type !== 'evaluatedVariable') {
-            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.value.type}'`);
-            return new DataAndMaybeError(result, error);
-        }
-        const conditionValue = condition.value;
-        const evaluatedConditionAndMaybeError = evaluateEvaluatedVariable(conditionValue, context);
+        const evaluatedConditionAndMaybeError = evaluateRValue(condition.value, context);
         const evaluatedCondition = evaluatedConditionAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedCondition.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedCondition.variableReferences);
         if (evaluatedConditionAndMaybeError.error !== null) {
             return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
         }
-        const evaluatedConditionValue = evaluatedCondition.valueScopeVariable.value;
+        const evaluatedConditionValue = evaluatedCondition.value;
         if (typeof evaluatedConditionValue !== 'boolean') {
-            const conditionValueRange = new SourceRange(context.thisFbuildUri, conditionValue.range);
+            const conditionValueRange = new SourceRange(context.thisFbuildUri, evaluatedCondition.range);
             const error = new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`);
             return new DataAndMaybeError(result, error);
         }

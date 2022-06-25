@@ -630,14 +630,14 @@ functionIf ->
 
 ifConditionExpression ->
     # || or single item
-    ifConditionExpressionExceptOr  {% ([[value, context]]) => [value, context] %}
+    ifConditionExpressionExceptOr  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
   | ifConditionExpressionExceptOr                     %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
   | ifConditionExpressionExceptOr whitespaceOrNewline %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
 
 ifConditionExpressionExceptOr ->
     # Single item
-    ifConditionTerm  {% ([[value, context]]) => [value, context] %}
+    ifConditionTerm  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
   | ifConditionTerm                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOr  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
   | ifConditionTerm whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOr  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
@@ -665,7 +665,9 @@ function createIfConditionComparison(operatorToken: Token, lhs: any, rhs: any) {
 
 ifConditionTerm ->
     # () group
-  %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, value, space2, braceClose]) => value %}
+  %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, valueWithContext, space2, braceClose]) => valueWithContext %}
+    # Boolean literal
+  | bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: .Value
   |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: ! .Value 
