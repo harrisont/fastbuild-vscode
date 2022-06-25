@@ -4112,6 +4112,36 @@ describe('evaluator', () => {
             
             assertEvaluatedVariablesValueEqual(input, ['else']);
         });
+
+        it('#if can be used inline in an assignment expression', () => {
+            const input = `
+                .Value
+                    = 'A'
+                #if ${builtInDefine}
+                    + 'B'
+                #endif
+                    + 'C'
+                Print( .Value )
+            `;
+
+            assertEvaluatedVariablesValueEqual(input, ['ABC']);
+        });
+
+        it('#if / #else can be used inline in an assignment expression', () => {
+            const input = `
+                .Value
+                    = 'A'
+                #if !${builtInDefine}
+                    + 'B'
+                #else
+                    + 'b'
+                #endif
+                    + 'C'
+                Print( .Value )
+            `;
+
+            assertEvaluatedVariablesValueEqual(input, ['AbC']);
+        });
     });
 
     describe('#if exists', () => {

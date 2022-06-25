@@ -1262,6 +1262,9 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (evaluatedStatementsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                 }
+
+                // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
+                statementLhsVariable = context.previousStatementLhsVariable;
             } else if (isParsedStatementDefine(statement)) {  // #define
                 const symbol = statement.symbol.value;
                 if (context.defines.has(symbol)) {
