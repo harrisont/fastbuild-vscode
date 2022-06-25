@@ -2518,6 +2518,30 @@ describe('evaluator', () => {
                 assertEvaluatedVariablesValueEqual(input, [false]);
             });
 
+            it('evaluates "! literal true" to false', () => {
+                const input = `
+                    .Result = false
+                    If( !true )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false]);
+            });
+
+            it('evaluates "! literal false" to true', () => {
+                const input = `
+                    .Result = false
+                    If( !false )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true]);
+            });
+
             it('evaluates a true boolean variable to true', () => {
                 const input = `
                     .Value = true

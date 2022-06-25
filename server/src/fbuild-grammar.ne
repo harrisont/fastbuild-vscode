@@ -349,8 +349,14 @@ function createBoolean(value: boolean, token: Token) {
 %}
 
 bool ->
-    %keywordTrue   {% ([token]) => createBoolean(true,  token) %}
-  | %keywordFalse  {% ([token]) => createBoolean(false, token) %}
+    # true
+    %keywordTrue                                  {% ([token]) => createBoolean(true,  token) %}
+    # false
+  | %keywordFalse                                 {% ([token]) => createBoolean(false, token) %}
+    # !true
+  | %operatorNot optionalWhitespace %keywordTrue   {% ([token]) => createBoolean(false, token) %}
+    # !false
+  | %operatorNot optionalWhitespace %keywordFalse  {% ([token]) => createBoolean(true,  token) %}
 
 # A single item or multiple items added/subtracted together.
 rValue -> sumHelper  {% ([[first, rest, context]]) => {
