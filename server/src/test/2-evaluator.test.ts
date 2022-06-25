@@ -3711,7 +3711,7 @@ describe('evaluator', () => {
                                     }
                                     .Copy = .Result
                                 `;
-                                assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
+                                assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
                             });
                         }
                     }

@@ -629,8 +629,8 @@ functionIf ->
   | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 ifConditionExpression ->
-    # Single item
-    ifConditionTerm  {% ([[value, context]]) => [value, context] %}
+    # || or single item
+    ifConditionExpressionExceptAnd  {% ([[value, context]]) => [value, context] %}
     # () group
   | %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, value, space2, braceClose]) => [value] %}
     # Multiple items &&'d together
