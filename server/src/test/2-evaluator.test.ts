@@ -3718,10 +3718,52 @@ describe('evaluator', () => {
                 }
             }
 
+            it('"(0 < 1) && (0 > 1)" evaluates to false', () => {
+                const input = `
+                    .Value1 = 0
+                    .Value2 = 1
+                    .Result = false
+                    If( (.Value1 < .Value2) && (.Value1 > .Value2) )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+            });
+
+            it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
+                const input = `
+                    .Value1 = 0
+                    .Value2 = 1
+                    .Result = false
+                    If( (.Value1 < .Value2) || (.Value1 > .Value2) )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+            });
+
+            it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
+                const input = `
+                    .Value1 = 0
+                    .Value2 = 1
+                    .Result = false
+                    If( (.Value1 > .Value2) || (.Value1 < .Value2) )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+            });
+
             // TODO: add tests
-            //   * && has precedence over ||
-            //   * Comparisons
             //   * Presence in ArrayOfStrings
+
+            // TODO: add parser test expected-failres for comparisons without parenthesis
         });
     });
 
