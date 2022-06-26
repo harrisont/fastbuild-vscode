@@ -3999,9 +3999,6 @@ describe('evaluator', () => {
                     ]);
                 });
             });
-
-            // TODO: add parser test expected-failures for comparisons without parenthesis
-            // TODO: add parser test expected-failures for Presence in ArrayOfStrings without parenthesis
         });
     });
 

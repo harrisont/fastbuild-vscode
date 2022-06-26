@@ -13,7 +13,7 @@ const IGNORED_EXPECTED_TOKENS = new Set<string>([
 const LEXER_TOKEN_NAME_TO_VALUE = new Map<string, string>([
     ['whitespace', ' '],
     ['whitespaceOrNewline', ' '],
-    ['optionalWhitespaceAndMandatoryNewline', '\\n'],
+    ['optionalWhitespaceAndMandatoryNewline', '<newline>'],
     ['comment', '// My informative comment'],
     ['scopeOrArrayStart', '{'],
     ['scopeOrArrayEnd', '}'],

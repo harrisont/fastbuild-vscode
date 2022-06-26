@@ -634,19 +634,37 @@ functionIf ->
     %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
   | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
+# Note on grouping (with `(...)`): grouping is always optional for boolean expressions (single booleans),
+# but is required for comparisions and presence-in-ArrayOfStrings when they are part of a compound expression.
 ifConditionExpression ->
-    # || or single item
+    # Single item
     ifConditionExpressionExceptOr  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
-  | ifConditionExpressionExceptOr                     %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionExpressionExceptOr whitespaceOrNewline %operatorOr  optionalWhitespaceOrNewline ifConditionExpression  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+
+# Same as `ifConditionExpression` but it's part of a compund condition, so all paths use `ifConditionExpressionExceptOrInCompound`.
+ifConditionExpressionInCompound ->
+    # Single item
+    ifConditionExpressionExceptOrInCompound  {% ([valueWithContext]) => valueWithContext %}
+    # Multiple items ||'d together
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
 
 ifConditionExpressionExceptOr ->
     # Single item
-    ifConditionTerm  {% ([valueWithContext]) => valueWithContext %}
+    ifConditionTermNotInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
-  | ifConditionTerm                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOr  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionTerm whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOr  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+
+# Same as `ifConditionExpressionExceptOr` but it's part of a compound condition, so all paths use `ifConditionTermInCompound`.
+ifConditionExpressionExceptOrInCompound ->
+    # Single item
+    ifConditionTermInCompound  {% ([valueWithContext]) => valueWithContext %}
+    # Multiple items &&'d together
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
 
 @{%
 
@@ -669,17 +687,33 @@ function createIfConditionComparison(operatorToken: Token, lhs: any, rhs: any) {
 
 %}
 
-ifConditionTerm ->
+# Note on grouping (with `(...)`): grouping is optional since this is not part of a compound expression.
+ifConditionTermNotInCompound ->
+    ifConditionTermBoolean                               {% ([valueWithContext]) => valueWithContext %}
+  | ifConditionTermComparisonOrPresenceInArrayOfStrings  {% ([valueWithContext]) => valueWithContext %}
     # () group
-  %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd  {% ([braceOpen, space1, valueWithContext, space2, braceClose]) => valueWithContext %}
+  | %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd                                {% ([braceOpen, space1, valueWithContext, space2, braceClose]) => valueWithContext %}
+
+# Note on grouping (with `(...)`): grouping is optional for boolean expressions (single booleans),
+# but is required for comparisions and presence-in-ArrayOfStrings since this is part of a compound expression.
+ifConditionTermInCompound ->
+    ifConditionTermBoolean                               {% ([valueWithContext]) => valueWithContext %}
+    # () group
+  | %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression optionalWhitespaceOrNewline %functionParametersEnd                                {% ([braceOpen, space1, valueWithContext, space2, braceClose]) => valueWithContext %}
+
+# A condition term that is a boolean expression (boolean literal or evaluated variable)
+ifConditionTermBoolean ->
     # Boolean expression: literal
-  | bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
+    bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: .Value
   |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: ! .Value 
   | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', value, invert: true  }, context ] %}
+
+# A condition term that is a comparison or a check for presence-in-ArrayOfStrings
+ifConditionTermComparisonOrPresenceInArrayOfStrings ->
     # Comparison: .Value1 == .Value2
-  | rValue                     %operatorEqual          optionalWhitespaceOrNewline rValue  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+    rValue                     %operatorEqual          optionalWhitespaceOrNewline rValue  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
   | rValue whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline rValue  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
     # Comparison: .Value1 != .Value2
   | rValue                     %operatorNotEqual       optionalWhitespaceOrNewline rValue  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}

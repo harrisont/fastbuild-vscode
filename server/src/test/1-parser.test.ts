@@ -18,12 +18,12 @@ function assertInputsGenerateSameParseResult(input1: string, input2: string): vo
     assert.deepStrictEqual(result1.statements, result2.statements);
 }
 
-function assertParseSyntaxError(input: string, expectedErrorMessageStart: string, range: ParseSourceRange): void {
+function assertParseSyntaxError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
     assert.throws(
         () => parse(input, { enableDiagnostics: false} ),
         error => {
             assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message.startsWith(expectedErrorMessageStart), `Error message <${error.message}> should start with: <${expectedErrorMessageStart}>`);
+            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
             assert.deepStrictEqual(error.range, range);
             return true;
         }
@@ -894,7 +894,14 @@ describe('parser', () => {
 
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
-        const expectedErrorMessageStart = `Syntax error: Unexpected arrayItemSeparator token: ",".`;
+        const expectedErrorMessageStart =
+`Syntax error: Unexpected arrayItemSeparator token: ",".
+Instead, I was expecting to see one of the following:
+ • operatorAddition ("+")
+ • operatorSubtraction ("-")
+ • optionalWhitespaceAndMandatoryNewline ("<newline>")
+ • structEnd ("]")
+ • whitespace (" ")`;
         assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
     });
 
@@ -2593,24 +2600,66 @@ describe('parser', () => {
         });
 
         describe('Compound expression', () => {
-            it('should error on a comparison compound expression without parenthesis around the terms', () => {
+            it('should error on a comparison compound expression without parenthesis around the terms (comparison 1st)', () => {
+                const input = `
+                    If( .Cat == 'cat' && .Bool )
+                    {
+                    }
+                `;
+                const expectedErrorMessageStart =
+`Syntax error: Unexpected operatorAnd token: "&&".
+Instead, I was expecting to see one of the following:
+ • functionParametersEnd (")")
+ • operatorAddition ("+")
+ • operatorSubtraction ("-")`;
+                // TODO: ^^^ should not be able to use +/- here
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 38, 1, 39));
+            });
+
+            it('should error on a comparison compound expression without parenthesis around the terms (comparison 2nd)', () => {
                 const input = `
                     If( .Bool && .Cat == 'cat' )
                     {
                     }
                 `;
-                const expectedErrorMessageStart = `Syntax error: Unexpected __ token: "__".`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
+                const expectedErrorMessageStart =
+`Syntax error: Unexpected operatorEqual token: "==".
+Instead, I was expecting to see one of the following:
+ • functionParametersEnd (")")
+ • operatorAnd ("&&")
+ • operatorOr ("||")`;
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 38, 1, 39));
             });
             
-            it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms', () => {
+            it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 1st)', () => {
                 const input = `
                     If( .Needle in .Haystack || .Bool )
                     {
                     }
                 `;
-                const expectedErrorMessageStart = `Syntax error: Unexpected __ token: "__".`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
+                const expectedErrorMessageStart =
+`Syntax error: Unexpected operatorOr token: "||".
+Instead, I was expecting to see one of the following:
+ • functionParametersEnd (")")
+ • operatorAddition ("+")
+ • operatorSubtraction ("-")`;
+                // TODO: ^^^ should not be able to use +/- here
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 45, 1, 46));
+            });
+            
+            it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 2nd)', () => {
+                const input = `
+                    If( .Bool || .Needle in .Haystack )
+                    {
+                    }
+                `;
+                const expectedErrorMessageStart =
+`Syntax error: Unexpected keywordIn token: "in".
+Instead, I was expecting to see one of the following:
+ • functionParametersEnd (")")
+ • operatorAnd ("&&")
+ • operatorOr ("||")`;
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 41, 1, 42));
             });
         });
     });
