@@ -2494,6 +2494,54 @@ describe('evaluator', () => {
 
     describe('If', () => {
         describe('Boolean expression', () => {
+            it('evaluates a literal true to true', () => {
+                const input = `
+                    .Result = false
+                    If( true )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true]);
+            });
+
+            it('evaluates a literal false to false', () => {
+                const input = `
+                    .Result = false
+                    If( false )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false]);
+            });
+
+            it('evaluates "! literal true" to false', () => {
+                const input = `
+                    .Result = false
+                    If( !true )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [false]);
+            });
+
+            it('evaluates "! literal false" to true', () => {
+                const input = `
+                    .Result = false
+                    If( !false )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true]);
+            });
+
             it('evaluates a true boolean variable to true', () => {
                 const input = `
                     .Value = true
@@ -2566,6 +2614,56 @@ describe('evaluator', () => {
         
         describe('Comparison', () => {
             describe('boolean', () => {
+                it('"{true-literal} == {true-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( true == true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{true-literal} == {false-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( true == false )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"true == {true-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Result = false
+                        If( .Value1 == true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                });
+
+                it('"{true-literal} == true" evaluates to true', () => {
+                    const input = `
+                        .Value1 = true
+                        .Result = false
+                        If( true == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                });
+
                 it('"true == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
@@ -2706,6 +2804,56 @@ describe('evaluator', () => {
             });
 
             describe('integer', () => {
+                it('"{1-literal} == {1-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( 1 == 1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{1-literal} == {0-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( 1 == 0 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"1 == {1-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Result = false
+                        If( .Value1 == 1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                });
+
+                it('"{1-literal} == 1" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 1
+                        .Result = false
+                        If( 1 == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                });
+
                 it('"1 == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
@@ -2932,6 +3080,56 @@ describe('evaluator', () => {
             });
 
             describe('string', () => {
+                it('"{cat-literal} == {cat-literal}" evaluates to true', () => {
+                    const input = `
+                        .Result = false
+                        If( 'cat' == 'cat' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [true]);
+                });
+
+                it('"{cat-literal} == {dog-literal}" evaluates to false', () => {
+                    const input = `
+                        .Result = false
+                        If( 'cat' == 'dog' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [false]);
+                });
+
+                it('"cat == {cat-literal}" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Result = false
+                        If( .Value1 == 'cat' )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                });
+
+                it('"{cat-literal} = cat" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 'cat'
+                        .Result = false
+                        If( 'cat' == .Value1 )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                });
+
                 it('"cat == cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3641,6 +3839,167 @@ describe('evaluator', () => {
                 );
             });
         });
+        
+        describe('Compound expression', () => {
+            describe('Boolean compound expression', () => {
+                class Comparison {
+                    constructor(
+                        readonly name: string,
+                        readonly condition: string,
+                        readonly compare: (values: boolean[]) => boolean
+                    )
+                    {
+                    }
+                }
+    
+                for (const value1 of [true, false]) {
+                    for (const value2 of [true, false]) {
+                        const comparisons2Values = [
+                            new Comparison(` ${value1} &&  ${value2}`, ' .Value1 &&  .Value2', v => ( v[0] &&  v[1])),
+                            new Comparison(`!${value1} &&  ${value2}`, '!.Value1 &&  .Value2', v => (!v[0] &&  v[1])),
+                            new Comparison(` ${value1} && !${value2}`, ' .Value1 && !.Value2', v => ( v[0] && !v[1])),
+                            new Comparison(`!${value1} && !${value2}`, '!.Value1 && !.Value2', v => (!v[0] && !v[1])),
+                            new Comparison(` ${value1} ||  ${value2}`, ' .Value1 ||  .Value2', v => ( v[0] ||  v[1])),
+                            new Comparison(`!${value1} ||  ${value2}`, '!.Value1 ||  .Value2', v => (!v[0] ||  v[1])),
+                            new Comparison(` ${value1} || !${value2}`, ' .Value1 || !.Value2', v => ( v[0] || !v[1])),
+                            new Comparison(`!${value1} || !${value2}`, '!.Value1 || !.Value2', v => (!v[0] || !v[1])),
+                        ];
+                        for (const comparison of comparisons2Values) {
+                            it(comparison.name, () => {
+                                const result = comparison.compare([value1, value2]);
+                                const input = `
+                                    .Value1 = ${value1}
+                                    .Value2 = ${value2}
+                                    .Result = false
+                                    If( ${comparison.condition} )
+                                    {
+                                        ^Result = ${result}
+                                    }
+                                    .Copy = .Result
+                                `;
+                                assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
+                            });
+                        }
+                    }
+                }
+    
+                for (const value1 of [true, false]) {
+                    for (const value2 of [true, false]) {
+                        for (const value3 of [true, false]) {
+                            const comparisons3Values = [
+                                new Comparison(`${value1} && ${value2} && ${value3}`, '.Value1 && .Value2 && .Value3', v => (v[0] && v[1] && v[2])),
+                                new Comparison(`${value1} || ${value2} || ${value3}`, '.Value1 || .Value2 || .Value3', v => (v[0] || v[1] || v[2])),
+                                new Comparison(`${value1} && ${value2} || ${value3}`, '.Value1 && .Value2 || .Value3', v => (v[0] && v[1] || v[2])),
+                                new Comparison(`${value1} || ${value2} && ${value3}`, '.Value1 || .Value2 && .Value3', v => (v[0] || v[1] && v[2])),
+                                new Comparison(`(${value1} && ${value2}) || ${value3}`, '(.Value1 && .Value2) || .Value3', v => ((v[0] && v[1]) || v[2])),
+                                new Comparison(`${value1} && (${value2} || ${value3})`, '.Value1 && (.Value2 || .Value3)', v => (v[0] && (v[1] || v[2]))),
+                                new Comparison(`(${value1} || ${value2}) && ${value3}`, '(.Value1 || .Value2) && .Value3', v => ((v[0] || v[1]) && v[2])),
+                                new Comparison(`${value1} || (${value2} && ${value3})`, '.Value1 || (.Value2 && .Value3)', v => (v[0] || (v[1] && v[2]))),
+                            ];
+                            for (const comparison of comparisons3Values) {
+                                it(comparison.name, () => {
+                                    const result = comparison.compare([value1, value2, value3]);
+                                    const input = `
+                                        .Value1 = ${value1}
+                                        .Value2 = ${value2}
+                                        .Value3 = ${value3}
+                                        .Result = false
+                                        If( ${comparison.condition} )
+                                        {
+                                            ^Result = ${result}
+                                        }
+                                        .Copy = .Result
+                                    `;
+                                    assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+
+            describe('Comparison compound expression', () => {
+                it('"(0 < 1) && (0 > 1)" evaluates to false', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 < .Value2) && (.Value1 > .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+                });
+
+                it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 < .Value2) || (.Value1 > .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                });
+
+                it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
+                    const input = `
+                        .Value1 = 0
+                        .Value2 = 1
+                        .Result = false
+                        If( (.Value1 > .Value2) || (.Value1 < .Value2) )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                });
+            });
+
+            describe('Presence-in-ArrayOfStrings compound expression', () => {
+                it('"(present-string in array of strings) && true" evaluates to true', () => {
+                    const input = `
+                        .Needle = 'b'
+                        .Haystack = {'a', 'b', 'c'}
+                        .Result = false
+                        If( (.Needle in .Haystack) && true )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
+                        true
+                    ]);
+                });
+
+                it('"(present-string in array of strings) && false" evaluates to false', () => {
+                    const input = `
+                        .Needle = 'b'
+                        .Haystack = {'a', 'b', 'c'}
+                        .Result = false
+                        If( (.Needle in .Haystack) && false )
+                        {
+                            ^Result = true
+                        }
+                        .Copy = .Result
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
+                        false
+                    ]);
+                });
+            });
+        });
     });
 
     describe('#include', () => {
@@ -4029,6 +4388,36 @@ describe('evaluator', () => {
             `;
             
             assertEvaluatedVariablesValueEqual(input, ['else']);
+        });
+
+        it('#if can be used inline in an assignment expression', () => {
+            const input = `
+                .Value
+                    = 'A'
+                #if ${builtInDefine}
+                    + 'B'
+                #endif
+                    + 'C'
+                Print( .Value )
+            `;
+
+            assertEvaluatedVariablesValueEqual(input, ['ABC']);
+        });
+
+        it('#if / #else can be used inline in an assignment expression', () => {
+            const input = `
+                .Value
+                    = 'A'
+                #if !${builtInDefine}
+                    + 'B'
+                #else
+                    + 'b'
+                #endif
+                    + 'C'
+                Print( .Value )
+            `;
+
+            assertEvaluatedVariablesValueEqual(input, ['AbC']);
         });
     });
 
