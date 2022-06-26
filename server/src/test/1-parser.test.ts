@@ -2591,6 +2591,28 @@ describe('parser', () => {
                 assertInputsGenerateSameParseResult(withComments, withoutComments);
             });
         });
+
+        describe('Compound expression', () => {
+            it('should error on a comparison compound expression without parenthesis around the terms', () => {
+                const input = `
+                    If( .Bool && .Cat == 'cat' )
+                    {
+                    }
+                `;
+                const expectedErrorMessageStart = `Syntax error: Unexpected __ token: "__".`;
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
+            });
+            
+            it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms', () => {
+                const input = `
+                    If( .Needle in .Haystack || .Bool )
+                    {
+                    }
+                `;
+                const expectedErrorMessageStart = `Syntax error: Unexpected __ token: "__".`;
+                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
+            });
+        });
     });
 
     describe('Generic functions', () => {
