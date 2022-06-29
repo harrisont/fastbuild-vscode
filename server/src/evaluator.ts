@@ -1356,6 +1356,9 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             variableDefinitions: [],
         };
         result.value = [];
+
+
+        let firstItemTypeNameA: string | null = null;
         for (const item of rValue.value) {
             const evaluatedAndMaybeError = evaluateRValue(item, context);
             const evaluated = evaluatedAndMaybeError.data;
@@ -1369,6 +1372,26 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             if (evaluated.value instanceof Array) {
                 pushToFirstArray(result.value, evaluated.value);
             } else {
+                if (firstItemTypeNameA === null) {
+                    firstItemTypeNameA = getValueTypeNameA(evaluated.value);
+    
+                    if (typeof evaluated.value === 'boolean'
+                        || typeof evaluated.value === 'number')
+                    {
+                        const error = new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`);
+                        return new DataAndMaybeError(result, error);
+                    } else if (evaluated.value instanceof Struct && !isParsedEvaluatedVariable(item)) {
+                        const error = new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`);
+                        return new DataAndMaybeError(result, error);
+                    }
+                } else {
+                    const itemTypeNameA = getValueTypeNameA(evaluated.value);
+                    if (itemTypeNameA !== firstItemTypeNameA) {
+                        const error = new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `All values in an Array must have the same type, but the first item is ${firstItemTypeNameA} and this item is ${itemTypeNameA}`);
+                        return new DataAndMaybeError(result, error);
+                    }
+                }
+
                 result.value.push(evaluated.value);
             }
         }

@@ -379,6 +379,64 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('should error on an array of booleans', () => {
+            const input = `
+                .MyVar = { true }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot have an Array of Booleans. Only Arrays of Strings and Arrays of Structs are allowed.',
+                    range: createRange(1, 27, 1, 31)
+                }
+            );
+        });
+
+        it('should error on an array of integers', () => {
+            const input = `
+                .MyVar = { 123 }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot have an Array of Integers. Only Arrays of Strings and Arrays of Structs are allowed.',
+                    range: createRange(1, 27, 1, 30)
+                }
+            );
+        });
+
+        it('should error on heterogenous arrays (variation 1: string first)', () => {
+            const input = `
+                .MyStruct = [ .Value = 1 ]
+                .MyVar = { 'a', .MyStruct }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'All values in an Array must have the same type, but the first item is a String and this item is a Struct',
+                    range: createRange(2, 32, 2, 41)
+                }
+            );
+        });
+
+        it('should error on heterogenous arrays (variation 1: struct first)', () => {
+            const input = `
+                .MyStruct = [ .Value = 1 ]
+                .MyVar = { .MyStruct, 'a' }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'All values in an Array must have the same type, but the first item is a Struct and this item is a String',
+                    range: createRange(2, 38, 2, 41)
+                }
+            );
+        });
+
         it('an array in an array should expand its items', () => {
             const input = `
                 .Parts1 = { 'thing1', 'thing2' }
@@ -472,14 +530,14 @@ describe('evaluator', () => {
         it('should evaluate a struct containing an array', () => {
             const input = `
                 .MyVar = [
-                    .MyArray = {1, 2, 3}
+                    .MyArray = {'a', 'b', 'c'}
                 ]
                 .Copy = .MyVar
             `;
             const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28) };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
-                    MyArray: new StructMember([1, 2, 3], myVarMyArrayDefinition),
+                    MyArray: new StructMember(['a', 'b', 'c'], myVarMyArrayDefinition),
                 }))
             ]);
         });
@@ -533,6 +591,20 @@ describe('evaluator', () => {
                     })),
                 ]
             ]);
+        });
+
+        it('should error an an array of struct literals', () => {
+            const input = `
+                .MyVar = { [.MyInt = 1] }
+            `;
+            assert.throws(
+                () => evaluateInput(input),
+                {
+                    name: 'EvaluationError',
+                    message: 'Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.',
+                    range: createRange(1, 27, 1, 39)
+                }
+            );
         });
 
         it('should evaluate dynamic variable names on the RHS in the current scope', () => {
@@ -1681,7 +1753,8 @@ describe('evaluator', () => {
         // The only type of array that can be subtracted from is an array of strings.
         it('should error on subtracting anything from an array of structs', () => {
             const input = `
-                .LHS = { [.A=1] }
+                .MyStruct = [.A=1]
+                .LHS = { .MyStruct }
                      - 'a'
             `;
             assert.throws(
@@ -1689,7 +1762,7 @@ describe('evaluator', () => {
                 {
                     name: 'EvaluationError',
                     message: 'Cannot subtract from an Array of Structs. Can only subtract from an Array if it is an Array of Strings.',
-                    range: createRange(2, 21, 2, 26)
+                    range: createRange(3, 21, 3, 26)
                 }
             );
         });
@@ -2303,18 +2376,26 @@ describe('evaluator', () => {
 
         it('iterates over an array of structs', () => {
             const input = `
+                .MyStruct1 = [ .Value = 1 ]
+                .MyStruct2 = [ .Value = 2 ]
                 .MyArray = {
-                    [ .Value = 1 ]
-                    [ .Value = 2 ]
+                    .MyStruct1
+                    .MyStruct2
                 }
                 ForEach( .Item in .MyArray )
                 {
                     .Copy = .Item
                 }
             `;
-            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(2, 22, 2, 28) };
-            const myArray2ValueDefinition: VariableDefinition = { id: 2, range: createRange(3, 22, 3, 28) };
+            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37) };
+            const myArray2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37) };
             assertEvaluatedVariablesValueEqual(input, [
+                Struct.from(Object.entries({
+                    Value: new StructMember(1, myArray1ValueDefinition)
+                })),
+                Struct.from(Object.entries({
+                    Value: new StructMember(2, myArray2ValueDefinition)
+                })),
                 [
                     Struct.from(Object.entries({
                         Value: new StructMember(1, myArray1ValueDefinition)
@@ -3793,7 +3874,8 @@ describe('evaluator', () => {
             
             it('errors if LHS is not a string or an array of strings (variation 1: array of non-strings)', () => {
                 const input = `
-                    .Needle = { 123 }
+                    .MyStruct = [ .A = 1 ]
+                    .Needle = { .MyStruct }
                     .Haystack = { '123' }
                     If( .Needle in .Haystack )
                     {
@@ -3803,8 +3885,8 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of Integers`,
-                        range: createRange(3, 24, 3, 31)
+                        message: `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of Structs`,
+                        range: createRange(4, 24, 4, 31)
                     }
                 );
             });
@@ -3847,7 +3929,8 @@ describe('evaluator', () => {
             it('errors if RHS is not an array of strings (variation 1: array of non-strings)', () => {
                 const input = `
                     .Needle = {}
-                    .Haystack = { 123 }
+                    .MyStruct = [ .A = 1 ]
+                    .Haystack = { .MyStruct }
                     If( .Needle in .Haystack )
                     {
                     }
@@ -3856,8 +3939,8 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of Integers`,
-                        range: createRange(3, 35, 3, 44)
+                        message: `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of Structs`,
+                        range: createRange(4, 35, 4, 44)
                     }
                 );
             });

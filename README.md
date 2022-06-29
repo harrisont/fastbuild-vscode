@@ -75,9 +75,6 @@ TODO
 
 Add server tests. This will also be useful for using in benchmarks.
 
-Fix bugs:
-* Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
-
 Support full FASTBuild syntax:
 * Support compound expressions in the `If(...)` condition (`&&` and `||`), which was added in FASTBuild v1.05.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
