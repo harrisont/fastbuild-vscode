@@ -2450,6 +2450,14 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
+
+            it('The message being just an evaluated variable', () => {
+                const input = `
+                    .Value = 1
+                    Error( '$Value$' )
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
         });
         
         describe('Print', () => {

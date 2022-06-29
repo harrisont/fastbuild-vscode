@@ -407,13 +407,8 @@ function createStringOrStringExpression(parts: any[], startToken: Token, endToke
     const range = createRangeEndInclusive(startToken, endToken);
     if (parts.length == 0) {
         return createString('', range);
-    } else if (parts.length == 1) {
-        const value = parts[0];
-        if (typeof value === 'string') {
-            return createString(parts[0], range);
-        } else {
-            return value;
-        }
+    } else if (parts.length == 1 && typeof parts[0] === 'string') {
+        return createString(parts[0], range);
     } else {
         return {
             type: 'stringExpression',

@@ -76,10 +76,6 @@ TODO
 Add server tests. This will also be useful for using in benchmarks.
 
 Fix bugs:
-* Calling `Error("$Bool$")`, where `Bool` is a boolean value fails but should not:
-    ```
-    Internal error: InternalEvaluationError: 'Error' argument must evaluate to a String, but instead evaluates to a Boolean
-    ```
 * Disallow arrays of booleans, arrays of integers, and arrays of arrays. Only array of strings and arrays of structs are allowed.
 
 Support full FASTBuild syntax:
