@@ -76,7 +76,6 @@ TODO
 Add server tests. This will also be useful for using in benchmarks.
 
 Support full FASTBuild syntax:
-* Support compound expressions in the `If(...)` condition (`&&` and `||`), which was added in FASTBuild v1.05.
 * Support user functions ([docs](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions)).
 * Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
 
