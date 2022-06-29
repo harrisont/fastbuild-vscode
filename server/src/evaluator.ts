@@ -1667,22 +1667,27 @@ function evaluateIfCondition(
         }
         const evaluatedRhsValue = evaluatedRhs.value;
 
+        const operator = condition.operator;
+
+        // Verify that the type is allowed.
+        // Just check the LHS type because below we check that the LHS and RHS types are equal.
+        if (operator.value === '==' || operator.value === '!=') {
+            if (!['boolean', 'string', 'number'].includes(typeof evaluatedLhsValue)) {
+                const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
+                const error = new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Booleans, Strings, and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`);
+                return new DataAndMaybeError(result, error);
+            }
+        } else {
+            if (!['string', 'number'].includes(typeof evaluatedLhsValue)) {
+                const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
+                const error = new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Strings and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`);
+                return new DataAndMaybeError(result, error);
+            }
+        }
+
         if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
             const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
             const error = new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`);
-            return new DataAndMaybeError(result, error);
-        }
-
-        const operator = condition.operator;
-    
-        // Only allow '==' and '!=' operators for booleans, since {'>', '>=', '<', '<='} don't make sense.
-        // Checking the LHS type also implicitly checks the RHS type since above we checked that the LHS and RHS types are equal.
-        if (typeof evaluatedLhsValue === 'boolean'
-            && operator.value !== '=='
-            && operator.value !== '!=')
-        {
-            const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-            const error = new EvaluationError(operatorRange, `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator.value}'`);
             return new DataAndMaybeError(result, error);
         }
 
@@ -1716,27 +1721,19 @@ function evaluateIfCondition(
         return new DataAndMaybeError(result);
     } else if (isParsedIfConditionIn(condition)) {
         // Evaluate LHS.
-        if (condition.lhs.type !== 'evaluatedVariable') {
-            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.lhs.type}'`);
-            return new DataAndMaybeError(result, error);
-        }
         const lhs = condition.lhs;
-        const evaluatedLhsAndMaybeError = evaluateEvaluatedVariable(lhs, context);
+        const evaluatedLhsAndMaybeError = evaluateRValue(lhs, context);
         const evaluatedLhs = evaluatedLhsAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedLhs.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedLhs.variableReferences);
         if (evaluatedLhsAndMaybeError.error !== null) {
             return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
         }
-        const evaluatedLhsValue = evaluatedLhs.valueScopeVariable.value;
+        const evaluatedLhsValue = evaluatedLhs.value;
     
         // Evaluate RHS.
-        if (condition.rhs.type !== 'evaluatedVariable') {
-            const error = new InternalEvaluationError(statementRange, `'If' condition must be an evaluated variable, but instead is '${condition.rhs.type}'`);
-            return new DataAndMaybeError(result, error);
-        }
         const rhs = condition.rhs;
-        const evaluatedRhsAndMaybeError = evaluateEvaluatedVariable(rhs, context);
+        const evaluatedRhsAndMaybeError = evaluateRValue(rhs, context);
         const evaluatedRhs = evaluatedRhsAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedRhs.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedRhs.variableReferences);
@@ -1744,36 +1741,50 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, evaluatedRhsAndMaybeError.error);
         }
         const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
-        const evaluatedRhsValue = evaluatedRhs.valueScopeVariable.value;
+        const evaluatedRhsValue = evaluatedRhs.value;
 
+        //
         // Check presence.
+        //
+
         let isPresent = true;
-        if (evaluatedRhsValue instanceof Array) {
-            if (evaluatedRhsValue.length === 0) {
-                isPresent = false;
-            } else if (typeof evaluatedRhsValue[0] === 'string') {
-                const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
-                if (typeof evaluatedLhsValue === 'string') {
-                    isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
-                } else if (evaluatedLhsValue instanceof Array) {
-                    if (evaluatedLhsValue.length === 0) {
-                        isPresent = false;
-                    } else if (typeof evaluatedLhsValue[0] === 'string') {
-                        isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
-                    } else {
-                        const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`);
-                        return new DataAndMaybeError(result, error);
-                    }
+        
+        if (!(evaluatedRhsValue instanceof Array)) {
+            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
+            return new DataAndMaybeError(result, error);
+        }
+
+        if (!isParsedEvaluatedVariable(rhs)) {
+            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`);
+            return new DataAndMaybeError(result, error);
+        }
+
+        if (evaluatedRhsValue.length === 0) {
+            isPresent = false;
+        } else if (typeof evaluatedRhsValue[0] === 'string') {
+            const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
+            if (typeof evaluatedLhsValue === 'string') {
+                isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
+            } else if (evaluatedLhsValue instanceof Array) {
+                if (!isParsedEvaluatedVariable(lhs)) {
+                    const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`);
+                    return new DataAndMaybeError(result, error);
+                }
+
+                if (evaluatedLhsValue.length === 0) {
+                    isPresent = false;
+                } else if (typeof evaluatedLhsValue[0] === 'string') {
+                    isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                 } else {
-                    const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`);
+                    const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`);
                     return new DataAndMaybeError(result, error);
                 }
             } else {
-                const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`);
+                const error = new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`);
                 return new DataAndMaybeError(result, error);
             }
         } else {
-            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
+            const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`);
             return new DataAndMaybeError(result, error);
         }
 

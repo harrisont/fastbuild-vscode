@@ -2609,10 +2609,7 @@ Instead, I was expecting to see one of the following:
                 const expectedErrorMessageStart =
 `Syntax error: Unexpected operatorAnd token: "&&".
 Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")
- • operatorAddition ("+")
- • operatorSubtraction ("-")`;
-                // TODO: ^^^ should not be able to use +/- here
+ • functionParametersEnd (")")`;
                 assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 38, 1, 39));
             });
 
@@ -2640,10 +2637,7 @@ Instead, I was expecting to see one of the following:
                 const expectedErrorMessageStart =
 `Syntax error: Unexpected operatorOr token: "||".
 Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")
- • operatorAddition ("+")
- • operatorSubtraction ("-")`;
-                // TODO: ^^^ should not be able to use +/- here
+ • functionParametersEnd (")")`;
                 assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 45, 1, 46));
             });
             

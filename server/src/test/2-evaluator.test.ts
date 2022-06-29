@@ -2795,7 +2795,7 @@ describe('evaluator', () => {
                             () => evaluateInput(input),
                             {
                                 name: 'EvaluationError',
-                                message: `'If' comparison of booleans only supports '==' and '!=', but instead is '${operator}'`,
+                                message: `'If' comparison using '${operator}' only supports comparing Strings and Integers, but a Boolean is used`,
                                 range: createRange(3, 40, 3, 40 + operator.length)
                             }
                         );
@@ -3515,6 +3515,22 @@ describe('evaluator', () => {
         });
         
         describe('Presence in ArrayOfStrings', () => {
+            it('present-literal-string "in" array of strings evaluates to true', () => {
+                const input = `
+                    .Haystack = {'a', 'b', 'c'}
+                    .Result = false
+                    If( 'b' in .Haystack )
+                    {
+                        ^Result = true
+                    }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+                    ['a', 'b', 'c'],
+                    true
+                ]);
+            });
+
             it('present-string "in" array of strings evaluates to true', () => {
                 const input = `
                     .Needle = 'b'
@@ -3779,7 +3795,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Array of Integers`,
+                        message: `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of Integers`,
                         range: createRange(3, 24, 3, 31)
                     }
                 );
@@ -3797,8 +3813,25 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition left-hand-side variable must be either a String or an Array of Strings, but instead is an Integer`,
+                        message: `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Integer`,
                         range: createRange(3, 24, 3, 31)
+                    }
+                );
+            });
+            
+            it('errors if LHS is not a string or an array of strings (variation 3: literal array of strings)', () => {
+                const input = `
+                    .Haystack = {'a'}
+                    If( {'d'} in .Haystack )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`,
+                        range: createRange(2, 24, 2, 29)
                     }
                 );
             });
@@ -3815,7 +3848,7 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Array of Integers`,
+                        message: `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of Integers`,
                         range: createRange(3, 35, 3, 44)
                     }
                 );
@@ -3833,8 +3866,24 @@ describe('evaluator', () => {
                     () => evaluateInput(input),
                     {
                         name: 'EvaluationError',
-                        message: `'If' 'in' condition right-hand-side variable must be an Array of Strings, but instead is an Integer`,
+                        message: `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Integer`,
                         range: createRange(3, 35, 3, 44)
+                    }
+                );
+            });
+            
+            it('errors if RHS is not an array of strings (variation 3: literal array of strings)', () => {
+                const input = `
+                    If( 'a' in {'b'} )
+                    {
+                    }
+                `;
+                assert.throws(
+                    () => evaluateInput(input),
+                    {
+                        name: 'EvaluationError',
+                        message: `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`,
+                        range: createRange(1, 31, 1, 36)
                     }
                 );
             });
