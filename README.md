@@ -17,21 +17,22 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 
 This provides the following functionality:
 * Go to definition of a variable.
-* Find references of a variable.
-* Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$` or `.Message = .Location`).
+* Find references to a variable.
+* Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`).
 * Show diagnostics for errors.
 
-It does not yet provide syntax highlighting. For that, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
+It does not yet provide syntax highlighting. For that in the meantime, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 
 ## Limitations
 
 * The language server cannot know what environment variables will exist when FASTBuild is run, since they might be different than the environment variables that exist when the language server runs, so:
     * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
     * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
+* Note that some of the language is not yet implemented. See [TODO](#todo) for details.
 
 ## Compatibility
 
-Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.03 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
+Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.05 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
 
 It may be compatible with a newer version of FASTBuild, but this was the latest version tested.
 
@@ -61,7 +62,7 @@ TODO
 
 ### Implementation Notes
 
-* Parses using [Nearley](https://nearley.js.org/), which lexes using [moo](https://github.com/no-context/moo).
+* Parses using the [Nearley](https://nearley.js.org/) parser generator, which lexes using [moo](https://github.com/no-context/moo).
     * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
     * Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
 * VS Code language server extension resources:
