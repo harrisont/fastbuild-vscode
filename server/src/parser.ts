@@ -93,6 +93,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['parametersStart', { value: 'parameters-start', symbol: '(', example: null }],
     ['parametersEnd', { value: 'parameters-end', symbol: ')', example: null }],
     ['functionName', { value: 'function-name', symbol: null, example: 'MyFunctionName' }],
+    ['parameterName', { value: 'parameter-name', symbol: null, example: '.MyParameterName' }],
 ]);
 
 function getTokenData(token: string): TokenData {
@@ -148,31 +149,25 @@ function createWholeDocumentRange(): ParseSourceRange {
 export type Statement = Record<string, any>;
 
 export class ParseError extends Error {
-    fileUri: UriStr = '';
-
-    constructor(readonly message: string, readonly range: ParseSourceRange) {
+    constructor(readonly message: string, readonly fileUri: UriStr, readonly range: ParseSourceRange) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseError.name;
     }
-
-    setFile(uri: UriStr): void {
-        this.fileUri = uri;
-    }
 }
 
 export class ParseSyntaxError extends ParseError {
-    constructor(message: string, readonly range: ParseSourceRange) {
-        super(message, range);
+    constructor(message: string, fileUri: UriStr, range: ParseSourceRange) {
+        super(message, fileUri, range);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseSyntaxError.name;
     }
 }
 
 export class ParseNumParsesError extends ParseError {
-    constructor(message: string) {
+    constructor(message: string, fileUri: UriStr) {
         // We don't know the location that causes the wrong number of parses, so use the whole document as the error range.
-        super(message, createWholeDocumentRange());
+        super(message, fileUri, createWholeDocumentRange());
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = ParseNumParsesError.name;
     }
@@ -197,17 +192,23 @@ function getParseTable(parser: nearley.Parser) {
 
 export interface ParseOptions {
     enableDiagnostics: boolean;
+    includeCodeLocationInError: boolean;
 }
 
 export interface ParseData {
     statements: Statement[];
 }
 
-function createParseErrorFromNearlyParseError(nearlyParseError: Error): ParseError {
+function createParseErrorFromNearlyParseError(
+    nearlyParseError: Error,
+    input: string,
+    fileUri: UriStr,
+    includeCodeLocationInError: boolean
+): ParseError {
     // Example error message:
     //
     //     Syntax error at line 6 col 7:
-    //     
+    //
     //       Print()
     //             ^
     //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
@@ -215,26 +216,23 @@ function createParseErrorFromNearlyParseError(nearlyParseError: Error): ParseErr
     const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n.+\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
     if (match !== null) {
         // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
-        const line = parseInt(match[1]) - 1;
-        const character = parseInt(match[2]) - 1;
-        const range: ParseSourceRange = {
-            start: {line, character },
-            end: {
-                line,
-                character: character + 1
-            }
-        };
+        const lineNum = parseInt(match[1]) - 1;
+        const characterNum = parseInt(match[2]) - 1;
+        const range = createRange(lineNum, characterNum, lineNum, characterNum + 1);
 
         let errorReason: string = match[3];
+        let numErrorCharacters = 1;
         if (errorReason === 'Unexpected input (lexer error).') {
             errorReason = 'Unexpected input.';
         } else {
-            const errorReasonMatch = errorReason.match(/Unexpected ([^ ]+) token(.*)/);
+            const errorReasonMatch = errorReason.match(/Unexpected ([^ ]+) token: "([^"]+)"(.+)/);
             if (errorReasonMatch !== null) {
                 const token = errorReasonMatch[1];
-                const rest = errorReasonMatch[2];
+                const tokenInput = errorReasonMatch[2];
+                const rest = errorReasonMatch[3];
                 const tokenData = getTokenData(token);
-                errorReason = `Unexpected ${tokenData.value}${rest}`;
+                errorReason = `Unexpected ${tokenData.value}: "${tokenInput}"${rest}`;
+                numErrorCharacters = tokenInput.length;
             }
         }
         const expected: string = match[4];
@@ -249,19 +247,31 @@ function createParseErrorFromNearlyParseError(nearlyParseError: Error): ParseErr
         );
         const filteredExpectedTokens = [...expectedTokens.values()].filter(token => !IGNORED_EXPECTED_TOKENS.has(token));
         const sortedFilteredExpectedTokens = filteredExpectedTokens.sort();
+
+        let numSpacesBeforeErrorCharacter = characterNum;
+        const errorLine = input
+            .split('\n')[lineNum]
+            // Remove leading whitespace from the line.
+            .replace(/^[ \t]*/, function(match: string) {
+                numSpacesBeforeErrorCharacter -= match.length;
+                return '';
+            });
+        const codeLocationMessage = includeCodeLocationInError ? `| ${errorLine}\n| ${' '.repeat(numSpacesBeforeErrorCharacter)}${'^'.repeat(numErrorCharacters)}\n` : '';
+
         const parseErrorMessage = `Syntax error: ${errorReason}\n`
+            + codeLocationMessage
             + `Expecting to see ${sortedFilteredExpectedTokens.length > 1 ? 'one of ' : ''}the following:\n`
             + sortedFilteredExpectedTokens.map(token => ` • ${getExpectedTokenMessage(token)}`).join('\n');
 
-        return new ParseSyntaxError(parseErrorMessage, range);
+        return new ParseSyntaxError(parseErrorMessage, fileUri, range);
     } else {
         // We were unable to parse the location from the error, so use the whole document as the error range.
-        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.message}`, createWholeDocumentRange());
+        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.message}`, fileUri, createWholeDocumentRange());
     }
 }
 
 // Parse the input and return the statements.
-export function parse(input: string, options: ParseOptions): ParseData {
+export function parse(input: string, fileUri: UriStr, options: ParseOptions): ParseData {
     // Pre-process the input:
     //  * Remove comments.
     //  * Add a newline in order to make parsing easier.
@@ -277,14 +287,14 @@ export function parse(input: string, options: ParseOptions): ParseData {
         nearley.Grammar.fromCompiled(fbuildGrammar),
         { keepHistory: options.enableDiagnostics }
     );
-    
+
     try {
         parser.feed(modifiedInput);
     } catch (nearlyParseError) {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw createParseErrorFromNearlyParseError(nearlyParseError);
+        throw createParseErrorFromNearlyParseError(nearlyParseError, modifiedInput, fileUri, options.includeCodeLocationInError);
     }
 
     const numResults = parser.results.length;
@@ -292,7 +302,7 @@ export function parse(input: string, options: ParseOptions): ParseData {
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw new ParseNumParsesError(`Should parse to exactly 1 result, but parsed to ${numResults}`);
+        throw new ParseNumParsesError(`Should parse to exactly 1 result, but parsed to ${numResults}`, fileUri);
     }
     const statements = parser.results[0];
     return {

@@ -31,7 +31,7 @@ type FileContents = string;
 class MockFileSystem implements IFileSystem {
     constructor(private readonly fileContents: Map<UriStr, FileContents>) {
     }
-    
+
     fileExists(uri: vscodeUri.URI): boolean
     {
         return this.fileContents.has(uri.toString());
@@ -65,12 +65,12 @@ function createFileRange(uri: UriStr, startLine: number, startCharacter: number,
         }
     );
 }
-    
+
 function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>): EvaluatedData {
     const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
         fileSystem,
-        { enableDiagnostics: true }
+        { enableDiagnostics: true, includeCodeLocationInError: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);
@@ -143,7 +143,7 @@ describe('evaluator', () => {
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
-        
+
         it('should be able to read a variable in a grandparent scope (current scope reference)', () => {
             const input = `
                 .Var1 = 1
@@ -155,7 +155,7 @@ describe('evaluator', () => {
             `;
             assertEvaluatedVariablesValueEqual(input, [1]);
         });
-        
+
         it('should be able to read a variable in a grandparent scope (parent scope reference)', () => {
             const input = `
                 .Var1 = 1
@@ -322,7 +322,7 @@ describe('evaluator', () => {
             `;
             assertEvaluatedVariablesValueEqual(input, ['']);
         });
-    
+
         it('should evaluate an empty array', () => {
             const input = `
                 .MyVar = {}
@@ -332,7 +332,7 @@ describe('evaluator', () => {
                 []
             ]);
         });
-    
+
         it('should evaluate an array of string literals', () => {
             const input = `
                 .MyVar = {
@@ -345,7 +345,7 @@ describe('evaluator', () => {
                 ['thing1', 'thing2']
             ]);
         });
-    
+
         it('should evaluate an array of string templates', () => {
             const input = `
                 .Type = 'thing'
@@ -361,7 +361,7 @@ describe('evaluator', () => {
                 ['thing1', 'thing2']
             ]);
         });
-    
+
         it('should evaluate an array of evaluated variables', () => {
             const input = `
                 .Var1 = 'thing1'
@@ -466,7 +466,7 @@ describe('evaluator', () => {
                 new Struct()
             ]);
         });
-    
+
         it('should evaluate a basic struct', () => {
             const input = `
                 .MyVar = [
@@ -487,7 +487,7 @@ describe('evaluator', () => {
                 }))
             ]);
         });
-    
+
         it('should evaluate a struct with an evaluated variable', () => {
             const input = `
                 .B = 1
@@ -526,7 +526,7 @@ describe('evaluator', () => {
                 }))
             ]);
         });
-    
+
         it('should evaluate a struct containing an array', () => {
             const input = `
                 .MyVar = [
@@ -541,7 +541,7 @@ describe('evaluator', () => {
                 }))
             ]);
         });
-    
+
         it('should evaluate a struct containing a struct', () => {
             const input = `
                 .MyVar = [
@@ -562,7 +562,7 @@ describe('evaluator', () => {
                 }))
             ]);
         });
-    
+
         it('should evaluate an array of structs', () => {
             const input = `
                 .Struct1 = [.MyInt = 1]
@@ -685,7 +685,7 @@ describe('evaluator', () => {
                     `
                 ],
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: '',
@@ -731,7 +731,7 @@ describe('evaluator', () => {
             ]));
 
             const root_fbuild_dir = `${path.sep}some${path.sep}path`;
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: root_fbuild_dir,
@@ -1368,7 +1368,7 @@ describe('evaluator', () => {
                 'Good  Good',
             ]);
         });
-        
+
         it('Multiple string removals', () => {
             const input = `
                 .String = 'Good Bad Good Bad Bad Good'
@@ -1380,7 +1380,7 @@ describe('evaluator', () => {
                 'Good  Good   Good',
             ]);
         });
-        
+
         it('Multiple string removals using variable', () => {
             const input = `
                 .String = 'Good Bad Good Bad Bad Good'
@@ -1394,7 +1394,7 @@ describe('evaluator', () => {
                 'Good  Good   Good',
             ]);
         });
-        
+
         it('String remove not found', () => {
             const input = `
                 .String = 'Good'
@@ -1406,7 +1406,7 @@ describe('evaluator', () => {
                 'Good',
             ]);
         });
-        
+
         it('String remove from empty string', () => {
             const input = `
                 .String = ''
@@ -1418,7 +1418,7 @@ describe('evaluator', () => {
                 '',
             ]);
         });
-        
+
         it('Inline string subtraction', () => {
             const input = `
                 .String = 'Good Bad'
@@ -1429,7 +1429,7 @@ describe('evaluator', () => {
                 'Good ',
             ]);
         });
-        
+
         it('Inline string subtraction within words', () => {
             const input = `
                 .String = 'GoBADod'
@@ -1440,7 +1440,7 @@ describe('evaluator', () => {
                 'Good',
             ]);
         });
-        
+
         it('Inline string subtraction must match case', () => {
             const input = `
                 .String = 'Good'
@@ -1451,7 +1451,7 @@ describe('evaluator', () => {
                 'Good',
             ]);
         });
-        
+
         it('Inline string addition then subtraction', () => {
             const input = `
                 .String = '1 2'
@@ -1464,7 +1464,7 @@ describe('evaluator', () => {
                 '1 3 4',
             ]);
         });
-        
+
         it('Inline string subtraction then addition', () => {
             const input = `
                 .String = '1 2'
@@ -1477,7 +1477,7 @@ describe('evaluator', () => {
                 '3',
             ]);
         });
-        
+
         it('Remove from array of strings', () => {
             const input = `
                 .Strings = { 'Good', 'Bad', 'Good' }
@@ -1489,7 +1489,7 @@ describe('evaluator', () => {
                 ['Good', 'Good'],
             ]);
         });
-        
+
         it('Remove from array of strings inline', () => {
             const input = `
                 .Strings = { 'Good', 'Bad', 'Good' }
@@ -1500,7 +1500,7 @@ describe('evaluator', () => {
                 ['Good', 'Good'],
             ]);
         });
-        
+
         it('Remove from array of strings using variable', () => {
             const input = `
                 .Bad = 'Bad'
@@ -1514,7 +1514,7 @@ describe('evaluator', () => {
                 ['Good', 'Good'],
             ]);
         });
-        
+
         it('Remove from array of strings inline using variable', () => {
             const input = `
                 .Bad = 'Bad'
@@ -1527,7 +1527,7 @@ describe('evaluator', () => {
                 ['Good', 'Good'],
             ]);
         });
-        
+
         it('Remove from empty array of strings', () => {
             const input = `
                 .Strings = {}
@@ -1827,7 +1827,7 @@ describe('evaluator', () => {
                 '1 2'
             ]);
         });
-        
+
         it('should work if there is an existing array evaluated variable value', () => {
             const input = `
                 .MyArray = { 'a' }
@@ -1843,7 +1843,7 @@ describe('evaluator', () => {
                 ['a', 'b'],
             ]);
         });
-        
+
         it('should work if there is an existing value (with #if)', () => {
             const builtInDefine = getPlatformSpecificDefineSymbol();
             const input = `
@@ -1901,7 +1901,7 @@ describe('evaluator', () => {
                 '13'
             ]);
         });
-        
+
         it('should work if there is an existing array evaluated variable value', () => {
             const input = `
                 .MyArray = { 'a', 'b' }
@@ -1917,7 +1917,7 @@ describe('evaluator', () => {
                 ['a'],
             ]);
         });
-        
+
         it('should work if there is an existing value (with #if)', () => {
             const builtInDefine = getPlatformSpecificDefineSymbol();
             const input = `
@@ -2153,7 +2153,7 @@ describe('evaluator', () => {
                 'hello'
             ]);
         });
-    
+
         it('Call Using inside a struct', () => {
             const input = `
                 .MyVar = 'fun'
@@ -2208,7 +2208,7 @@ describe('evaluator', () => {
                 ]
                 Using( .MyStruct )
             `;
-            
+
             const result = evaluateInput(input);
 
             const rangeMyVar1 = createFileRange('file:///dummy.bff', 1, 16, 1, 23);
@@ -2257,7 +2257,7 @@ describe('evaluator', () => {
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
-    
+
         it('Using chain', () => {
             const input = `
                 .MyStruct1 = [
@@ -2465,7 +2465,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, []);
                 });
-        
+
                 it('handles an evaluated variable alias name', () => {
                     const input = `
                         .MyAliasName = 'SomeName'
@@ -2475,7 +2475,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['SomeName']);
                 });
-        
+
                 it('handles a dynamic-variable alias name', () => {
                     const input = `
                         .MyAliasName = 'SomeName'
@@ -2489,7 +2489,7 @@ describe('evaluator', () => {
                         'SomeName'
                     ]);
                 });
-        
+
                 it('errors if the evaluated variable alias name is not a string', () => {
                     const input = `
                         .MyAliasName = 123
@@ -2506,7 +2506,7 @@ describe('evaluator', () => {
                         }
                     );
                 });
-        
+
                 it('evaluates body statements', () => {
                     const input = `
                         .MyVar = 1
@@ -2540,7 +2540,7 @@ describe('evaluator', () => {
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
         });
-        
+
         describe('Print', () => {
             it('Print string', () => {
                 const input = `
@@ -2549,7 +2549,7 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
-            
+
             it('Print string variable', () => {
                 const input = `
                     .Value = 'hello'
@@ -2557,7 +2557,7 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, ['hello']);
             });
-            
+
             it('Print integer variable', () => {
                 const input = `
                     .Value = 123
@@ -2643,7 +2643,7 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [true, true]);
             });
-            
+
             it('evaluates a false boolean variable to false', () => {
                 const input = `
                     .Value = false
@@ -2669,7 +2669,7 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [true, false]);
             });
-            
+
             it('evaluates the inversion of a false boolean variable to true', () => {
                 const input = `
                     .Value = false
@@ -2682,7 +2682,7 @@ describe('evaluator', () => {
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false, true]);
             });
-            
+
             it('errors on using a non-boolean variable for the condition', () => {
                 const input = `
                     .Value = 123
@@ -2700,7 +2700,7 @@ describe('evaluator', () => {
                 );
             });
         });
-        
+
         describe('Comparison', () => {
             describe('boolean', () => {
                 it('"{true-literal} == {true-literal}" evaluates to true', () => {
@@ -2780,7 +2780,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false, false, true]);
                 });
-                
+
                 it('"true == false" evaluates to false', () => {
                     const input = `
                         .Value1 = true
@@ -2794,7 +2794,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true, false, false]);
                 });
-                
+
                 it('"false == true" evaluates to false', () => {
                     const input = `
                         .Value1 = false
@@ -2822,7 +2822,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true, true, false]);
                 });
-                
+
                 it('"false != false" evaluates to false', () => {
                     const input = `
                         .Value1 = false
@@ -2836,7 +2836,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false, false, false]);
                 });
-                
+
                 it('"true != false" evaluates to true', () => {
                     const input = `
                         .Value1 = true
@@ -2850,7 +2850,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true, false, true]);
                 });
-                
+
                 it('"false != true" evaluates to true', () => {
                     const input = `
                         .Value1 = false
@@ -2956,7 +2956,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
                 });
-                
+
                 it('"1 == 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
@@ -2970,7 +2970,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
                 });
-                
+
                 it('"1 != 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
@@ -2984,7 +2984,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
                 });
-                
+
                 it('"1 != 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
@@ -3246,7 +3246,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false]);
                 });
-                
+
                 it('"cat == dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3260,7 +3260,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
                 });
-                
+
                 it('"cat != cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3274,7 +3274,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false]);
                 });
-                
+
                 it('"cat != Cat" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3288,7 +3288,7 @@ describe('evaluator', () => {
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', true]);
                 });
-                
+
                 it('"cat != dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
@@ -3602,7 +3602,7 @@ describe('evaluator', () => {
                 );
             });
         });
-        
+
         describe('Presence in ArrayOfStrings', () => {
             it('present-literal-string "in" array of strings evaluates to true', () => {
                 const input = `
@@ -3673,7 +3673,7 @@ describe('evaluator', () => {
                     false
                 ]);
             });
-            
+
             it('present-string "not in" array of strings evaluates to false', () => {
                 const input = `
                     .Needle = 'b'
@@ -3727,7 +3727,7 @@ describe('evaluator', () => {
                     true
                 ]);
             });
-            
+
             it('present-array-of-strings "in" array of strings evaluates to true', () => {
                 const input = `
                     .Needle = {'d', 'b'}
@@ -3763,7 +3763,7 @@ describe('evaluator', () => {
                     false
                 ]);
             });
-            
+
             it('array of strings "in" empty array evaluates to false', () => {
                 const input = `
                     .Needle = {'b'}
@@ -3781,7 +3781,7 @@ describe('evaluator', () => {
                     false
                 ]);
             });
-            
+
             it('empty array "in" empty array evaluates to false', () => {
                 const input = `
                     .Needle = {}
@@ -3799,7 +3799,7 @@ describe('evaluator', () => {
                     false
                 ]);
             });
-            
+
             it('present-array-of-strings "not in" array of strings evaluates to false', () => {
                 const input = `
                     .Needle = {'d', 'b'}
@@ -3835,7 +3835,7 @@ describe('evaluator', () => {
                     true
                 ]);
             });
-            
+
             it('array of strings "not in" empty array evaluates to true', () => {
                 const input = `
                     .Needle = {'b'}
@@ -3853,7 +3853,7 @@ describe('evaluator', () => {
                     true
                 ]);
             });
-            
+
             it('empty array "not in" empty array evaluates to true', () => {
                 const input = `
                     .Needle = {}
@@ -3871,7 +3871,7 @@ describe('evaluator', () => {
                     true
                 ]);
             });
-            
+
             it('errors if LHS is not a string or an array of strings (variation 1: array of non-strings)', () => {
                 const input = `
                     .MyStruct = [ .A = 1 ]
@@ -3890,7 +3890,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('errors if LHS is not a string or an array of strings (variation 2: non-string, non-array)', () => {
                 const input = `
                     .Needle = 123
@@ -3908,7 +3908,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('errors if LHS is not a string or an array of strings (variation 3: literal array of strings)', () => {
                 const input = `
                     .Haystack = {'a'}
@@ -3925,7 +3925,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('errors if RHS is not an array of strings (variation 1: array of non-strings)', () => {
                 const input = `
                     .Needle = {}
@@ -3944,7 +3944,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('errors if RHS is not an array of strings (variation 2: non-array)', () => {
                 const input = `
                     .Needle = {}
@@ -3962,7 +3962,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('errors if RHS is not an array of strings (variation 3: literal array of strings)', () => {
                 const input = `
                     If( 'a' in {'b'} )
@@ -3979,7 +3979,7 @@ describe('evaluator', () => {
                 );
             });
         });
-        
+
         describe('Compound expression', () => {
             describe('Boolean compound expression', () => {
                 class Comparison {
@@ -3991,7 +3991,7 @@ describe('evaluator', () => {
                     {
                     }
                 }
-    
+
                 for (const value1 of [true, false]) {
                     for (const value2 of [true, false]) {
                         const comparisons2Values = [
@@ -4022,7 +4022,7 @@ describe('evaluator', () => {
                         }
                     }
                 }
-    
+
                 for (const value1 of [true, false]) {
                     for (const value2 of [true, false]) {
                         for (const value3 of [true, false]) {
@@ -4160,7 +4160,7 @@ describe('evaluator', () => {
                     `
                 ]
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 1,
@@ -4171,22 +4171,22 @@ describe('evaluator', () => {
                     range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
                 }
             ]);
-    
+
             const definitionFromHelper: VariableDefinition = {
                 id: 1,
                 range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
             };
-    
+
             const definitionCopy: VariableDefinition = {
                 id: 2,
                 range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
             };
-    
+
             assert.deepStrictEqual(result.variableDefinitions, [
                 definitionFromHelper,  // FromHelper
                 definitionCopy,  // Copy
             ]);
-    
+
             assert.deepStrictEqual(result.variableReferences, [
                 // helper.bff ".FromHelper = 1" LHS
                 {
@@ -4233,7 +4233,7 @@ describe('evaluator', () => {
                     `
                 ],
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'Bobo',
@@ -4278,7 +4278,7 @@ describe('evaluator', () => {
                     `
                 ]
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
@@ -4299,7 +4299,7 @@ describe('evaluator', () => {
             ]);
         });
     });
-    
+
     describe('#once', () => {
         it('include the same file-with-#once multiple times from the same file', () => {
             const result = evaluateInputs('file:///some/path/fbuild.bff', new Map<UriStr, FileContents>([
@@ -4319,7 +4319,7 @@ describe('evaluator', () => {
                     `
                 ],
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'Bobo',
@@ -4359,7 +4359,7 @@ describe('evaluator', () => {
                     `
                 ]
             ]));
-    
+
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
@@ -4526,7 +4526,7 @@ describe('evaluator', () => {
                 #endif
                 Print( .Value )
             `;
-            
+
             assertEvaluatedVariablesValueEqual(input, ['else']);
         });
 
@@ -4608,7 +4608,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
     });
-    
+
     describe('#if file_exists', () => {
         const builtInDefine = getPlatformSpecificDefineSymbol();
 

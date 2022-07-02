@@ -22,7 +22,7 @@ export class ParseDataProvider {
 
     constructor(private readonly fileContentProvider: IFileSystem, private readonly parseOptions: ParseOptions) {
     }
-    
+
     // Calculates the parse data for a URI, caches it, and returns it.
     //
     // Returns |Error| on failing to read the file contents.
@@ -34,13 +34,10 @@ export class ParseDataProvider {
         }
         const text = maybeText.getValue();
         try {
-            const parseData = parse(text, this.parseOptions);
+            const parseData = parse(text, uri.toString(), this.parseOptions);
             this.data.set(uri.toString(), parseData);
             return Maybe.ok(parseData);
         } catch (error) {
-            if (error instanceof ParseError) {
-                error.setFile(uri.toString());
-            }
             return Maybe.error(error);
         }
     }
