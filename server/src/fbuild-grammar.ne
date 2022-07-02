@@ -152,6 +152,7 @@ const lexer = moo.states({
         parametersStart: '(',
         parametersEnd: { match: ')', pop: 1 },
         parameterName: /\.[a-zA-Z_][a-zA-Z0-9_]*/,
+        parameterSeparator: ',',
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
         whitespace: /[ \t]+/,
     },
@@ -622,7 +623,12 @@ userFunctionDeclaration ->
 
 userFunctionDeclarationParameters ->
     null
-  | %parameterName optionalWhitespaceOrNewline userFunctionDeclarationParameters  {%([firstParameter, space, restParameters]) => [firstParameter, ...restParameters] %}
+  | %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([firstParameter, space, restParameters]) => [firstParameter, ...restParameters] %}
+
+nonFirstUserFunctionDeclarationParameters ->
+    null
+  |                                                 %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([                   firstParameter, space2, restParameters]) => [firstParameter, ...restParameters] %}
+  | %parameterSeparator optionalWhitespaceOrNewline %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([separator, space1, firstParameter, space2, restParameters]) => [firstParameter, ...restParameters] %}
 
 # Function names of functions that we don't care about handling except for the function's alias parameter.
 genericFunctionNameWithAlias ->

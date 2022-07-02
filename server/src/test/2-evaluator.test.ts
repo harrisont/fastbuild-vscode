@@ -4228,9 +4228,9 @@ Expecting to see one of the following:
     });
 
     describe('User functions', () => {
-        describe('Declare function without args', () => {
+        describe('Declare function without arguments', () => {
             //
-            // Success cases: Basic no-args functions
+            // Success cases: Basic no-arguments functions
             //
 
             it('Empty body', () => {
@@ -4325,21 +4325,61 @@ Expecting to see the following:
             });
         });
 
-        /*
-        describe('Declare function with args', () => {
-            it('TODO', () => {
+        describe('Declare function with arguments', () => {
+            it('Single argument', () => {
                 const input = `
-                `;
-                assert.throws(
-                    () => evaluateInput(input),
-                    {
-                        name: 'EvaluationError',
-                        message: `TODO`,
-                        range: createRange(1, 0, 1, 0)
+                    function Func( .Arg ){
                     }
-                );
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
             });
 
+            it('Multiple arguments separated by spaces', () => {
+                const input = `
+                    function Func( .Arg1 .Arg2 .Arg3 ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Multiple arguments separated by commas', () => {
+                const input = `
+                    function Func( .Arg1, .Arg2, .Arg3 ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Arguments must start with "."', () => {
+                const input = `
+                    function Func( Arg ){
+                    }
+                `;
+                const expectedErrorMessage = 
+`Syntax error: Unexpected function-name: "Arg".
+| function Func( Arg ){
+|                ^^^
+Expecting to see one of the following:
+ • parameter-name (example: ".MyParameterName")
+ • parameters-end: ")"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 35, 1, 36));
+            });
+
+            it('Arguments cannot have a trailing separator', () => {
+                const input = `
+                    function Func( .Arg, ){
+                    }
+                `;
+                const expectedErrorMessage = 
+`Syntax error: Unexpected parameters-end: ")".
+| function Func( .Arg, ){
+|                      ^
+Expecting to see the following:
+ • parameter-name (example: ".MyParameterName")`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 41, 1, 42));
+            });
+
+            /*
             it('TODO', () => {
                 const input = `
                 `;
@@ -4355,17 +4395,11 @@ Expecting to see the following:
 
                 ]);
             });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
+            */
         });
 
-        describe('Call function without args', () => {
+        /*
+        describe('Call function without arguments', () => {
             it('TODO', () => {
                 const input = `
                 `;
@@ -4399,7 +4433,7 @@ Expecting to see the following:
             });
         });
 
-        describe('Call function without args', () => {
+        describe('Call function without arguments', () => {
             it('TODO', () => {
                 const input = `
                 `;

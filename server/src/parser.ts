@@ -94,6 +94,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['parametersEnd', { value: 'parameters-end', symbol: ')', example: null }],
     ['functionName', { value: 'function-name', symbol: null, example: 'MyFunctionName' }],
     ['parameterName', { value: 'parameter-name', symbol: null, example: '.MyParameterName' }],
+    ['parameterSeparator', { value: 'parameter-separator', symbol: ',', example: null }],
 ]);
 
 function notNull<TValue>(value: TValue | null): value is TValue {
