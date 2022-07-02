@@ -67,7 +67,9 @@ class State {
     parseDataProvider = new ParseDataProvider(
         this.fileSystem,
         {
-            enableDiagnostics: false
+            enableDiagnostics: false,
+            // No need to include the code location, since the extension will show the error location.
+            includeCodeLocationInError: false,
         }
     );
 
@@ -162,7 +164,7 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
         if (evaluatedDataAndMaybeError.error !== null) {
             throw evaluatedDataAndMaybeError.error;
         }
-        
+
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     } catch (error) {
         // Clear previous diagnostics because they are now potentially stale.

@@ -75,7 +75,7 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
     const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
         fileSystem,
-        { enableDiagnostics: true }
+        { enableDiagnostics: true, includeCodeLocationInError: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);

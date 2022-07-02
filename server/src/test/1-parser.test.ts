@@ -8,19 +8,19 @@ import {
 } from '../parser';
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
-    const result = parse(input, { enableDiagnostics: true} );
+    const result = parse(input, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
     assert.deepStrictEqual(result.statements, expectedResult);
 }
 
 function assertInputsGenerateSameParseResult(input1: string, input2: string): void {
-    const result1 = parse(input1, { enableDiagnostics: true} );
-    const result2 = parse(input2, { enableDiagnostics: true} );
+    const result1 = parse(input1, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    const result2 = parse(input2, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
     assert.deepStrictEqual(result1.statements, result2.statements);
 }
 
 function assertParseSyntaxError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
     assert.throws(
-        () => parse(input, { enableDiagnostics: false} ),
+        () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
         error => {
             assert.strictEqual(error.name, 'ParseSyntaxError');
             assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
@@ -43,7 +43,7 @@ describe('parser', () => {
 
     it('should work on empty lines', () => {
         const input = `
-        
+
 
         `;
         assertParseResultsEqual(input, []);
@@ -115,7 +115,7 @@ describe('parser', () => {
             .MyVar
 
                 =
-                
+
                 123
         `;
         assertParseResultsEqual(input, [
@@ -171,7 +171,7 @@ describe('parser', () => {
                 // Comment 2
                 // Comment 3
                 =
-                
+
                 // Comment 4
 
                 // Comment 5
@@ -188,7 +188,7 @@ describe('parser', () => {
 
 
 
-            
+
                 123
 
 
@@ -203,7 +203,7 @@ describe('parser', () => {
 // Comment 2
 // Comment 3
                 =
-                
+
 // Comment 4
 
 // Comment 5
@@ -220,7 +220,7 @@ describe('parser', () => {
 
 
 
-            
+
                 123
 
 
@@ -883,7 +883,7 @@ describe('parser', () => {
             .MyVar =
             [
 
-                .MyBool = true 
+                .MyBool = true
 
 
                 .MyInt = 123
@@ -896,6 +896,8 @@ describe('parser', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
         const expectedErrorMessage =
 `Syntax error: Unexpected Array-item-separator: ",".
+| .MyVar = [ .A=1, .B=2 ]
+|                ^
 Expecting to see one of the following:
  • addition: "+"
  • subtraction: "-"
@@ -1256,7 +1258,7 @@ Expecting to see one of the following:
             }
         ]);
     });
-    
+
     it('should work on an empty scope', () => {
         const input = `
             {
@@ -2468,7 +2470,7 @@ Expecting to see one of the following:
                 }
             ]);
         });
-    
+
         it('Call Using inside a struct', () => {
             const input = `
                 .MyVar = [
@@ -2587,7 +2589,7 @@ Expecting to see one of the following:
                     } // Comment 6
                 `;
                 const withoutComments = `
-                    If( .Value ) // 
+                    If( .Value ) //
                     {
 
 
@@ -2608,6 +2610,8 @@ Expecting to see one of the following:
                 `;
                 const expectedErrorMessage =
 `Syntax error: Unexpected operator-and: "&&".
+| If( .Cat == 'cat' && .Bool )
+|                   ^^
 Expecting to see the following:
  • function-parameters-end: ")"`;
                 assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 38, 1, 39));
@@ -2621,13 +2625,15 @@ Expecting to see the following:
                 `;
                 const expectedErrorMessage =
 `Syntax error: Unexpected operator-equal: "==".
+| If( .Bool && .Cat == 'cat' )
+|                   ^^
 Expecting to see one of the following:
  • function-parameters-end: ")"
  • operator-and: "&&"
  • operator-or: "||"`;
                 assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 38, 1, 39));
             });
-            
+
             it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 1st)', () => {
                 const input = `
                     If( .Needle in .Haystack || .Bool )
@@ -2636,11 +2642,13 @@ Expecting to see one of the following:
                 `;
                 const expectedErrorMessage =
 `Syntax error: Unexpected operator-or: "||".
+| If( .Needle in .Haystack || .Bool )
+|                          ^^
 Expecting to see the following:
  • function-parameters-end: ")"`;
                 assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 45, 1, 46));
             });
-            
+
             it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 2nd)', () => {
                 const input = `
                     If( .Bool || .Needle in .Haystack )
@@ -2649,6 +2657,8 @@ Expecting to see the following:
                 `;
                 const expectedErrorMessage =
 `Syntax error: Unexpected keyword-in: "in".
+| If( .Bool || .Needle in .Haystack )
+|                      ^^
 Expecting to see one of the following:
  • function-parameters-end: ")"
  • operator-and: "&&"
