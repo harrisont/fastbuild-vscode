@@ -213,17 +213,24 @@ function createParseErrorFromNearlyParseError(
     //             ^
     //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
     //     ...
-    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n.+\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
+    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n(.+)\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
     if (match !== null) {
         // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
         const lineNum = parseInt(match[1]) - 1;
         const characterNum = parseInt(match[2]) - 1;
         const range = createRange(lineNum, characterNum, lineNum, characterNum + 1);
 
-        let errorReason: string = match[3];
+        let errorReason: string = match[4];
         let numErrorCharacters = 1;
         if (errorReason === 'Unexpected input (lexer error).') {
-            errorReason = 'Unexpected input.';
+            const lineThroughError: string = match[3].trim();
+            if (lineThroughError === '<end-of-file>') {
+                errorReason = 'Unexpected end of file.';
+                // There is nothing useful to show.
+                includeCodeLocationInError = false;
+            } else {
+                errorReason = 'Unexpected input.';
+            }
         } else {
             const errorReasonMatch = errorReason.match(/Unexpected ([^ ]+) token: "([^"]+)"(.+)/);
             if (errorReasonMatch !== null) {
@@ -235,7 +242,7 @@ function createParseErrorFromNearlyParseError(
                 numErrorCharacters = tokenInput.length;
             }
         }
-        const expected: string = match[4];
+        const expected: string = match[5];
         const expectedTokens = new Set<string>();
         // Until string.prototype.matchAll is available, use string.prototype.replace.
         expected.replace(
