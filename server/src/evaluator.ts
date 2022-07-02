@@ -1886,26 +1886,37 @@ function evaluateIfCondition(
 function evaluateUserFunctionDeclaration(
     userFunction: ParsedStatementUserFunctionDeclaration,
     context: EvaluationContext
-): DataAndMaybeError<EvaluatedUserFunctionDeclaration> {
-    // TODO: add variableDefinition for the function name.
+): DataAndMaybeError<EvaluatedData> {
+    const nameRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameRange);
+
+    const result: EvaluatedData = {
+        evaluatedVariables: [],
+        variableReferences: [],
+        variableDefinitions: [ functionNameDefinition ],
+    };
 
     // TODO: save the function body so that it can be called later.
     //userFunction.name
     //userFunction.parameters
     //userFunction.statements
 
-    const definition = context.scopeStack.createVariableDefinition(userFunction.nameRange);
-
     /*
-    const result: EvaluatedUserFunctionDeclaration = {
-        evaluatedString: '',
-        evaluatedVariables: [],
-        variableReferences: [],
-        variableDefinitions: [],
-    };
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        const evaluatedStatementsAndMaybeError = evaluateStatements(userFunction.statements, context);
+        error = evaluatedStatementsAndMaybeError.error;
+        const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
+        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+    });
+    if (error !== null) {
+        return new DataAndMaybeError(result, error);
+    }
+    */
 
     return new DataAndMaybeError(result);
-    */
 }
 
 function getValueTypeName(value: Value): ValueTypeName {

@@ -4254,12 +4254,10 @@ Expecting to see one of the following:
                     function
                 `;
                 const expectedErrorMessage =
-`Syntax error: Unexpected input.
-Expecting to see one of the following:
- • function-name (example: "MyFunctionName")
- • optional-whitespace-and-mandatory-newline (example: "<newline>")
- • whitespace (example: " ")`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 28, 1, 29));
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • function-name (example: "MyFunctionName")`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
             });
 
             it('Missing declaration of arguments (variation 1)', () => {

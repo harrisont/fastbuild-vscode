@@ -617,8 +617,8 @@ genericFunctionWithAlias ->
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName                             %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, braceOpen), parameters, statements) %}
-  | %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName optionalWhitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, space2),  parameters, statements) %}
+    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, braceOpen), parameters, statements) %}
+  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, space2),    parameters, statements) %}
 
 userFunctionDeclarationParameters ->
     null
