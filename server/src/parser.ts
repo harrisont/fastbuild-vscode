@@ -222,7 +222,11 @@ function createParseErrorFromNearlyParseError(
 
         let errorReason: string = match[4];
         let numErrorCharacters = 1;
-        if (errorReason === 'Unexpected input (lexer error).') {
+        if (errorReason === 'Unexpected endOfFile token: "<end-of-file>".') {
+            errorReason = 'Unexpected end of file.';
+            // There is nothing useful to show.
+            includeCodeLocationInError = false;
+        } else if (errorReason === 'Unexpected input (lexer error).') {
             const lineThroughError: string = match[3].trim();
             if (lineThroughError === '<end-of-file>') {
                 errorReason = 'Unexpected end of file.';

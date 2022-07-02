@@ -4265,8 +4265,10 @@ Expecting to see the following:
                     function Func
                 `;
                 const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • parameters-start: "("`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
             });
 
             it('Missing declaration of arguments (variation 2)', () => {
@@ -4274,8 +4276,14 @@ Expecting to see the following:
                     function Func{}
                 `;
                 const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+`Syntax error: Unexpected input.
+| function Func{}
+|              ^
+Expecting to see one of the following:
+ • optional-whitespace-and-mandatory-newline (example: "<newline>")
+ • parameters-start: "("
+ • whitespace (example: " ")`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 33, 1, 34));
             });
 
             it('Missing body', () => {
@@ -4283,10 +4291,13 @@ Expecting to see the following:
                     function Func()
                 `;
                 const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • scope-or-Array-start: "{"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
             });
 
+            /*
             it('Function name that is a keyword', () => {
                 const input = `
                     function true
@@ -4295,7 +4306,6 @@ Expecting to see the following:
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
             });
 
-            /*
             // Error case: Duplicate definition. Functions must be uniquely named.
             it('Duplicate definition', () => {
                 const input = `
