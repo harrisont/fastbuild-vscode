@@ -153,7 +153,7 @@ const lexer = moo.states({
 
 @preprocessor typescript
 
-main -> lines  {% (d) => d[0] %}
+main -> lines %endOfFile  {% ([lines, endOfFile]) => lines %}
 
 lines ->
     null  {% () => [] %}
