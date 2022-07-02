@@ -110,7 +110,7 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
     assert.throws(
         () => evaluateInput(input),
         actualError => {
-            assert.strictEqual(actualError.name, 'ParseSyntaxError');
+            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
@@ -4308,22 +4308,21 @@ Expecting to see the following:
                     function true() {
                     }
                 `;
-                const expectedErrorMessage = `Cannot use function name "true" because it is reserved.`;
+                const expectedErrorMessage = 'Cannot use function name "true" because it is reserved.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
             });
 
-            /*
             // Error case: Duplicate definition. Functions must be uniquely named.
             it('Duplicate definition', () => {
                 const input = `
-                    function Func(){}
-                    function Func(){}
+                    function Func(){
+                    }
+                    function Func(){
+                    }
                 `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+                const expectedErrorMessage = 'Cannot use function name "Func" because it is already used by another user function. Functions must be uniquely named.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 29, 3, 33));
             });
-            */
         });
 
         /*

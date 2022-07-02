@@ -569,6 +569,10 @@ interface EvaluatedCondition {
     variableReferences: VariableReference[];
 }
 
+interface UserFunction {
+    todo: string;
+}
+
 interface ScopeVariable {
     value: Value;
     definition: VariableDefinition;
@@ -744,6 +748,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
     const context = {
         scopeStack,
         defines,
+        userFunctions: new Map<string, UserFunction>(),
         rootFbuildDirUri: rootFbuildDirUri.toString(),
         thisFbuildUri,
         fileSystem,
@@ -757,6 +762,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
 interface EvaluationContext {
     scopeStack: ScopeStack,
     defines: Set<string>,
+    userFunctions: Map<string, UserFunction>,
     rootFbuildDirUri: string,
     thisFbuildUri: UriStr,
     fileSystem: IFileSystem,
@@ -1208,6 +1214,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const includeContext: EvaluationContext = {
                         scopeStack: context.scopeStack,
                         defines: context.defines,
+                        userFunctions: context.userFunctions,
                         rootFbuildDirUri: context.rootFbuildDirUri,
                         thisFbuildUri: includeUri.toString(),
                         fileSystem: context.fileSystem,
@@ -1897,10 +1904,21 @@ function evaluateUserFunctionDeclaration(
         variableDefinitions: [ functionNameDefinition ],
     };
     
+    // Check if the function name is reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
         const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
         return new DataAndMaybeError(result, error);
     }
+
+    // Check if the function name is already used by another user function.
+    if (context.userFunctions.has(userFunction.name)) {
+        const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`);
+        return new DataAndMaybeError(result, error);
+    }
+
+    context.userFunctions.set(userFunction.name, {
+        todo: 'TODO',
+    });
 
     // TODO: save the function body so that it can be called later.
     //userFunction.name
