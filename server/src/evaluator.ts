@@ -397,6 +397,19 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
     return (obj as ParsedStatementIf).type === 'if';
 }
 
+interface ParsedStatementUserFunctionDeclaration {
+    type: 'userFunction';
+    range: ParseSourceRange;
+    name: string;
+    parameters: string[];
+    statements: Statement[];
+}
+
+// User function
+function isParsedStatementUserFunction(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclaration {
+    return (obj as ParsedStatementUserFunctionDeclaration).type === 'userFunction';
+}
+
 // #include
 interface ParsedStatementInclude {
     type: 'include';
@@ -613,7 +626,7 @@ class ScopeStack {
         if (this.stack.length < 2) {
             return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`));
         }
-        
+
         for (let scopeIndex = this.stack.length - 2; scopeIndex >= 0; --scopeIndex) {
             const scope = this.stack[scopeIndex];
             const maybeVariable = scope.variables.get(variableName);
@@ -803,7 +816,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     variable = maybeVariable.getValue();
                     variable.value = value;
                 }
-                
+
                 statementLhsVariable = variable;
 
                 // The definition's LHS is a variable reference.
@@ -972,7 +985,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
                         result.variableDefinitions.push(variableDefinition);
                     }
-                    
+
                     result.variableReferences.push(
                         {
                             definition: variableDefinition,
@@ -1110,7 +1123,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const error = new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
                     return new DataAndMaybeError(result, error);
                 }
-            } else if (isParsedStatementSettings(statement)) {                
+            } else if (isParsedStatementSettings(statement)) {
                 // Evaluate the function body.
                 let error: Error | null = null;
                 context.scopeStack.withScope(() => {
@@ -1151,6 +1164,15 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, error);
                     }
                 }
+            } else if (isParsedStatementUserFunction(statement)) {
+                const evaluatedUserFunctionDeclarationAndMaybeError = evaluateUserFunctionDeclaration(statement, context);
+                const evaluatedUserFunctionDeclaration = evaluatedUserFunctionDeclarationAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedUserFunctionDeclaration.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedUserFunctionDeclaration.variableReferences);
+                pushToFirstArray(result.variableDefinitions, evaluatedUserFunctionDeclaration.variableDefinitions);
+                if (evaluatedUserFunctionDeclarationAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedUserFunctionDeclarationAndMaybeError.error);
+                }
             } else if (isParsedStatementInclude(statement)) {  // #include
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
@@ -1168,7 +1190,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, error);
                     }
                     const includeParseData = maybeIncludeParseData.getValue();
-                
+
                     // Save the current `_CURRENT_BFF_DIR_` value so that we can restore it after processing the include.
                     const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                     const maybeCurrentBffDirVariable = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
@@ -1201,13 +1223,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     if (evaluatedStatementsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
-                    
+
                     // Restore the `_CURRENT_BFF_DIR_` value.
                     currentBffDirVariable.value = currentBffDirBeforeInclude;
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
-            } else if (isParsedStatementDirectiveIf(statement)) {  // #if                
+            } else if (isParsedStatementDirectiveIf(statement)) {  // #if
                 // Evaluate the condition, which is an array of AND statements OR'd together.
                 const orExpressions = statement.condition;
                 let orExpressionResult = false;
@@ -1374,7 +1396,7 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             } else {
                 if (firstItemTypeNameA === null) {
                     firstItemTypeNameA = getValueTypeNameA(evaluated.value);
-    
+
                     if (typeof evaluated.value === 'boolean'
                         || typeof evaluated.value === 'number')
                     {
@@ -1678,7 +1700,7 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
         }
         const evaluatedLhsValue = evaluatedLhs.value;
-    
+
         // Evaluate RHS.
         const rhs = condition.rhs;
         const evaluatedRhsAndMaybeError = evaluateRValue(rhs, context);
@@ -1753,7 +1775,7 @@ function evaluateIfCondition(
             return new DataAndMaybeError(result, evaluatedLhsAndMaybeError.error);
         }
         const evaluatedLhsValue = evaluatedLhs.value;
-    
+
         // Evaluate RHS.
         const rhs = condition.rhs;
         const evaluatedRhsAndMaybeError = evaluateRValue(rhs, context);
@@ -1771,7 +1793,7 @@ function evaluateIfCondition(
         //
 
         let isPresent = true;
-        
+
         if (!(evaluatedRhsValue instanceof Array)) {
             const error = new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`);
             return new DataAndMaybeError(result, error);
@@ -1859,6 +1881,26 @@ function evaluateIfCondition(
         const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
         return new DataAndMaybeError(result, error);
     }
+}
+
+function evaluateUserFunctionDeclaration(userFunction: ParsedStatementUserFunctionDeclaration): DataAndMaybeError<EvaluatedUserFunctionDeclaration> {
+    // TODO: add variableDefinition for the function name.
+
+    // TODO: save the function body so that it can be called later.
+    //userFunction.name
+    //userFunction.parameters
+    //userFunction.statements
+
+    /*
+    const result: EvaluatedUserFunctionDeclaration = {
+        evaluatedString: '',
+        evaluatedVariables: [],
+        variableReferences: [],
+        variableDefinitions: [],
+    };
+
+    return new DataAndMaybeError(result);
+    */
 }
 
 function getValueTypeName(value: Value): ValueTypeName {
