@@ -31,7 +31,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['doubleQuotedStringEnd', { value: 'double-quoted-String-end', symbol: '"', example: null }],
     ['startTemplatedVariable', { value: 'template-variable-start', symbol: '$', example: null }],
     ['endTemplatedVariable', { value: 'template-variable-end', symbol: '$', example: null }],
-    ['stringLiteral', { value: 'String-literal' , symbol: 'abc', example: null }],
+    ['stringLiteral', { value: 'String-literal' , symbol: null, example: 'abc' }],
     ['variableReferenceCurrentScope', { value: 'variable-reference', symbol: '.', example: null }],
     ['variableReferenceParentScope', { value: 'parent-scope-variable-reference', symbol: '^', example: null }],
     ['variableName', { value: 'variable-name', symbol: null, example: 'MyVarName' }],
@@ -95,6 +95,12 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['functionName', { value: 'function-name', symbol: null, example: 'MyFunctionName' }],
     ['parameterName', { value: 'parameter-name', symbol: null, example: '.MyParameterName' }],
 ]);
+
+function notNull<TValue>(value: TValue | null): value is TValue {
+    return value !== null;
+}
+
+export const RESERVED_SYMBOL_NAMES = new Set<string>([...LEXER_TOKEN_NAME_TO_DATA.values()].map(data => data.symbol).filter(notNull));
 
 function getTokenData(token: string): TokenData {
     const data = LEXER_TOKEN_NAME_TO_DATA.get(token);

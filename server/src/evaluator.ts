@@ -9,6 +9,7 @@ import {
     ParseData,
     ParseError,
     ParseSourceRange,
+    RESERVED_SYMBOL_NAMES,
     SourcePosition,
     Statement,
 } from './parser';
@@ -1895,6 +1896,11 @@ function evaluateUserFunctionDeclaration(
         variableReferences: [],
         variableDefinitions: [ functionNameDefinition ],
     };
+    
+    if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
+        const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
+        return new DataAndMaybeError(result, error);
+    }
 
     // TODO: save the function body so that it can be called later.
     //userFunction.name

@@ -18,13 +18,17 @@ function assertInputsGenerateSameParseResult(input1: string, input2: string): vo
     assert.deepStrictEqual(result1.statements, result2.statements);
 }
 
-function assertParseSyntaxError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
+function getParseSourceRangeString(range: ParseSourceRange): string {
+    return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+}
+
+function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     assert.throws(
         () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
-        error => {
-            assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
-            assert.deepStrictEqual(error.range, range);
+        actualError => {
+            assert.strictEqual(actualError.name, 'ParseSyntaxError');
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
         }
     );

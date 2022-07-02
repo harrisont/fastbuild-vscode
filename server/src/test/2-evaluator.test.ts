@@ -102,25 +102,31 @@ function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues:
     assert.deepStrictEqual(actualValues, expectedValues);
 }
 
-function assertParseSyntaxError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
+function getParseSourceRangeString(range: ParseSourceRange): string {
+    return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+}
+
+function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     assert.throws(
         () => evaluateInput(input),
-        error => {
-            assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
-            assert.deepStrictEqual(error.range, range);
+        actualError => {
+            assert.strictEqual(actualError.name, 'ParseSyntaxError');
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
         }
     );
 }
 
-function assertEvaluationError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
+function assertEvaluationError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     assert.throws(
         () => evaluateInput(input),
-        error => {
-            assert.strictEqual(error.name, 'EvaluationError');
-            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
-            assert.deepStrictEqual(error.range, range);
+        actualError => {
+            assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}`);
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
+            const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
+            assert.deepStrictEqual(actualRange, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
             return true;
         }
     );
@@ -4297,15 +4303,16 @@ Expecting to see the following:
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
             });
 
-            /*
-            it('Function name that is a keyword', () => {
+            it('Function name that is reserved', () => {
                 const input = `
-                    function true
+                    function true() {
+                    }
                 `;
                 const expectedErrorMessage = `Cannot use function name "true" because it is reserved.`;
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
             });
 
+            /*
             // Error case: Duplicate definition. Functions must be uniquely named.
             it('Duplicate definition', () => {
                 const input = `

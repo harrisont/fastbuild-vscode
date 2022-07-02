@@ -598,11 +598,11 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
     };
 }
 
-function createUserFunction(name: string, nameRange: SourceRange, parameters: string[], statements: Record<string, any>) {
+function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters: string[], statements: Record<string, any>) {
     return {
         type: 'userFunction',
-        name,
-        nameRange,
+        name: nameToken.value,
+        nameRange: createRange(nameToken, tokenAfterName),
         parameters,
         statements
     };
@@ -617,8 +617,8 @@ genericFunctionWithAlias ->
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, braceOpen), parameters, statements) %}
-  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, space2),    parameters, statements) %}
+    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, braceOpen, parameters, statements) %}
+  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, space2,    parameters, statements) %}
 
 userFunctionDeclarationParameters ->
     null
