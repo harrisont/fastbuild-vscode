@@ -894,15 +894,15 @@ describe('parser', () => {
 
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
-        const expectedErrorMessageStart =
-`Syntax error: Unexpected arrayItemSeparator token: ",".
-Instead, I was expecting to see one of the following:
- • operatorAddition ("+")
- • operatorSubtraction ("-")
- • optionalWhitespaceAndMandatoryNewline ("<newline>")
- • structEnd ("]")
- • whitespace (" ")`;
-        assertParseSyntaxError(input, expectedErrorMessageStart, createRange(0, 15, 0, 16));
+        const expectedErrorMessage =
+`Syntax error: Unexpected Array-item-separator: ",".
+Expecting to see one of the following:
+ • addition: "+"
+ • subtraction: "-"
+ • optional-whitespace-and-mandatory-newline (example: "<newline>")
+ • Struct-end: "]"
+ • whitespace (example: " ")`;
+        assertParseSyntaxError(input, expectedErrorMessage, createRange(0, 15, 0, 16));
     });
 
     it('should work on assigning a struct with one evaluated variable', () => {
@@ -2606,11 +2606,11 @@ Instead, I was expecting to see one of the following:
                     {
                     }
                 `;
-                const expectedErrorMessageStart =
-`Syntax error: Unexpected operatorAnd token: "&&".
-Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 38, 1, 39));
+                const expectedErrorMessage =
+`Syntax error: Unexpected operator-and: "&&".
+Expecting to see the following:
+ • function-parameters-end: ")"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 38, 1, 39));
             });
 
             it('should error on a comparison compound expression without parenthesis around the terms (comparison 2nd)', () => {
@@ -2619,13 +2619,13 @@ Instead, I was expecting to see one of the following:
                     {
                     }
                 `;
-                const expectedErrorMessageStart =
-`Syntax error: Unexpected operatorEqual token: "==".
-Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")
- • operatorAnd ("&&")
- • operatorOr ("||")`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 38, 1, 39));
+                const expectedErrorMessage =
+`Syntax error: Unexpected operator-equal: "==".
+Expecting to see one of the following:
+ • function-parameters-end: ")"
+ • operator-and: "&&"
+ • operator-or: "||"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 38, 1, 39));
             });
             
             it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 1st)', () => {
@@ -2634,11 +2634,11 @@ Instead, I was expecting to see one of the following:
                     {
                     }
                 `;
-                const expectedErrorMessageStart =
-`Syntax error: Unexpected operatorOr token: "||".
-Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 45, 1, 46));
+                const expectedErrorMessage =
+`Syntax error: Unexpected operator-or: "||".
+Expecting to see the following:
+ • function-parameters-end: ")"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 45, 1, 46));
             });
             
             it('should error on a presence-in-ArrayOfStrings compound expression without parenthesis around the terms (presence-in-ArrayOfStrings 2nd)', () => {
@@ -2647,13 +2647,13 @@ Instead, I was expecting to see one of the following:
                     {
                     }
                 `;
-                const expectedErrorMessageStart =
-`Syntax error: Unexpected keywordIn token: "in".
-Instead, I was expecting to see one of the following:
- • functionParametersEnd (")")
- • operatorAnd ("&&")
- • operatorOr ("||")`;
-                assertParseSyntaxError(input, expectedErrorMessageStart, createRange(1, 41, 1, 42));
+                const expectedErrorMessage =
+`Syntax error: Unexpected keyword-in: "in".
+Expecting to see one of the following:
+ • function-parameters-end: ")"
+ • operator-and: "&&"
+ • operator-or: "||"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createRange(1, 41, 1, 42));
             });
         });
     });

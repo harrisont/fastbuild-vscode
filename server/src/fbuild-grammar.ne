@@ -3,6 +3,9 @@ const moo = require('moo');
 
 const lexer = moo.states({
     main: {
+        // This needs to come before '<' so that it has higher priority when matching.
+        endOfFile: '<end-of-file>',
+
         optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
         whitespace: /[ \t]+/,
         // The symbols for array/scope delimeters are the same.
@@ -15,7 +18,7 @@ const lexer = moo.states({
         doubleQuotedStringStart: { match: '"', push: 'doubleQuotedStringBodyThenPop' },
         variableReferenceCurrentScope: { match: '.', push: 'variableReferenceName' },
         variableReferenceParentScope:  { match: '^', push: 'variableReferenceName' },
-        
+
         // '==' needs to come before '=' so that it has priority when matching.
         operatorEqual: '==',
         // '!=' needs to come before '!' so that it has priority when matching.
@@ -705,7 +708,7 @@ ifConditionTermBoolean ->
     bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
     # Boolean expression: .Value
   |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
-    # Boolean expression: ! .Value 
+    # Boolean expression: ! .Value
   | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', value, invert: true  }, context ] %}
 
 # A condition term that is a comparison or a check for presence-in-ArrayOfStrings
