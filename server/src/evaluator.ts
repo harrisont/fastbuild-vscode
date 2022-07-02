@@ -399,8 +399,8 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
 
 interface ParsedStatementUserFunctionDeclaration {
     type: 'userFunction';
-    range: ParseSourceRange;
     name: string;
+    nameRange: ParseSourceRange;
     parameters: string[];
     statements: Statement[];
 }
@@ -1883,13 +1883,18 @@ function evaluateIfCondition(
     }
 }
 
-function evaluateUserFunctionDeclaration(userFunction: ParsedStatementUserFunctionDeclaration): DataAndMaybeError<EvaluatedUserFunctionDeclaration> {
+function evaluateUserFunctionDeclaration(
+    userFunction: ParsedStatementUserFunctionDeclaration,
+    context: EvaluationContext
+): DataAndMaybeError<EvaluatedUserFunctionDeclaration> {
     // TODO: add variableDefinition for the function name.
 
     // TODO: save the function body so that it can be called later.
     //userFunction.name
     //userFunction.parameters
     //userFunction.statements
+
+    const definition = context.scopeStack.createVariableDefinition(userFunction.nameRange);
 
     /*
     const result: EvaluatedUserFunctionDeclaration = {

@@ -598,12 +598,12 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
     };
 }
 
-function createUserFunction(name: string, parameters: string[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createUserFunction(name: string, nameRange: SourceRange, parameters: string[], statements: Record<string, any>) {
     return {
         type: 'userFunction',
         name,
+        nameRange,
         parameters,
-        range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
     };
 }
@@ -617,7 +617,8 @@ genericFunctionWithAlias ->
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName optionalWhitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, parameters, statements, functionKeyword, braceClose) %}
+    %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName                             %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, braceOpen), parameters, statements) %}
+  | %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName optionalWhitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, createRangeEndInclusive(functionName, space2),  parameters, statements) %}
 
 userFunctionDeclarationParameters ->
     null
