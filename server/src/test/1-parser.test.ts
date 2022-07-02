@@ -23,7 +23,7 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, ran
         () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
         error => {
             assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
+            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(error.range, range);
             return true;
         }

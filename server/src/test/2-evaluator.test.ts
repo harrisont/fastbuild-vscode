@@ -107,7 +107,7 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, ran
         () => evaluateInput(input),
         error => {
             assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
+            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(error.range, range);
             return true;
         }
@@ -119,7 +119,7 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, rang
         () => evaluateInput(input),
         error => {
             assert.strictEqual(error.name, 'EvaluationError');
-            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
+            assert(error.message === expectedErrorMessage, `Got error message <${error.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(error.range, range);
             return true;
         }
@@ -127,6 +127,56 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, rang
 }
 
 describe('evaluator', () => {
+    it('Invalid token', () => {
+        const input = `abc`;
+        const expectedErrorMessage =
+`Syntax error: Unexpected input.
+| abc
+| ^
+Expecting to see one of the following:
+ • directive-define: "#define"
+ • directive-if: "#if"
+ • directive-import: "#import"
+ • directive-include: "#include"
+ • directive-once: "#once"
+ • directive-undef: "#undef"
+ • end-of-file
+ • function-Alias: "Alias"
+ • function-CSAssembly: "CSAssembly"
+ • function-Compiler: "Compiler"
+ • function-Copy: "Copy"
+ • function-CopyDir: "CopyDir"
+ • function-DLL: "DLL"
+ • function-Error: "Error"
+ • function-keywordExec: "keywordExec"
+ • function-Executable: "Executable"
+ • function-ForEach: "ForEach"
+ • function-If: "If"
+ • function-Library: "Library"
+ • function-ListDependencies: "ListDependencies"
+ • function-ObjectList: "ObjectList"
+ • function-Print: "Print"
+ • function-RemoveDir: "RemoveDir"
+ • function-Settings: "Settings"
+ • function-Test: "Test"
+ • function-TextFile: "TextFile"
+ • function-Unity: "Unity"
+ • function-UserFunctionDeclaration: "UserFunctionDeclaration"
+ • function-Using: "Using"
+ • function-VCXProject: "VCXProject"
+ • function-VSProjectExternal: "VSProjectExternal"
+ • function-VSSolution: "VSSolution"
+ • function-XCodeProject: "XCodeProject"
+ • addition: "+"
+ • subtraction: "-"
+ • optional-whitespace-and-mandatory-newline (example: "<newline>")
+ • scope-or-Array-start: "{"
+ • variable-reference: "."
+ • parent-scope-variable-reference: "^"
+ • whitespace (example: " ")`;
+        assertParseSyntaxError(input, expectedErrorMessage, createParseRange(0, 0, 0, 1));
+    });
+
     describe('evaluatedVariables value', () => {
         it('should be detected in a string with a variable', () => {
             const input = `
