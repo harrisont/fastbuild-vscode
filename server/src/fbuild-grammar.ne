@@ -151,7 +151,9 @@ const lexer = moo.states({
         functionName: /[a-zA-Z_][a-zA-Z0-9_]*/,
         parametersStart: '(',
         parametersEnd: { match: ')', pop: 1 },
-        parameterName: /\.[a-zA-Z_][a-zA-Z0-9_]*/
+        parameterName: /\.[a-zA-Z_][a-zA-Z0-9_]*/,
+        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
+        whitespace: /[ \t]+/,
     },
 });
 %}
