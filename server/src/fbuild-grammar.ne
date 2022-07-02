@@ -200,7 +200,7 @@ statement ->
   | functionSettings                 {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias         {% ([value]) => [ value, new ParseContext() ] %}
-  | userFunctionDeclaration          {% ([valueWithContext]) => valueWithContext %}
+  | userFunctionDeclaration          {% ([value]) => [ value, new ParseContext() ] %}
   | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveOnce                    {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf                      {% ([value]) => [ value, new ParseContext() ] %}

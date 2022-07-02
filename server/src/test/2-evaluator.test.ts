@@ -4229,7 +4229,8 @@ Expecting to see one of the following:
 
             it('Empty body', () => {
                 const input = `
-                    function Func(){}
+                    function Func(){
+                    }
                 `;
                 assertEvaluatedVariablesValueEqual(input, []);
             });
