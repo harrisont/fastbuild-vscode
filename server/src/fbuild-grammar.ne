@@ -79,6 +79,8 @@ const lexer = moo.states({
         keywordVSSolution: 'VSSolution',
         keywordXCodeProject: 'XCodeProject',
 
+        keywordUserFunctionDeclaration: { match: 'function', push: 'userFunction' },
+
         directiveInclude: '#include',
         directiveOnce: '#once',
 
@@ -145,6 +147,12 @@ const lexer = moo.states({
         whitespace: /[ \t]+/,
         variableName: { match: /[a-zA-Z_][a-zA-Z0-9_]*/, pop: 1 }
     },
+    userFunction: {
+        functionName: /[a-zA-Z_][a-zA-Z0-9_]*/,
+        parametersStart: '(',
+        parametersEnd: { match: ')', pop: 1 },
+        parameterName: /.[a-zA-Z_][a-zA-Z0-9_]*/
+    },
 });
 %}
 
@@ -190,6 +198,7 @@ statement ->
   | functionSettings                 {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias         {% ([value]) => [ value, new ParseContext() ] %}
+  | userFunctionDeclaration          {% ([valueWithContext]) => valueWithContext %}
   | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveOnce                    {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf                      {% ([value]) => [ value, new ParseContext() ] %}
@@ -587,12 +596,30 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
     };
 }
 
+function createUserFunction(name: string, parameters: string[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+    return {
+        type: 'userFunction',
+        name,
+        parameters,
+        range: createRangeEndInclusive(statementStartToken, statementEndToken),
+        statements
+    };
+}
+
 %}
 
 # Functions that we don't care about handling except for the function's alias parameter.
 genericFunctionWithAlias ->
     genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements, functionName, braceClose); } %}
   | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements, functionName, braceClose); } %}
+
+# User functions
+userFunctionDeclaration ->
+    %keywordUserFunctionDeclaration optionalWhitespaceOrNewline %functionName optionalWhitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, parameters, statements, functionKeyword, braceClose) %}
+
+userFunctionDeclarationParameters ->
+    null
+  | %parameterName optionalWhitespaceOrNewline userFunctionDeclarationParameters  {%([firstParameter, space, restParameters]) => [firstParameter, ...restParameters] %}
 
 # Function names of functions that we don't care about handling except for the function's alias parameter.
 genericFunctionNameWithAlias ->
