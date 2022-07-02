@@ -114,6 +114,18 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, ran
     );
 }
 
+function assertEvaluationError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
+    assert.throws(
+        () => evaluateInput(input),
+        error => {
+            assert.strictEqual(error.name, 'EvaluationError');
+            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
+            assert.deepStrictEqual(error.range, range);
+            return true;
+        }
+    );
+}
+
 describe('evaluator', () => {
     describe('evaluatedVariables value', () => {
         it('should be detected in a string with a variable', () => {
@@ -4162,6 +4174,27 @@ describe('evaluator', () => {
     describe('User functions', () => {
         describe('Declare function without args', () => {
             //
+            // Success cases: Basic no-args functions
+            //
+
+            it('Empty body', () => {
+                const input = `
+                    function Func(){}
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Simple body', () => {
+                const input = `
+                    function Func()
+                    {
+                        Print( 'X' )
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            //
             // Error cases: Malformed functions
             //
 
@@ -4176,16 +4209,6 @@ Expecting to see one of the following:
  • optional-whitespace-and-mandatory-newline (example: "<newline>")
  • whitespace (example: " ")`;
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 28, 1, 29));
-            });
-
-            /*
-            it('Function name that is a keyword', () => {
-                const input = `
-                    function true
-                `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
             });
 
             it('Missing declaration of arguments (variation 1)', () => {
@@ -4215,6 +4238,15 @@ Expecting to see one of the following:
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
             });
 
+            it('Function name that is a keyword', () => {
+                const input = `
+                    function true
+                `;
+                const expectedErrorMessage = `Cannot use function name "true" because it is reserved.`;
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
+            });
+
+            /*
             // Error case: Duplicate definition. Functions must be uniquely named.
             it('Duplicate definition', () => {
                 const input = `
@@ -4224,27 +4256,6 @@ Expecting to see one of the following:
                 const expectedErrorMessage =
 `TODO`;
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            //
-            // Success cases: Basic no-args functions
-            //
-
-            it('Empty body', () => {
-                const input = `
-                    function Func(){}
-                `;
-                assertEvaluatedVariablesValueEqual(input, []);
-            });
-
-            it('Simple body', () => {
-                const input = `
-                    function Func()
-                    {
-                        Print( 'X' )
-                    }
-                `;
-                assertEvaluatedVariablesValueEqual(input, []);
             });
             */
         });
