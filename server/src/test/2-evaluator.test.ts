@@ -133,56 +133,6 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, expe
 }
 
 describe('evaluator', () => {
-    it('Invalid token', () => {
-        const input = `abc`;
-        const expectedErrorMessage =
-`Syntax error: Unexpected input.
-| abc
-| ^
-Expecting to see one of the following:
- • directive-define: "#define"
- • directive-if: "#if"
- • directive-import: "#import"
- • directive-include: "#include"
- • directive-once: "#once"
- • directive-undef: "#undef"
- • end-of-file
- • function-Alias: "Alias"
- • function-CSAssembly: "CSAssembly"
- • function-Compiler: "Compiler"
- • function-Copy: "Copy"
- • function-CopyDir: "CopyDir"
- • function-DLL: "DLL"
- • function-Error: "Error"
- • function-keywordExec: "keywordExec"
- • function-Executable: "Executable"
- • function-ForEach: "ForEach"
- • function-If: "If"
- • function-Library: "Library"
- • function-ListDependencies: "ListDependencies"
- • function-ObjectList: "ObjectList"
- • function-Print: "Print"
- • function-RemoveDir: "RemoveDir"
- • function-Settings: "Settings"
- • function-Test: "Test"
- • function-TextFile: "TextFile"
- • function-Unity: "Unity"
- • function-UserFunctionDeclaration: "UserFunctionDeclaration"
- • function-Using: "Using"
- • function-VCXProject: "VCXProject"
- • function-VSProjectExternal: "VSProjectExternal"
- • function-VSSolution: "VSSolution"
- • function-XCodeProject: "XCodeProject"
- • addition: "+"
- • subtraction: "-"
- • optional-whitespace-and-mandatory-newline (example: "<newline>")
- • scope-or-Array-start: "{"
- • variable-reference: "."
- • parent-scope-variable-reference: "^"
- • whitespace (example: " ")`;
-        assertParseSyntaxError(input, expectedErrorMessage, createParseRange(0, 0, 0, 1));
-    });
-
     describe('evaluatedVariables value', () => {
         it('should be detected in a string with a variable', () => {
             const input = `
@@ -4383,8 +4333,50 @@ Expecting to see one of the following:
             });
         });
 
-        /*
         describe('Call function without arguments', () => {
+            it('Empty body', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func()
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Simple body', () => {
+                const input = `
+                    .Value = 1
+                    function Func()
+                    {
+                        .Copy = .Value
+                    }
+                    Func()
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+            
+            it('Non-existent function', () => {
+                const input = `
+                    Func()
+                `;
+                const expectedErrorMessage = 'No function exists with the name "Func".';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 20, 1, 24));
+            });
+            
+            it('Missing arguments block', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • function-parameters-start: "("`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+            });
+
+            /*
             it('TODO', () => {
                 const input = `
                 `;
@@ -4416,9 +4408,11 @@ Expecting to see one of the following:
 
                 ]);
             });
+            */
         });
 
-        describe('Call function without arguments', () => {
+        /*
+        describe('Call function with arguments', () => {
             it('TODO', () => {
                 const input = `
                 `;

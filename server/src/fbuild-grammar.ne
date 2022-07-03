@@ -80,6 +80,7 @@ const lexer = moo.states({
         keywordXCodeProject: 'XCodeProject',
 
         keywordUserFunctionDeclaration: { match: 'function', push: 'userFunction' },
+        functionName: /[a-zA-Z_][a-zA-Z0-9_]*/,
 
         directiveInclude: '#include',
         directiveOnce: '#once',
@@ -208,6 +209,7 @@ statement ->
   | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
   | genericFunctionWithAlias         {% ([value]) => [ value, new ParseContext() ] %}
   | userFunctionDeclaration          {% ([value]) => [ value, new ParseContext() ] %}
+  | userFunctionCall                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveOnce                    {% ([value]) => [ value, new ParseContext() ] %}
   | directiveIf                      {% ([value]) => [ value, new ParseContext() ] %}
@@ -599,6 +601,41 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
     };
 }
 
+%}
+
+# Functions that we don't care about handling except for the function's alias parameter.
+genericFunctionWithAlias ->
+    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements, functionName, braceClose); } %}
+  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements, functionName, braceClose); } %}
+
+# Function names of functions that we don't care about handling except for the function's alias parameter.
+genericFunctionNameWithAlias ->
+    %keywordAlias              {% id %}
+  | %keywordCompiler           {% id %}
+  | %keywordCopy               {% id %}
+  | %keywordCopyDir            {% id %}
+  | %keywordCSAssembly         {% id %}
+  | %keywordDLL                {% id %}
+  | %keywordExec               {% id %}
+  | %keywordExecutable         {% id %}
+  | %keywordLibrary            {% id %}
+  | %keywordListDependencies   {% id %}
+  | %keywordObjectList         {% id %}
+  | %keywordRemoveDir          {% id %}
+  | %keywordTest               {% id %}
+  | %keywordTextFile           {% id %}
+  | %keywordUnity              {% id %}
+  | %keywordVCXProject         {% id %}
+  | %keywordVSProjectExternal  {% id %}
+  | %keywordVSSolution         {% id %}
+  | %keywordXCodeProject       {% id %}
+
+alias ->
+    string             {% ([value]) => [ value, new ParseContext() ] %}
+  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+
+@{%
+
 function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
     return {
         type: 'userFunction',
@@ -629,12 +666,15 @@ function createUserFunctionParameterWithStartRange(nameToken: Token) {
     return [result, context];
 }
 
-%}
+function createUserFunctionCall(nameToken: Token, tokenAfterName: Token) {
+    return {
+        type: 'userFunctionCall',
+        name: nameToken.value,
+        nameRange: createRangeEndInclusive(nameToken, tokenAfterName),
+    };
+}
 
-# Functions that we don't care about handling except for the function's alias parameter.
-genericFunctionWithAlias ->
-    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements, functionName, braceClose); } %}
-  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements, functionName, braceClose); } %}
+%}
 
 # User functions
 userFunctionDeclaration ->
@@ -659,31 +699,9 @@ nonEmptyUserFunctionDeclarationParams ->
   | optionalWhitespaceOrNewline %parameterName                     %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, first,         separator, [rest, restContext]]) => [[createUserFunctionParameter(first, separator), ...rest], restContext] %}
   | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, first, space2, separator, [rest, restContext]]) => [[createUserFunctionParameter(first, space2),    ...rest], restContext] %}
 
-# Function names of functions that we don't care about handling except for the function's alias parameter.
-genericFunctionNameWithAlias ->
-    %keywordAlias              {% id %}
-  | %keywordCompiler           {% id %}
-  | %keywordCopy               {% id %}
-  | %keywordCopyDir            {% id %}
-  | %keywordCSAssembly         {% id %}
-  | %keywordDLL                {% id %}
-  | %keywordExec               {% id %}
-  | %keywordExecutable         {% id %}
-  | %keywordLibrary            {% id %}
-  | %keywordListDependencies   {% id %}
-  | %keywordObjectList         {% id %}
-  | %keywordRemoveDir          {% id %}
-  | %keywordTest               {% id %}
-  | %keywordTextFile           {% id %}
-  | %keywordUnity              {% id %}
-  | %keywordVCXProject         {% id %}
-  | %keywordVSProjectExternal  {% id %}
-  | %keywordVSSolution         {% id %}
-  | %keywordXCodeProject       {% id %}
-
-alias ->
-    string             {% ([value]) => [ value, new ParseContext() ] %}
-  | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
+userFunctionCall ->
+    %functionName                     %functionParametersStart optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName,         braceOpen, space2, braceClose]) => { return createUserFunctionCall(functionName, braceOpen); } %}
+  | %functionName whitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, braceClose]) => { return createUserFunctionCall(functionName, space1);    } %}
 
 functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'error', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 

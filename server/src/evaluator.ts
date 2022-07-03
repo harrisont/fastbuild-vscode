@@ -425,6 +425,17 @@ function isParsedStatementUserFunction(obj: Record<string, any>): obj is ParsedS
     return userFunction.parameters.every(isParsedStatementUserFunctionParameter);
 }
 
+interface ParsedStatementUserFunctionCall {
+    type: 'userFunctionCall';
+    name: string;
+    nameRange: ParseSourceRange;
+    //parameters: todo[];
+}
+
+function isParsedStatementUserFunctionCall(obj: Record<string, any>): obj is ParsedStatementUserFunctionCall {
+    return (obj as ParsedStatementUserFunctionCall).type === 'userFunctionCall';
+}
+
 // #include
 interface ParsedStatementInclude {
     type: 'include';
@@ -584,7 +595,9 @@ interface EvaluatedCondition {
 }
 
 interface UserFunction {
-    parameters: ParsedStatementUserFunctionParameter[]
+    definition: VariableDefinition;
+    parameters: ParsedStatementUserFunctionParameter[];
+    //body: TODO;
 }
 
 interface ScopeVariable {
@@ -597,7 +610,7 @@ class Scope {
 }
 
 class ScopeStack {
-    private stack: Scope[] = []
+    private stack: Scope[] = [];
     private nextVariableDefinitionId = 1;
 
     constructor() {
@@ -1186,13 +1199,22 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 }
             } else if (isParsedStatementUserFunction(statement)) {
-                const evaluatedUserFunctionDeclarationAndMaybeError = evaluateUserFunctionDeclaration(statement, context);
-                const evaluatedUserFunctionDeclaration = evaluatedUserFunctionDeclarationAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedUserFunctionDeclaration.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedUserFunctionDeclaration.variableReferences);
-                pushToFirstArray(result.variableDefinitions, evaluatedUserFunctionDeclaration.variableDefinitions);
-                if (evaluatedUserFunctionDeclarationAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedUserFunctionDeclarationAndMaybeError.error);
+                const evaluatedDataAndMaybeError = evaluateUserFunctionDeclaration(statement, context);
+                const evaluatedData = evaluatedDataAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
+                pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+                if (evaluatedDataAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedDataAndMaybeError.error);
+                }
+            } else if (isParsedStatementUserFunctionCall(statement)) {
+                const evaluatedDataAndMaybeError = evaluateUserFunctionCall(statement, context);
+                const evaluatedData = evaluatedDataAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
+                pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+                if (evaluatedDataAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedDataAndMaybeError.error);
                 }
             } else if (isParsedStatementInclude(statement)) {  // #include
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
@@ -1909,8 +1931,8 @@ function evaluateUserFunctionDeclaration(
     userFunction: ParsedStatementUserFunctionDeclaration,
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
-    const nameRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
-    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameRange);
+    const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange);
 
     const result: EvaluatedData = {
         evaluatedVariables: [],
@@ -1920,13 +1942,13 @@ function evaluateUserFunctionDeclaration(
     
     // Ensure that the function name is not reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
-        const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
+        const error = new EvaluationError(nameSourceRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
         return new DataAndMaybeError(result, error);
     }
 
     // Ensure that the function name is not already used by another user function.
     if (context.userFunctions.has(userFunction.name)) {
-        const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`);
+        const error = new EvaluationError(nameSourceRange, `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`);
         return new DataAndMaybeError(result, error);
     }
 
@@ -1946,6 +1968,7 @@ function evaluateUserFunctionDeclaration(
     //userFunction.statements
 
     context.userFunctions.set(userFunction.name, {
+        definition: functionNameDefinition,
         parameters: userFunction.parameters,
     });
 
@@ -1963,6 +1986,34 @@ function evaluateUserFunctionDeclaration(
         return new DataAndMaybeError(result, error);
     }
     */
+
+    return new DataAndMaybeError(result);
+}
+
+function evaluateUserFunctionCall(
+    call: ParsedStatementUserFunctionCall,
+    context: EvaluationContext
+): DataAndMaybeError<EvaluatedData> {
+    const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
+
+    const result: EvaluatedData = {
+        evaluatedVariables: [],
+        variableReferences: [],
+        variableDefinitions: [],
+    };
+
+    const userFunction = context.userFunctions.get(call.name);
+    if (userFunction === undefined) {
+        const error = new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`);
+        return new DataAndMaybeError(result, error);
+    }
+
+    result.variableReferences.push({
+        definition: userFunction.definition,
+        range: nameSourceRange,
+    });
+
+    // TODO: call function
 
     return new DataAndMaybeError(result);
 }
