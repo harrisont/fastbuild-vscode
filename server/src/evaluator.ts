@@ -1,3 +1,4 @@
+import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -397,43 +398,60 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
     return (obj as ParsedStatementIf).type === 'if';
 }
 
-interface ParsedStatementUserFunctionParameter {
-    type: 'userFunctionParameter';
+interface ParsedStatementUserFunctionDeclarationParameter {
+    type: 'userFunctionDeclarationParameter';
     name: string;
     range: ParseSourceRange;
+    definition: VariableDefinition | undefined;
 }
 
-function isParsedStatementUserFunctionParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionParameter {
-    return (obj as ParsedStatementUserFunctionParameter).type === 'userFunctionParameter';
+function isParsedStatementUserFunctionDeclarationParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclarationParameter {
+    return (obj as ParsedStatementUserFunctionDeclarationParameter).type === 'userFunctionDeclarationParameter';
 }
 
 interface ParsedStatementUserFunctionDeclaration {
-    type: 'userFunction';
+    type: 'userFunctionDeclaration';
     name: string;
     nameRange: ParseSourceRange;
-    parameters: ParsedStatementUserFunctionParameter[];
+    parameters: ParsedStatementUserFunctionDeclarationParameter[];
     statements: Statement[];
 }
 
 function isParsedStatementUserFunction(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclaration {
     const userFunction = obj as ParsedStatementUserFunctionDeclaration;
 
-    if (userFunction.type !== 'userFunction') {
+    if (userFunction.type !== 'userFunctionDeclaration') {
         return false;
     }
 
-    return userFunction.parameters.every(isParsedStatementUserFunctionParameter);
+    return userFunction.parameters.every(isParsedStatementUserFunctionDeclarationParameter);
+}
+
+interface ParsedStatementUserFunctionCallParameter {
+    type: 'userFunctionCallParameter';
+    value: Value;
+    range: ParseSourceRange;
+}
+
+function isParsedStatementUserFunctionCallParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionCallParameter {
+    return (obj as ParsedStatementUserFunctionCallParameter).type === 'userFunctionCallParameter';
 }
 
 interface ParsedStatementUserFunctionCall {
     type: 'userFunctionCall';
     name: string;
     nameRange: ParseSourceRange;
-    //parameters: todo[];
+    parameters: ParsedStatementUserFunctionCallParameter[];
 }
 
 function isParsedStatementUserFunctionCall(obj: Record<string, any>): obj is ParsedStatementUserFunctionCall {
-    return (obj as ParsedStatementUserFunctionCall).type === 'userFunctionCall';
+    const userFunction = obj as ParsedStatementUserFunctionCall;
+
+    if (userFunction.type !== 'userFunctionCall') {
+        return false;
+    }
+
+    return userFunction.parameters.every(isParsedStatementUserFunctionCallParameter);
 }
 
 // #include
@@ -596,7 +614,7 @@ interface EvaluatedCondition {
 
 interface UserFunction {
     definition: VariableDefinition;
-    parameters: ParsedStatementUserFunctionParameter[];
+    parameters: ParsedStatementUserFunctionDeclarationParameter[];
     statements: Statement[];
 }
 
@@ -1956,16 +1974,28 @@ function evaluateUserFunctionDeclaration(
         return new DataAndMaybeError(result, error);
     }
 
+    // Define and reference each parameter.
+    //
     // Ensure that the parameter names are unique.
     // Use an Array instead of a Set since we're optimizing for a small number of parameters.
     const usedParameterNames: string[] = [];
     for (const parameter of userFunction.parameters) {
+        const paramSourceRange = new SourceRange(context.thisFbuildUri, parameter.range);
+
         if (usedParameterNames.includes(parameter.name)) {
-            const parameterRange = new SourceRange(context.thisFbuildUri, parameter.range);
-            const error = new EvaluationError(parameterRange, `User-function argument names must be unique.`);
+            const error = new EvaluationError(paramSourceRange, `User-function argument names must be unique.`);
             return new DataAndMaybeError(result, error);
         }
         usedParameterNames.push(parameter.name);
+        
+        const definition = context.scopeStack.createVariableDefinition(paramSourceRange);
+        parameter.definition = definition;
+
+        result.variableDefinitions.push(definition);
+        result.variableReferences.push({
+            definition: definition,
+            range: paramSourceRange,
+        });
     }
 
     context.userFunctions.set(userFunction.name, {
@@ -2005,6 +2035,17 @@ function evaluateUserFunctionCall(
     // Call the function.
     let error: Error | null = null;
     context.scopeStack.withScope(() => {
+        // Set a variable for each parameter.
+        assert.strictEqual(call.parameters.length, userFunction.parameters.length);
+        for (const [i, callParam] of call.parameters.entries()) {
+            const funcDeclarationParam = userFunction.parameters[i];
+            if (funcDeclarationParam.definition === undefined) {
+                const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
+                throw new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
+            }
+            context.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, callParam.value, funcDeclarationParam.definition);
+        }
+
         const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, context);
         error = evaluatedDataAndMaybeError.error;
         const evaluatedData = evaluatedDataAndMaybeError.data;

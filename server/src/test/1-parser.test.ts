@@ -2719,33 +2719,31 @@ Expecting to see one of the following:
     });
 
     describe('User function', () => {
-        describe('Declare function with arguments', () => {
-            it('Single argument', () => {
-                const input = `
-                    function Func( .Arg1, .Arg2 ){
-                    }
-                `;
-                assertParseResultsEqual(input, [
-                    {
-                        type: 'userFunction',
-                        name: 'Func',
-                        nameRange: createRange(1, 29, 1, 33),
-                        parameters: [
-                            {
-                                type: 'userFunctionParameter',
-                                name: '.Arg1',
-                                range: createRange(1, 35, 1, 40),
-                            },
-                            {
-                                type: 'userFunctionParameter',
-                                name: '.Arg2',
-                                range: createRange(1, 42, 1, 47),
-                            },
-                        ],
-                        statements: [],
-                    }
-                ]);
-            });
+        it('Declare function with arguments', () => {
+            const input = `
+                function Func( .Arg1, .Arg2 ){
+                }
+            `;
+            assertParseResultsEqual(input, [
+                {
+                    type: 'userFunctionDeclaration',
+                    name: 'Func',
+                    nameRange: createRange(1, 25, 1, 29),
+                    parameters: [
+                        {
+                            type: 'userFunctionDeclarationParameter',
+                            name: '.Arg1',
+                            range: createRange(1, 31, 1, 36),
+                        },
+                        {
+                            type: 'userFunctionDeclarationParameter',
+                            name: '.Arg2',
+                            range: createRange(1, 38, 1, 43),
+                        },
+                    ],
+                    statements: [],
+                }
+            ]);
         });
     });
 

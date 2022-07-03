@@ -284,7 +284,7 @@ function createParseErrorFromNearlyParseError(
         return new ParseSyntaxError(parseErrorMessage, fileUri, range);
     } else {
         // We were unable to parse the location from the error, so use the whole document as the error range.
-        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.message}`, fileUri, createWholeDocumentRange());
+        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.stack}`, fileUri, createWholeDocumentRange());
     }
 }
 
