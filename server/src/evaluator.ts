@@ -393,22 +393,36 @@ interface ParsedStatementIf {
     statements: Statement[];
 }
 
-// If
 function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf {
     return (obj as ParsedStatementIf).type === 'if';
+}
+
+interface ParsedStatementUserFunctionParameter {
+    type: 'userFunctionParameter';
+    name: string;
+    range: ParseSourceRange;
+}
+
+function isParsedStatementUserFunctionParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionParameter {
+    return (obj as ParsedStatementUserFunctionParameter).type === 'userFunctionParameter';
 }
 
 interface ParsedStatementUserFunctionDeclaration {
     type: 'userFunction';
     name: string;
     nameRange: ParseSourceRange;
-    parameters: string[];
+    parameters: ParsedStatementUserFunctionParameter[];
     statements: Statement[];
 }
 
-// User function
 function isParsedStatementUserFunction(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclaration {
-    return (obj as ParsedStatementUserFunctionDeclaration).type === 'userFunction';
+    const userFunction = obj as ParsedStatementUserFunctionDeclaration;
+
+    if (userFunction.type !== 'userFunction') {
+        return false;
+    }
+
+    return userFunction.parameters.every(isParsedStatementUserFunctionParameter);
 }
 
 // #include
@@ -570,7 +584,7 @@ interface EvaluatedCondition {
 }
 
 interface UserFunction {
-    todo: string;
+    parameters: ParsedStatementUserFunctionParameter[]
 }
 
 interface ScopeVariable {
@@ -1904,26 +1918,36 @@ function evaluateUserFunctionDeclaration(
         variableDefinitions: [ functionNameDefinition ],
     };
     
-    // Check if the function name is reserved.
+    // Ensure that the function name is not reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
         const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
         return new DataAndMaybeError(result, error);
     }
 
-    // Check if the function name is already used by another user function.
+    // Ensure that the function name is not already used by another user function.
     if (context.userFunctions.has(userFunction.name)) {
         const error = new EvaluationError(nameRange, `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`);
         return new DataAndMaybeError(result, error);
     }
 
-    context.userFunctions.set(userFunction.name, {
-        todo: 'TODO',
-    });
+    // Ensure that the parameter names are unique.
+    // Use an Array instead of a Set since we're optimizing for a small number of parameters.
+    const usedParameterNames: string[] = [];
+    for (const parameter of userFunction.parameters) {
+        if (usedParameterNames.includes(parameter.name)) {
+            const parameterRange = new SourceRange(context.thisFbuildUri, parameter.range);
+            const error = new EvaluationError(parameterRange, `User-function argument names must be unique.`);
+            return new DataAndMaybeError(result, error);
+        }
+        usedParameterNames.push(parameter.name);
+    }
 
     // TODO: save the function body so that it can be called later.
-    //userFunction.name
-    //userFunction.parameters
     //userFunction.statements
+
+    context.userFunctions.set(userFunction.name, {
+        parameters: userFunction.parameters,
+    });
 
     /*
     let error: Error | null = null;

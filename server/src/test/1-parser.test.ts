@@ -26,7 +26,7 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
     assert.throws(
         () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
         actualError => {
-            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}`);
+            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
@@ -2716,6 +2716,37 @@ Expecting to see one of the following:
                 });
             });
         }
+    });
+
+    describe('User function', () => {
+        describe('Declare function with arguments', () => {
+            it('Single argument', () => {
+                const input = `
+                    function Func( .Arg1, .Arg2 ){
+                    }
+                `;
+                assertParseResultsEqual(input, [
+                    {
+                        type: 'userFunction',
+                        name: 'Func',
+                        nameRange: createRange(1, 29, 1, 33),
+                        parameters: [
+                            {
+                                type: 'userFunctionParameter',
+                                name: '.Arg1',
+                                range: createRange(1, 35, 1, 40),
+                            },
+                            {
+                                type: 'userFunctionParameter',
+                                name: '.Arg2',
+                                range: createRange(1, 42, 1, 47),
+                            },
+                        ],
+                        statements: [],
+                    }
+                ]);
+            });
+        });
     });
 
     describe('Settings', () => {

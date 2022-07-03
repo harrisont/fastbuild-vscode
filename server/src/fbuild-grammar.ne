@@ -173,11 +173,17 @@ lines ->
 
 @{%
 
-class ParseContext {
-    onNextToken: null | ((token:any) => void) = null;
+interface Token {
+    line: number;
+    col: number;
+    value: any;
 }
 
-function callOnNextToken(context: ParseContext, token: object) {
+class ParseContext {
+    onNextToken: null | ((token:Token) => void) = null;
+}
+
+function callOnNextToken(context: ParseContext, token: Token) {
     if (context.onNextToken !== null) {
         context.onNextToken(token);
         context.onNextToken = null;
@@ -221,12 +227,6 @@ interface SourceLocation {
 interface SourceRange {
     start: SourceLocation;
     end: SourceLocation;
-}
-
-interface Token {
-    line: number;
-    col: number;
-    value: any;
 }
 
 function createLocation(token: Token): SourceLocation {
@@ -599,7 +599,7 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
     };
 }
 
-function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters: string[], statements: Record<string, any>) {
+function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
     return {
         type: 'userFunction',
         name: nameToken.value,
@@ -607,6 +607,26 @@ function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters:
         parameters,
         statements
     };
+}
+
+function createUserFunctionParameter(nameToken: Token, tokenAfterName: Token) {
+    return {
+        type: 'userFunctionParameter',
+        name: nameToken.value,
+        range: createRange(nameToken, tokenAfterName),
+    };
+}
+
+function createUserFunctionParameterWithStartRange(nameToken: Token) {
+    const [range, context] = createRangeStart(nameToken);
+
+    const result = {
+        type: 'userFunctionParameter',
+        name: nameToken.value,
+        range,
+    };
+
+    return [result, context];
 }
 
 %}
@@ -618,17 +638,26 @@ genericFunctionWithAlias ->
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, braceOpen, parameters, statements) %}
-  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart optionalWhitespaceOrNewline userFunctionDeclarationParameters %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, space3, parameters, braceClose, statements]) => createUserFunction(functionName, space2,    parameters, statements) %}
+    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, [parameters, context], braceClose, statements]) => { callOnNextToken(context, braceClose); return createUserFunction(functionName, braceOpen, parameters, statements); } %}
+  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, [parameters, context], braceClose, statements]) => { callOnNextToken(context, braceClose); return createUserFunction(functionName, space2,    parameters, statements); } %}
 
-userFunctionDeclarationParameters ->
-    null
-  | %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([firstParameter, space, restParameters]) => [firstParameter, ...restParameters] %}
-
-nonFirstUserFunctionDeclarationParameters ->
-    null
-  |                                                 %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([                   firstParameter, space2, restParameters]) => [firstParameter, ...restParameters] %}
-  | %parameterSeparator optionalWhitespaceOrNewline %parameterName optionalWhitespaceOrNewline nonFirstUserFunctionDeclarationParameters  {%([separator, space1, firstParameter, space2, restParameters]) => [firstParameter, ...restParameters] %}
+userFunctionDeclarationParams ->
+    # Empty
+    null                 {% () => [[], new ParseContext()] %}
+  | whitespaceOrNewline  {% () => [[], new ParseContext()] %}
+    # Not empty
+  | nonEmptyUserFunctionDeclarationParams  {% ([paramsWithContext]) => paramsWithContext %}
+  
+nonEmptyUserFunctionDeclarationParams ->
+    # Single param. Optional trailing param separator (",").
+    optionalWhitespaceOrNewline %parameterName                                                                      {% ([space1, paramName                           ]) => { const [param, context] = createUserFunctionParameterWithStartRange(paramName); return [[param], context]; } %}
+  | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline                                                  {% ([space1, paramName, space2                   ]) => [[createUserFunctionParameter(paramName, space2)],    new ParseContext()] %}
+  | optionalWhitespaceOrNewline %parameterName                     %parameterSeparator optionalWhitespaceOrNewline  {% ([space1, paramName,         separator, space3]) => [[createUserFunctionParameter(paramName, separator)], new ParseContext()] %}
+  | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline %parameterSeparator optionalWhitespaceOrNewline  {% ([space1, paramName, space2, separator, space3]) => [[createUserFunctionParameter(paramName, space2)],    new ParseContext()] %}
+    # Param and then another param(s). The params must be separated by a newline and/or an param separator (",").
+  | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline                     nonEmptyUserFunctionDeclarationParams  {% ([space1, first, space2,            [rest, restContext]]) => [[createUserFunctionParameter(first, space2),    ...rest], restContext] %}
+  | optionalWhitespaceOrNewline %parameterName                     %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, first,         separator, [rest, restContext]]) => [[createUserFunctionParameter(first, separator), ...rest], restContext] %}
+  | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, first, space2, separator, [rest, restContext]]) => [[createUserFunctionParameter(first, space2),    ...rest], restContext] %}
 
 # Function names of functions that we don't care about handling except for the function's alias parameter.
 genericFunctionNameWithAlias ->

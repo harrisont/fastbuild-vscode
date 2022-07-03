@@ -110,7 +110,7 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
     assert.throws(
         () => evaluateInput(input),
         actualError => {
-            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}`);
+            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
             assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
@@ -122,7 +122,7 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, expe
     assert.throws(
         () => evaluateInput(input),
         actualError => {
-            assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}`);
+            assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
             // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
             const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
@@ -4350,6 +4350,14 @@ Expecting to see the following:
                 assertEvaluatedVariablesValueEqual(input, []);
             });
 
+            it('Arguments can have a trailing comma', () => {
+                const input = `
+                    function Func( .Arg1, ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
             it('Arguments must start with "."', () => {
                 const input = `
                     function Func( Arg ){
@@ -4365,37 +4373,14 @@ Expecting to see one of the following:
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 35, 1, 36));
             });
 
-            it('Arguments cannot have a trailing separator', () => {
+            it('Argument names must be unique', () => {
                 const input = `
-                    function Func( .Arg, ){
+                    function Func( .Arg .Arg ){
                     }
                 `;
-                const expectedErrorMessage = 
-`Syntax error: Unexpected parameters-end: ")".
-| function Func( .Arg, ){
-|                      ^
-Expecting to see the following:
- • parameter-name (example: ".MyParameterName")`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 41, 1, 42));
+                const expectedErrorMessage = 'User-function argument names must be unique.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 40, 1, 44));
             });
-
-            /*
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-            */
         });
 
         /*
