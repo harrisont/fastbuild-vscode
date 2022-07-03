@@ -670,7 +670,7 @@ function createUserFunctionCall(nameToken: Token, tokenAfterName: Token) {
     return {
         type: 'userFunctionCall',
         name: nameToken.value,
-        nameRange: createRangeEndInclusive(nameToken, tokenAfterName),
+        nameRange: createRange(nameToken, tokenAfterName),
     };
 }
 

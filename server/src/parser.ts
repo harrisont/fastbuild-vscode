@@ -76,7 +76,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['keywordTest', { value: 'function-Test', symbol: 'Test', example: null }],
     ['keywordTextFile', { value: 'function-TextFile', symbol: 'TextFile', example: null }],
     ['keywordUnity', { value: 'function-Unity', symbol: 'Unity', example: null }],
-    ['keywordUserFunctionDeclaration', { value: 'function-UserFunctionDeclaration', symbol: 'UserFunctionDeclaration', example: null }],
+    ['keywordUserFunctionDeclaration', { value: 'user-function-declaration', symbol: 'UserFunctionDeclaration', example: null }],
     ['keywordUsing', { value: 'function-Using', symbol: 'Using', example: null }],
     ['keywordVCXProject', { value: 'function-VCXProject', symbol: 'VCXProject', example: null }],
     ['keywordVSProjectExternal', { value: 'function-VSProjectExternal', symbol: 'VSProjectExternal', example: null }],

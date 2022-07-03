@@ -4348,7 +4348,7 @@ Expecting to see one of the following:
                     .Value = 1
                     function Func()
                     {
-                        .Copy = .Value
+                        Print(.Value)
                     }
                     Func()
                 `;
@@ -4373,7 +4373,7 @@ Expecting to see one of the following:
 `Syntax error: Unexpected end of file.
 Expecting to see the following:
  • function-parameters-start: "("`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(5, 0, 5, 1));
             });
 
             /*
@@ -4413,6 +4413,68 @@ Expecting to see the following:
 
         /*
         describe('Call function with arguments', () => {
+            it('Single argument', () => {
+                const input = `
+                    function Func(.Arg){
+                        Print(.Arg)
+                    }
+                    Func(1)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+
+            it('Multiple arguments separated by spaces', () => {
+                const input = `
+                    function Func(.Arg1 .Arg2){
+                        Print(.Value1)
+                        Print(.Value2)
+                    }
+                    Func(1 2)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1, 2]);
+            });
+
+            it('Multiple arguments separated by commas', () => {
+                const input = `
+                    function Func(.Arg1, .Arg2){
+                        Print(.Value1)
+                        Print(.Value2)
+                    }
+                    Func(1, 2)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1, 2]);
+            });
+
+            it('Wrong number of arguments (takes 0, passing 1)', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func(1)
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 0 arguments but passing 1.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 27));
+            });
+
+            it('Wrong number of arguments (takes 1, passing 0)', () => {
+                const input = `
+                    function Func(.Arg){
+                    }
+                    Func()
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 1 argument but passing 0.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 26));
+            });
+
+            it('Wrong number of arguments (takes 2, passing 1)', () => {
+                const input = `
+                    function Func(.Arg1, .Arg2){
+                    }
+                    Func(1)
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 2 argument but passing 1.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 27));
+            });
+
             it('TODO', () => {
                 const input = `
                 `;

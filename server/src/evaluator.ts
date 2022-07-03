@@ -597,7 +597,7 @@ interface EvaluatedCondition {
 interface UserFunction {
     definition: VariableDefinition;
     parameters: ParsedStatementUserFunctionParameter[];
-    //body: TODO;
+    statements: Statement[];
 }
 
 interface ScopeVariable {
@@ -1933,11 +1933,15 @@ function evaluateUserFunctionDeclaration(
 ): DataAndMaybeError<EvaluatedData> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
     const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange);
+    const functionNameReference = {
+        definition: functionNameDefinition,
+        range: nameSourceRange,
+    };
 
     const result: EvaluatedData = {
         evaluatedVariables: [],
-        variableReferences: [],
-        variableDefinitions: [ functionNameDefinition ],
+        variableReferences: [functionNameReference],
+        variableDefinitions: [functionNameDefinition],
     };
     
     // Ensure that the function name is not reserved.
@@ -1964,28 +1968,11 @@ function evaluateUserFunctionDeclaration(
         usedParameterNames.push(parameter.name);
     }
 
-    // TODO: save the function body so that it can be called later.
-    //userFunction.statements
-
     context.userFunctions.set(userFunction.name, {
         definition: functionNameDefinition,
         parameters: userFunction.parameters,
+        statements: userFunction.statements,
     });
-
-    /*
-    let error: Error | null = null;
-    context.scopeStack.withScope(() => {
-        const evaluatedStatementsAndMaybeError = evaluateStatements(userFunction.statements, context);
-        error = evaluatedStatementsAndMaybeError.error;
-        const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
-    });
-    if (error !== null) {
-        return new DataAndMaybeError(result, error);
-    }
-    */
 
     return new DataAndMaybeError(result);
 }
@@ -2002,18 +1989,32 @@ function evaluateUserFunctionCall(
         variableDefinitions: [],
     };
 
+    // Lookup the function.
     const userFunction = context.userFunctions.get(call.name);
     if (userFunction === undefined) {
         const error = new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`);
         return new DataAndMaybeError(result, error);
     }
 
+    // Reference the function.
     result.variableReferences.push({
         definition: userFunction.definition,
         range: nameSourceRange,
     });
 
-    // TODO: call function
+    // Call the function.
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, context);
+        error = evaluatedDataAndMaybeError.error;
+        const evaluatedData = evaluatedDataAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
+        pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+    });
+    if (error !== null) {
+        return new DataAndMaybeError(result, error);
+    }
 
     return new DataAndMaybeError(result);
 }
