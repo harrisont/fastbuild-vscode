@@ -642,7 +642,7 @@ function createUserFunction(nameToken: Token, tokenAfterName: Token, parameters:
         name: nameToken.value,
         nameRange: createRange(nameToken, tokenAfterName),
         parameters,
-        statements
+        statements,
     };
 }
 
@@ -666,11 +666,12 @@ function createUserFunctionParameterWithStartRange(nameToken: Token) {
     return [result, context];
 }
 
-function createUserFunctionCall(nameToken: Token, tokenAfterName: Token) {
+function createUserFunctionCall(nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[]) {
     return {
         type: 'userFunctionCall',
         name: nameToken.value,
         nameRange: createRange(nameToken, tokenAfterName),
+        parameters,
     };
 }
 
@@ -700,8 +701,26 @@ nonEmptyUserFunctionDeclarationParams ->
   | optionalWhitespaceOrNewline %parameterName whitespaceOrNewline %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, first, space2, separator, [rest, restContext]]) => [[createUserFunctionParameter(first, space2),    ...rest], restContext] %}
 
 userFunctionCall ->
-    %functionName                     %functionParametersStart optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName,         braceOpen, space2, braceClose]) => { return createUserFunctionCall(functionName, braceOpen); } %}
-  | %functionName whitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, braceClose]) => { return createUserFunctionCall(functionName, space1);    } %}
+    %functionName                     %functionParametersStart userFunctionCallParams %functionParametersEnd  {% ([functionName,         braceOpen, [parameters, context], braceClose]) => { callOnNextToken(context, braceClose); return createUserFunctionCall(functionName, braceOpen, parameters); } %}
+  | %functionName whitespaceOrNewline %functionParametersStart userFunctionCallParams %functionParametersEnd  {% ([functionName, space1, braceOpen, [parameters, context], braceClose]) => { callOnNextToken(context, braceClose); return createUserFunctionCall(functionName, space1,    parameters); } %}
+
+userFunctionCallParams ->
+    # Empty
+    null                 {% () => [[], new ParseContext()] %}
+  | whitespaceOrNewline  {% () => [[], new ParseContext()] %}
+    # Not empty
+  | nonEmptyUserFunctionCallParams  {% ([paramsWithContext]) => paramsWithContext %}
+
+nonEmptyUserFunctionCallParams ->
+    # Single param. Optional trailing param separator (",").
+    optionalWhitespaceOrNewline summand                                                                      {% ([space1, [paramValue, paramValueContext]                           ]) => { const [param, paramContext] = createUserFunctionParameterWithStartRange(paramValue); return [[param], createCombinedContext([paramValueContext, paramContext])]; } %}
+  | optionalWhitespaceOrNewline summand whitespaceOrNewline                                                  {% ([space1, [paramValue, paramValueContext], space2                   ]) => { callOnNextToken(paramValueContext, space2);    return [[createUserFunctionParameter(paramValue, space2)],    new ParseContext()]; } %}
+  | optionalWhitespaceOrNewline summand                     %parameterSeparator optionalWhitespaceOrNewline  {% ([space1, [paramValue, paramValueContext],         separator, space3]) => { callOnNextToken(paramValueContext, separator); return [[createUserFunctionParameter(paramValue, separator)], new ParseContext()]; } %}
+  | optionalWhitespaceOrNewline summand whitespaceOrNewline %parameterSeparator optionalWhitespaceOrNewline  {% ([space1, [paramValue, paramValueContext], space2, separator, space3]) => { callOnNextToken(paramValueContext, space2);    return [[createUserFunctionParameter(paramValue, space2)],    new ParseContext()]; } %}
+    # Param and then another param(s). The params must be separated by a newline and/or an param separator (",").
+  | optionalWhitespaceOrNewline summand whitespaceOrNewline                     nonEmptyUserFunctionDeclarationParams  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[createUserFunctionParameter(first, space2),    ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline summand                     %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[createUserFunctionParameter(first, separator), ...rest], restContext]; } %}
+  | optionalWhitespaceOrNewline summand whitespaceOrNewline %parameterSeparator nonEmptyUserFunctionDeclarationParams  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[createUserFunctionParameter(first, space2),    ...rest], restContext]; } %}
 
 functionError -> %keywordError optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline string optionalWhitespaceOrNewline %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, value, space3, braceClose]) => { return { type: 'error', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
