@@ -4411,7 +4411,6 @@ Expecting to see the following:
             */
         });
 
-        /*
         describe('Call function with arguments', () => {
             it('Single argument', () => {
                 const input = `
@@ -4474,40 +4473,9 @@ Expecting to see the following:
                 const expectedErrorMessage = 'User function "Func" takes 2 argument but passing 1.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 27));
             });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
         });
 
+        /*
         describe('Scope', () => {
             it('TODO', () => {
                 const input = `
