@@ -4509,41 +4509,31 @@ Expecting to see the following:
                 ]);
             });
         });
+        */
 
-        describe('Deffered evaluation', () => {
-            it('TODO', () => {
+        describe('Deferred evaluation', () => {
+            it('Function evaluation is deferred until the call - Declaration works', () => {
                 const input = `
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
                 `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+                assertEvaluatedVariablesValueEqual(input, []);
             });
 
-            it('TODO', () => {
+            it('Function evaluation is deferred until the call - Error occurs on invocation', () => {
                 const input = `
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
+                    MyFunc()
                 `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
+                const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 31, 2, 37));
             });
         });
 
+        /*
         describe('Nested functions', () => {
             it('TODO', () => {
                 const input = `
