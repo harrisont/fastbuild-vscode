@@ -77,6 +77,8 @@ TODO
 Add server tests. This will also be useful for using in benchmarks.
 
 Support full FASTBuild syntax:
+* Support function and scope bodies ending on the same line as they start. Right now it requires them to be on a new line.
+    * Idea: do so by moving the scope close matching to a higher level.
 * Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
 
 Release a Visual Studio Code extension ([docs](https://code.visualstudio.com/api/get-started/wrapping-up#testing-and-publishing)).
