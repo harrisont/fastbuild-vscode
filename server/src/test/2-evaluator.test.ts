@@ -4425,8 +4425,8 @@ Expecting to see the following:
             it('Multiple arguments separated by spaces', () => {
                 const input = `
                     function Func(.Arg1 .Arg2){
-                        Print(.Value1)
-                        Print(.Value2)
+                        Print(.Arg1)
+                        Print(.Arg2)
                     }
                     Func(1 2)
                 `;
@@ -4436,8 +4436,8 @@ Expecting to see the following:
             it('Multiple arguments separated by commas', () => {
                 const input = `
                     function Func(.Arg1, .Arg2){
-                        Print(.Value1)
-                        Print(.Value2)
+                        Print(.Arg1)
+                        Print(.Arg2)
                     }
                     Func(1, 2)
                 `;
@@ -4451,7 +4451,7 @@ Expecting to see the following:
                     Func(1)
                 `;
                 const expectedErrorMessage = 'User function "Func" takes 0 arguments but passing 1.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 27));
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 27));
             });
 
             it('Wrong number of arguments (takes 1, passing 0)', () => {
@@ -4461,7 +4461,7 @@ Expecting to see the following:
                     Func()
                 `;
                 const expectedErrorMessage = 'User function "Func" takes 1 argument but passing 0.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 26));
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 26));
             });
 
             it('Wrong number of arguments (takes 2, passing 1)', () => {
@@ -4470,8 +4470,8 @@ Expecting to see the following:
                     }
                     Func(1)
                 `;
-                const expectedErrorMessage = 'User function "Func" takes 2 argument but passing 1.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 24, 3, 27));
+                const expectedErrorMessage = 'User function "Func" takes 2 arguments but passing 1.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 27));
             });
         });
 

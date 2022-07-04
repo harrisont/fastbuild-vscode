@@ -1,4 +1,3 @@
-import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -439,6 +438,7 @@ function isParsedStatementUserFunctionCallParameter(obj: Record<string, any>): o
 
 interface ParsedStatementUserFunctionCall {
     type: 'userFunctionCall';
+    range: ParseSourceRange;
     name: string;
     nameRange: ParseSourceRange;
     parameters: ParsedStatementUserFunctionCallParameter[];
@@ -2011,13 +2011,13 @@ function evaluateUserFunctionCall(
     call: ParsedStatementUserFunctionCall,
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
-    const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
-
     const result: EvaluatedData = {
         evaluatedVariables: [],
         variableReferences: [],
         variableDefinitions: [],
     };
+    
+    const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
 
     // Lookup the function.
     const userFunction = context.userFunctions.get(call.name);
@@ -2031,19 +2031,36 @@ function evaluateUserFunctionCall(
         definition: userFunction.definition,
         range: nameSourceRange,
     });
+    
+    if (call.parameters.length !== userFunction.parameters.length) {
+        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
+        const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
+        const error = new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`);
+        return new DataAndMaybeError(result, error);
+    }
 
     // Call the function.
     let error: Error | null = null;
     context.scopeStack.withScope(() => {
         // Set a variable for each parameter.
-        assert.strictEqual(call.parameters.length, userFunction.parameters.length);
         for (const [i, callParam] of call.parameters.entries()) {
             const funcDeclarationParam = userFunction.parameters[i];
             if (funcDeclarationParam.definition === undefined) {
                 const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
                 throw new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
             }
-            context.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, callParam.value, funcDeclarationParam.definition);
+
+            // Evaluate the call-parameter's value.
+            const evaluatedValueAndMaybeError = evaluateRValue(callParam.value, context);
+            const evaluatedValue = evaluatedValueAndMaybeError.data;
+            pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
+            pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
+            pushToFirstArray(result.variableDefinitions, evaluatedValue.variableDefinitions);
+            if (evaluatedValueAndMaybeError.error !== null) {
+                return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
+            }
+
+            context.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, evaluatedValue.value, funcDeclarationParam.definition);
         }
 
         const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, context);

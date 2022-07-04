@@ -47,7 +47,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['operatorAssignment', { value: 'assignment', symbol: '=', example: null }],
     ['operatorAddition', { value: 'addition', symbol: '+', example: null }],
     ['operatorSubtraction', { value: 'subtraction', symbol: '-', example: null }],
-    ['arrayItemSeparator', { value: 'Array-item-separator', symbol: ',', example: null }],
+    ['itemSeparator', { value: 'item-separator', symbol: ',', example: null }],
     ['structStart', { value: 'Struct-start', symbol: '[', example: null }],
     ['structEnd', { value: 'Struct-end', symbol: ']', example: null }],
     ['functionParametersStart', { value: 'function-parameters-start', symbol: '(', example: null }],
@@ -94,7 +94,6 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['parametersEnd', { value: 'parameters-end', symbol: ')', example: null }],
     ['functionName', { value: 'function-name', symbol: null, example: 'MyFunctionName' }],
     ['parameterName', { value: 'parameter-name', symbol: null, example: '.MyParameterName' }],
-    ['parameterSeparator', { value: 'parameter-separator', symbol: ',', example: null }],
 ]);
 
 function notNull<TValue>(value: TValue | null): value is TValue {

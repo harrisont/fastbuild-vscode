@@ -899,7 +899,7 @@ describe('parser', () => {
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
         const expectedErrorMessage =
-`Syntax error: Unexpected Array-item-separator: ",".
+`Syntax error: Unexpected item-separator: ",".
 | .MyVar = [ .A=1, .B=2 ]
 |                ^
 Expecting to see one of the following:
@@ -2732,12 +2732,12 @@ Expecting to see one of the following:
                     parameters: [
                         {
                             type: 'userFunctionDeclarationParameter',
-                            name: '.Arg1',
+                            name: 'Arg1',
                             range: createRange(1, 31, 1, 36),
                         },
                         {
                             type: 'userFunctionDeclarationParameter',
-                            name: '.Arg2',
+                            name: 'Arg2',
                             range: createRange(1, 38, 1, 43),
                         },
                     ],
