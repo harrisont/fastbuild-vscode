@@ -4476,7 +4476,7 @@ Expecting to see the following:
         });
 
         describe('Scope', () => {
-            it('Functions can only see passed in arguments', () => {
+            it('Functions cannot access variable defined outside the function (using current-scope access)', () => {
                 const input = `
                     .MyVar = 'X'
                     function MyFunc(){
@@ -4485,6 +4485,18 @@ Expecting to see the following:
                     MyFunc()
                 `;
                 const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
+            });
+            
+            it('Functions cannot access variable defined outside the function (using parent-scope access)', () => {
+                const input = `
+                    .MyVar = 'X'
+                    function MyFunc(){
+                        Print( ^MyVar )
+                    }
+                    MyFunc()
+                `;
+                const expectedErrorMessage = 'Referencing variable "MyVar" in a parent scope that is not defined in any parent scope.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
             });
         });
