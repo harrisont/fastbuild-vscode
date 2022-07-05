@@ -625,6 +625,9 @@ interface ScopeVariable {
 
 class Scope {
     variables = new Map<string, ScopeVariable>();
+
+    constructor(readonly canAccessParentScopes: boolean) {
+    }
 }
 
 class ScopeStack {
@@ -632,18 +635,30 @@ class ScopeStack {
     private nextVariableDefinitionId = 1;
 
     constructor() {
-        this.push();
+        this.push(true /*canAccessParentScopes*/);
     }
 
-    private push() {
-        const scope = new Scope();
+    private push(canAccessParentScopes: boolean) {
+        const scope = new Scope(canAccessParentScopes);
         this.stack.push(scope);
     }
 
-    withScope(body: () => void) {
-        this.push();
-        body();
+    private pop() {
         this.stack.pop();
+    }
+
+    // Convenience method to `push`, run `body`, and then `pop`.
+    withScope(body: () => void) {
+        this.push(true /*canAccessParentScopes*/);
+        body();
+        this.pop();
+    }
+
+    // Like `withScope`, but cannot access variables in parent scopes.
+    withPrivateScope(body: () => void) {
+        this.push(false /*canAccessParentScopes*/);
+        body();
+        this.pop();
     }
 
     // Get a variable, searching from the current scope to the root.
@@ -654,6 +669,9 @@ class ScopeStack {
             const maybeVariable = scope.variables.get(variableName);
             if (maybeVariable !== undefined) {
                 return maybeVariable;
+            }
+            if (!scope.canAccessParentScopes) {
+                return null;
             }
         }
         return null;
@@ -677,11 +695,14 @@ class ScopeStack {
             return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`));
         }
 
-        for (let scopeIndex = this.stack.length - 2; scopeIndex >= 0; --scopeIndex) {
-            const scope = this.stack[scopeIndex];
-            const maybeVariable = scope.variables.get(variableName);
-            if (maybeVariable !== undefined) {
-                return Maybe.ok(maybeVariable);
+        const currentScope = this.stack[this.stack.length - 1];
+        if (currentScope.canAccessParentScopes) {
+            for (let scopeIndex = this.stack.length - 2; scopeIndex >= 0; --scopeIndex) {
+                const scope = this.stack[scopeIndex];
+                const maybeVariable = scope.variables.get(variableName);
+                if (maybeVariable !== undefined) {
+                    return Maybe.ok(maybeVariable);
+                }
             }
         }
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`));
@@ -761,10 +782,20 @@ function getPlatformSpecificDefineSymbol(): string {
     }
 }
 
-// thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
-    const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+interface EvaluationContext {
+    scopeStack: ScopeStack,
+    defines: Set<string>,
+    userFunctions: Map<string, UserFunction>,
+    rootFbuildDirUri: vscodeUri.URI,
+    thisFbuildUri: UriStr,
+    fileSystem: IFileSystem,
+    parseDataProvider: ParseDataProvider,
+    // Used to ensure that a URI is only included a single time.
+    onceIncludeUrisAlreadyIncluded: string[];
+    previousStatementLhsVariable: ScopeVariable | null;
+}
 
+function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     const scopeStack = new ScopeStack();
 
     const dummyVariableDefinition: VariableDefinition = {
@@ -787,14 +818,22 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', dummyVariableDefinition);
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, dummyVariableDefinition);
 
+    return scopeStack;
+}
+
+function createDefaultDefines(): Set<string> {
     const defines = new Set<string>();
     defines.add(getPlatformSpecificDefineSymbol());
-
-    const context = {
-        scopeStack,
-        defines,
+    return defines;
+}
+// thisFbuildUri is used to calculate relative paths (e.g. from #include)
+export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
+    const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+    const context: EvaluationContext = {
+        scopeStack: createDefaultScopeStack(rootFbuildDirUri),
+        defines: createDefaultDefines(),
         userFunctions: new Map<string, UserFunction>(),
-        rootFbuildDirUri: rootFbuildDirUri.toString(),
+        rootFbuildDirUri,
         thisFbuildUri,
         fileSystem,
         parseDataProvider,
@@ -802,18 +841,6 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
         previousStatementLhsVariable: null,
     };
     return evaluateStatements(parseData.statements, context);
-}
-
-interface EvaluationContext {
-    scopeStack: ScopeStack,
-    defines: Set<string>,
-    userFunctions: Map<string, UserFunction>,
-    rootFbuildDirUri: string,
-    thisFbuildUri: UriStr,
-    fileSystem: IFileSystem,
-    parseDataProvider: ParseDataProvider,
-    onceIncludeUrisAlreadyIncluded: string[];
-    previousStatementLhsVariable: ScopeVariable | null;
 }
 
 function evaluateStatements(statements: Statement[], context: EvaluationContext): DataAndMaybeError<EvaluatedData> {
@@ -1262,7 +1289,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const currentBffDirBeforeInclude = currentBffDirVariable.value;
 
                     // Update the `_CURRENT_BFF_DIR_` value for the include.
-                    const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri, vscodeUri.Utils.dirname(includeUri).toString());
+                    const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri.toString(), vscodeUri.Utils.dirname(includeUri).toString());
                     currentBffDirVariable.value = includeDirRelativeToRoot;
 
                     const includeContext: EvaluationContext = {
@@ -1575,7 +1602,7 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
 
 function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): DataAndMaybeError<EvaluatedRValue> {
     let evaluatedStatementsAndMaybeError = new DataAndMaybeError(new EvaluatedData());
-    let structScope = new Scope();
+    let structScope = new Scope(true /*canAccessParentScopes*/);
     context.scopeStack.withScope(() => {
         evaluatedStatementsAndMaybeError = evaluateStatements(struct.statements, context);
         structScope = context.scopeStack.getCurrentScope();
@@ -1961,7 +1988,7 @@ function evaluateUserFunctionDeclaration(
         variableReferences: [functionNameReference],
         variableDefinitions: [functionNameDefinition],
     };
-    
+
     // Ensure that the function name is not reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
         const error = new EvaluationError(nameSourceRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
@@ -1987,7 +2014,7 @@ function evaluateUserFunctionDeclaration(
             return new DataAndMaybeError(result, error);
         }
         usedParameterNames.push(parameter.name);
-        
+
         const definition = context.scopeStack.createVariableDefinition(paramSourceRange);
         parameter.definition = definition;
 
@@ -2016,7 +2043,7 @@ function evaluateUserFunctionCall(
         variableReferences: [],
         variableDefinitions: [],
     };
-    
+
     const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
 
     // Lookup the function.
@@ -2031,7 +2058,7 @@ function evaluateUserFunctionCall(
         definition: userFunction.definition,
         range: nameSourceRange,
     });
-    
+
     if (call.parameters.length !== userFunction.parameters.length) {
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
         const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
@@ -2039,37 +2066,58 @@ function evaluateUserFunctionCall(
         return new DataAndMaybeError(result, error);
     }
 
+    //
     // Call the function.
+    //
+    // Note that the call uses the current `EvaluationContext`, but the body of the call uses a new context.
+    //
     let error: Error | null = null;
     // User functions can only use passed-in arguments and not variables in scope where they are defined.
-    context.scopeStack.withScope(() => {
+    context.scopeStack.withPrivateScope(() => {
+        const functionCallContext: EvaluationContext = {
+            scopeStack: context.scopeStack,
+            // User functions do not share defines.
+            defines: createDefaultDefines(),
+            // User functions can call other user functions.
+            userFunctions: context.userFunctions,
+            rootFbuildDirUri: context.rootFbuildDirUri,
+            thisFbuildUri: context.thisFbuildUri,
+            fileSystem: context.fileSystem,
+            parseDataProvider: context.parseDataProvider,
+            onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+            previousStatementLhsVariable: null,
+        };
+
         // Set a variable for each parameter.
-        for (const [i, callParam] of call.parameters.entries()) {
-            const funcDeclarationParam = userFunction.parameters[i];
+        for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
+            const callParam = call.parameters[i];
             if (funcDeclarationParam.definition === undefined) {
                 const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
                 throw new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
             }
 
             // Evaluate the call-parameter's value.
+            // Note that we evaluate the call's parameter in the current context, not the function call context.
             const evaluatedValueAndMaybeError = evaluateRValue(callParam.value, context);
             const evaluatedValue = evaluatedValueAndMaybeError.data;
             pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
             pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
             pushToFirstArray(result.variableDefinitions, evaluatedValue.variableDefinitions);
             if (evaluatedValueAndMaybeError.error !== null) {
-                return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
+                error = evaluatedValueAndMaybeError.error;
+                return;
             }
 
-            context.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, evaluatedValue.value, funcDeclarationParam.definition);
+            // Note that we set the variable in the function call context, not the current context.
+            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, evaluatedValue.value, funcDeclarationParam.definition);
         }
 
-        const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, context);
-        error = evaluatedDataAndMaybeError.error;
+        const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, functionCallContext);
         const evaluatedData = evaluatedDataAndMaybeError.data;
         pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
         pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
         pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+        error = evaluatedDataAndMaybeError.error;
     });
     if (error !== null) {
         return new DataAndMaybeError(result, error);

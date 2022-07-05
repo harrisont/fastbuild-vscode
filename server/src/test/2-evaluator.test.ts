@@ -4313,7 +4313,7 @@ Expecting to see the following:
                     function Func( Arg ){
                     }
                 `;
-                const expectedErrorMessage = 
+                const expectedErrorMessage =
 `Syntax error: Unexpected function-name: "Arg".
 | function Func( Arg ){
 |                ^^^
@@ -4345,16 +4345,16 @@ Expecting to see one of the following:
 
             it('Simple body', () => {
                 const input = `
-                    .Value = 1
                     function Func()
                     {
+                        .Value = 1
                         Print(.Value)
                     }
                     Func()
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
-            
+
             it('Non-existent function', () => {
                 const input = `
                     Func()
@@ -4362,7 +4362,7 @@ Expecting to see one of the following:
                 const expectedErrorMessage = 'No function exists with the name "Func".';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 20, 1, 24));
             });
-            
+
             it('Missing arguments block', () => {
                 const input = `
                     function Func(){
@@ -4485,7 +4485,7 @@ Expecting to see the following:
                     MyFunc()
                 `;
                 const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
             });
         });
 
