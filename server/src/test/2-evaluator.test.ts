@@ -4511,75 +4511,36 @@ Expecting to see the following:
             });
         });
 
-        /*
         describe('Nested functions', () => {
-            it('TODO', () => {
+            it('Functions may call other functions', () => {
                 const input = `
+                    function FuncA() {
+                        .MyVar = 1
+                        Print( .MyVar )
+                    }
+
+                    function FuncB() {
+                        FuncA()
+                    }
+
+                    FuncB()
                 `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
+                assertEvaluatedVariablesValueEqual(input, [1]);
             });
         });
 
         describe('Recursion', () => {
-            it('TODO', () => {
+            it('Recursion is supported, and a general cap on depth complexity prevents stack overflows', () => {
                 const input = `
+                    function Func(){
+                        Func()
+                    }
+                    Func()
                 `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
+                const expectedErrorMessage = 'Excessive scope depth. Possible infinite recursion from user function calls.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
             });
         });
-        */
     });
 
     describe('#include', () => {
