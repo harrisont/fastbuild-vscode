@@ -219,7 +219,7 @@ function createParseErrorFromNearlyParseError(
     //             ^
     //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
     //     ...
-    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n(.+)\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
+    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n(.+)\r?\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
     if (match !== null) {
         // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
         const lineNum = parseInt(match[1]) - 1;
@@ -329,7 +329,7 @@ export function parse(input: string, fileUri: UriStr, options: ParseOptions): Pa
 
 // TODO: make this more efficient by moving it into the grammar.
 function removeComments(input: string): string {
-    const lines = input.split('\n');
+    const lines = input.split(/\r?\n/);
     const modifiedLines: string[] = [];
     for (const line of lines) {
         let inSingleQuotedString = false;

@@ -6,7 +6,7 @@ const lexer = moo.states({
         // This needs to come before '<' so that it has higher priority when matching.
         endOfFile: '<end-of-file>',
 
-        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
+        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\r\n]*\r?\n[ \t\r\n]*/, lineBreaks: true },
         whitespace: /[ \t]+/,
         // The symbols for array/scope delimeters are the same.
         // We could distinguish them by pushing state when we're on the RHS of an operator (assignment/addition), to know that the symbols are array delimeters.
@@ -97,26 +97,26 @@ const lexer = moo.states({
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         singleQuotedStringEnd: { match: "'", pop: 1 },
         // Handle escaping ', $, ^ with ^
-        stringLiteral: /(?:[^'$^\n]|\^['$^])+/,
+        stringLiteral: /(?:[^'$^\r\n]|\^['$^])+/,
     },
     doubleQuotedStringBodyThenPop: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         doubleQuotedStringEnd: { match: '"', pop: 1 },
         // Handle escaping ", $, ^ with ^
-        stringLiteral: /(?:[^"$^\n]|\^["$^])+/,
+        stringLiteral: /(?:[^"$^\r\n]|\^["$^])+/,
     },
     // Same as "...ThenPop" but instead of popping, goes to "main".
     singleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         singleQuotedStringEnd: { match: "'", next: 'main' },
         // Handle escaping ', $, ^ with ^
-        stringLiteral: /(?:[^'$^\n]|\^['$^])+/,
+        stringLiteral: /(?:[^'$^\r\n]|\^['$^])+/,
     },
     doubleQuotedStringBodyThenMain: {
         startTemplatedVariable: { match: '$', push: 'templatedVariable' },
         doubleQuotedStringEnd: { match: '"', next: 'main' },
         // Handle escaping ", $, ^ with ^
-        stringLiteral: /(?:[^"$^\n]|\^["$^])+/,
+        stringLiteral: /(?:[^"$^\r\n]|\^["$^])+/,
     },
     templatedVariable: {
         endTemplatedVariable: { match: '$', pop: 1 },
@@ -137,7 +137,7 @@ const lexer = moo.states({
           exists: 'exists',
           fileExists: 'file_exists',
         })},
-        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true, pop: 1 },
+        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\r\n]*\r?\n[ \t\r\n]*/, lineBreaks: true, pop: 1 },
         whitespace: /[ \t]+/,
         parametersStart: '(',
         parametersEnd: ')',
@@ -154,7 +154,7 @@ const lexer = moo.states({
         parametersEnd: { match: ')', pop: 1 },
         parameterName: /\.[a-zA-Z_][a-zA-Z0-9_]*/,
         itemSeparator: ',',
-        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\n]*\n[ \t\n]*/, lineBreaks: true },
+        optionalWhitespaceAndMandatoryNewline: { match: /[ \t\r\n]*\r?\n[ \t\r\n]*/, lineBreaks: true },
         whitespace: /[ \t]+/,
     },
 });
