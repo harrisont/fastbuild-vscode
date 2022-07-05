@@ -2447,6 +2447,19 @@ describe('evaluator', () => {
                 }))
             ]);
         });
+        
+        it('body is on the same line', () => {
+            const input = `
+                .MyArray = {'a', 'b', 'c'}
+                ForEach( .Item in .MyArray ) { .Copy = .Item }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
+                'a',
+                'b',
+                'c'
+            ]);
+        });
 
         it('Loop variable must be an array', () => {
             const input = `
@@ -2523,6 +2536,13 @@ describe('evaluator', () => {
                         'MyAliasName',
                         'SomeName'
                     ]);
+                });
+
+                it('body on the same line', () => {
+                    const input = `
+                        ${functionName}('MyAliasName'){}
+                    `;
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('errors if the evaluated variable alias name is not a string', () => {
@@ -2733,6 +2753,15 @@ describe('evaluator', () => {
                         range: createRange(2, 24, 2, 30)
                     }
                 );
+            });
+            
+            it('Body on the same line', () => {
+                const input = `
+                    .Result = false
+                    If( true ) { ^Result = true }
+                    .Copy = .Result
+                `;
+                assertEvaluatedVariablesValueEqual(input, [true]);
             });
         });
 
@@ -4201,6 +4230,13 @@ describe('evaluator', () => {
                 assertEvaluatedVariablesValueEqual(input, []);
             });
 
+            it('Body on the same line', () => {
+                const input = `
+                    function Func(){ Print( 'X' ) }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
             //
             // Error cases: Malformed functions
             //
@@ -4331,6 +4367,13 @@ Expecting to see one of the following:
                 const expectedErrorMessage = 'User-function argument names must be unique.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 40, 1, 44));
             });
+            
+            it('Body on the same line', () => {
+                const input = `
+                    function Func( .Arg ){ Print( .Arg ) }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
         });
 
         describe('Call function without arguments', () => {
@@ -4355,6 +4398,14 @@ Expecting to see one of the following:
                 assertEvaluatedVariablesValueEqual(input, [1]);
             });
 
+            it('Body on the same line', () => {
+                const input = `
+                    function Func(){ Print( 'X' ) }
+                    Func()
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
             it('Non-existent function', () => {
                 const input = `
                     Func()
@@ -4375,40 +4426,6 @@ Expecting to see the following:
  • function-parameters-start: "("`;
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(5, 0, 5, 1));
             });
-
-            /*
-            it('TODO', () => {
-                const input = `
-                `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-            */
         });
 
         describe('Call function with arguments', () => {
@@ -4417,6 +4434,14 @@ Expecting to see the following:
                     function Func(.Arg){
                         Print(.Arg)
                     }
+                    Func(1)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+
+            it('Body on the same line', () => {
+                const input = `
+                    function Func(.Arg){ Print(.Arg) }
                     Func(1)
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);

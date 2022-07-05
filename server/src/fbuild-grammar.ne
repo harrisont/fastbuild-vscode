@@ -172,6 +172,11 @@ lines ->
   | whitespaceOrNewline lines  {% ([space, lines]) => lines %}
   | statementAndNewline lines  {% ([first, rest]) => [first, ...rest] %}
 
+linesWithScopeEnd ->
+    null  {% () => [] %}
+  | whitespaceOrNewline linesWithScopeEnd  {% ([space, lines]) => lines %}
+  | statementWithScopeEndAndNewline linesWithScopeEnd  {% ([first, rest]) => [first, ...rest] %}
+
 @{%
 
 interface Token {
@@ -195,6 +200,12 @@ function callOnNextToken(context: ParseContext, token: Token) {
 
 statementAndNewline ->
     statement %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space]) => { callOnNextToken(context, space);  return statement; } %}
+
+# Like `statementAndNewline` but has a scope end.
+statementWithScopeEndAndNewline ->
+    statement                                        %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, closeBrace);  return statement; } %}
+  | statement %whitespace                            %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, space1);      return statement; } %}
+  | statement %optionalWhitespaceAndMandatoryNewline %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, space1);      return statement; } %}
 
 statement ->
     scopedStatements                 {% ([value]) => [ value, new ParseContext() ] %}
@@ -588,7 +599,7 @@ forEachLoopVar ->
   | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, [varName, varNameContext], space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
 functionBody ->
-    optionalWhitespaceOrNewline %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([space1, braceOpen, space2, statements, braceClose]) => statements %}
+    optionalWhitespaceOrNewline %scopeOrArrayStart linesWithScopeEnd  {% ([space, braceOpen, statements]) => statements %}
 
 @{%
 
