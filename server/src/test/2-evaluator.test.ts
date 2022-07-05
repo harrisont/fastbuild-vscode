@@ -4475,41 +4475,19 @@ Expecting to see the following:
             });
         });
 
-        /*
         describe('Scope', () => {
-            it('TODO', () => {
+            it('Functions can only see passed in arguments', () => {
                 const input = `
+                    .MyVar = 'X'
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
+                    MyFunc()
                 `;
-                const expectedErrorMessage =
-`TODO`;
-                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
-            });
-
-            it('TODO', () => {
-                const input = `
-                `;
-                assertEvaluatedVariablesValueEqual(input, [
-
-                ]);
+                const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
             });
         });
-        */
 
         describe('Deferred evaluation', () => {
             it('Function evaluation is deferred until the call - Declaration works', () => {

@@ -2041,6 +2041,7 @@ function evaluateUserFunctionCall(
 
     // Call the function.
     let error: Error | null = null;
+    // User functions can only use passed-in arguments and not variables in scope where they are defined.
     context.scopeStack.withScope(() => {
         // Set a variable for each parameter.
         for (const [i, callParam] of call.parameters.entries()) {
