@@ -4538,7 +4538,7 @@ Expecting to see the following:
                     Func()
                 `;
                 const expectedErrorMessage = 'Excessive scope depth. Possible infinite recursion from user function calls.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 24, 2, 30));
             });
         });
     });

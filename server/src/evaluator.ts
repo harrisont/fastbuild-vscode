@@ -21,6 +21,8 @@ import { ParseDataProvider, UriStr } from './parseDataProvider';
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
+const MAX_SCOPE_STACK_DEPTH = 128;
+
 // This indicates a problem with the content being evaluated.
 export class EvaluationError extends Error {
     constructor(readonly range: SourceRange, message: string, ) {
@@ -659,6 +661,10 @@ class ScopeStack {
         this.push(false /*canAccessParentScopes*/);
         body();
         this.pop();
+    }
+
+    getDepth(): number {
+        return this.stack.length;
     }
 
     // Get a variable, searching from the current scope to the root.
@@ -2063,6 +2069,12 @@ function evaluateUserFunctionCall(
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
         const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
         const error = new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`);
+        return new DataAndMaybeError(result, error);
+    }
+
+    if (context.scopeStack.getDepth() > MAX_SCOPE_STACK_DEPTH) {
+        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
+        const error = new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.');
         return new DataAndMaybeError(result, error);
     }
 
