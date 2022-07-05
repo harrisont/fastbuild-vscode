@@ -28,6 +28,7 @@ It does not yet provide syntax highlighting. For that in the meantime, I recomme
 * The language server cannot know what environment variables will exist when FASTBuild is run, since they might be different than the environment variables that exist when the language server runs, so:
     * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
     * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
+* Only evaluates user functions if they are called at least once. This means that you cannot jump to the definition of a variable defined inside a user function if that user function is never called, for example.
 * Note that some of the language is not yet implemented. See [TODO](#todo) for details.
 
 ## Compatibility
@@ -91,7 +92,7 @@ Add more language server provider features:
 
 Improve performance:
 * Add server benchmarks.
-* Prevent unnecessarily re-evaluating on every keystroke while the user is typing. 
+* Prevent unnecessarily re-evaluating on every keystroke while the user is typing.
     * Potential solution #1: When a document-update event occurs while an existing one is still being processed, cancel the existing processing. Do so by: pass through a cancellation token, intermittently check if it has been canceled, and either return or raise an exception if so.
     * Potential solution #2: Add a "debounce". Wait until X milliseconds have passed since the last document change before processing the change.
         * Example: https://github.com/microsoft/vscode/blob/7bd6470e00f9aca9d8a4661778b94f31836142ce/extensions/json-language-features/server/src/jsonServer.ts#L305-L336

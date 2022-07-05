@@ -61,7 +61,7 @@ export class HoverProvider {
     onEvaluatedDataChanged(newEvaluatedData: EvaluatedData): void {
         this.evaluatedData = newEvaluatedData;
     }
-    
+
     onHover(params: HoverParams): Hover | null {
         const uri = params.textDocument.uri;
         const position = params.position;
@@ -69,7 +69,7 @@ export class HoverProvider {
 
         const possibleValues: Set<Value> = new Set();
         let firstEvaluatedVariable: EvaluatedVariable | null = null;
-    
+
         // Potential optmization: use a different data structure to allow for a more efficient search.
         for (const evaluatedVariable of evaluatedVariables) {
             if (uri == evaluatedVariable.range.uri
@@ -90,14 +90,14 @@ export class HoverProvider {
                 const value = possibleValues.values().next().value;
                 valueStr = valueToString(value);
             } else {
-                valueStr = 'Loop values:';
+                valueStr = 'Values:';
                 for (const value of possibleValues) {
                     valueStr += '\n' + valueToString(value);
                 }
             }
-    
+
             const hoverText = '```' + FASTBUILD_LANGUAGE_ID + '\n' + valueStr + '\n```';
-    
+
             const hover: Hover = {
                 contents: {
                     kind: MarkupKind.Markdown,
