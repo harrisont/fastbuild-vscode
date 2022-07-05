@@ -11,6 +11,11 @@ import {
 } from '../coreTypes';
 
 import {
+    ParseSourceRange,
+    createRange as createParseRange,
+} from '../parser';
+
+import {
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
@@ -95,6 +100,36 @@ function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues:
     const result = evaluateInput(input);
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
+}
+
+function getParseSourceRangeString(range: ParseSourceRange): string {
+    return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+}
+
+function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
+    assert.throws(
+        () => evaluateInput(input),
+        actualError => {
+            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
+            return true;
+        }
+    );
+}
+
+function assertEvaluationError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
+    assert.throws(
+        () => evaluateInput(input),
+        actualError => {
+            assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
+            const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
+            assert.deepStrictEqual(actualRange, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
+            return true;
+        }
+    );
 }
 
 describe('evaluator', () => {
@@ -4138,6 +4173,384 @@ describe('evaluator', () => {
                         false
                     ]);
                 });
+            });
+        });
+    });
+
+    describe('User functions', () => {
+        describe('Declare function without arguments', () => {
+            //
+            // Success cases: Basic no-arguments functions
+            //
+
+            it('Empty body', () => {
+                const input = `
+                    function Func(){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Simple body', () => {
+                const input = `
+                    function Func()
+                    {
+                        Print( 'X' )
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            //
+            // Error cases: Malformed functions
+            //
+
+            it('Missing function name', () => {
+                const input = `
+                    function
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • function-name (example: "MyFunctionName")`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
+            });
+
+            it('Missing declaration of arguments (variation 1)', () => {
+                const input = `
+                    function Func
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • parameters-start: "("`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
+            });
+
+            it('Missing declaration of arguments (variation 2)', () => {
+                const input = `
+                    function Func{}
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected input.
+| function Func{}
+|              ^
+Expecting to see one of the following:
+ • optional-whitespace-and-mandatory-newline (example: "<newline>")
+ • parameters-start: "("
+ • whitespace (example: " ")`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 33, 1, 34));
+            });
+
+            it('Missing body', () => {
+                const input = `
+                    function Func()
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • scope-or-Array-start: "{"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
+            });
+
+            it('Function name that is reserved', () => {
+                const input = `
+                    function true() {
+                    }
+                `;
+                const expectedErrorMessage = 'Cannot use function name "true" because it is reserved.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
+            });
+
+            // Error case: Duplicate definition. Functions must be uniquely named.
+            it('Duplicate definition', () => {
+                const input = `
+                    function Func(){
+                    }
+                    function Func(){
+                    }
+                `;
+                const expectedErrorMessage = 'Cannot use function name "Func" because it is already used by another user function. Functions must be uniquely named.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 29, 3, 33));
+            });
+        });
+
+        describe('Declare function with arguments', () => {
+            it('Single argument', () => {
+                const input = `
+                    function Func( .Arg ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Multiple arguments separated by spaces', () => {
+                const input = `
+                    function Func( .Arg1 .Arg2 .Arg3 ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Multiple arguments separated by commas', () => {
+                const input = `
+                    function Func( .Arg1, .Arg2, .Arg3 ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Arguments can have a trailing comma', () => {
+                const input = `
+                    function Func( .Arg1, ){
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Arguments must start with "."', () => {
+                const input = `
+                    function Func( Arg ){
+                    }
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected function-name: "Arg".
+| function Func( Arg ){
+|                ^^^
+Expecting to see one of the following:
+ • parameter-name (example: ".MyParameterName")
+ • parameters-end: ")"`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 35, 1, 36));
+            });
+
+            it('Argument names must be unique', () => {
+                const input = `
+                    function Func( .Arg .Arg ){
+                    }
+                `;
+                const expectedErrorMessage = 'User-function argument names must be unique.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 40, 1, 44));
+            });
+        });
+
+        describe('Call function without arguments', () => {
+            it('Empty body', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func()
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Simple body', () => {
+                const input = `
+                    function Func()
+                    {
+                        .Value = 1
+                        Print(.Value)
+                    }
+                    Func()
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+
+            it('Non-existent function', () => {
+                const input = `
+                    Func()
+                `;
+                const expectedErrorMessage = 'No function exists with the name "Func".';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 20, 1, 24));
+            });
+
+            it('Missing arguments block', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func
+                `;
+                const expectedErrorMessage =
+`Syntax error: Unexpected end of file.
+Expecting to see the following:
+ • function-parameters-start: "("`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(5, 0, 5, 1));
+            });
+
+            /*
+            it('TODO', () => {
+                const input = `
+                `;
+                const expectedErrorMessage =
+`TODO`;
+                assertParseSyntaxError(input, expectedErrorMessage, createParseRange(1, 0, 1, 0));
+            });
+
+            it('TODO', () => {
+                const input = `
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+
+                ]);
+            });
+
+            it('TODO', () => {
+                const input = `
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+
+                ]);
+            });
+
+            it('TODO', () => {
+                const input = `
+                `;
+                assertEvaluatedVariablesValueEqual(input, [
+
+                ]);
+            });
+            */
+        });
+
+        describe('Call function with arguments', () => {
+            it('Single argument', () => {
+                const input = `
+                    function Func(.Arg){
+                        Print(.Arg)
+                    }
+                    Func(1)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+
+            it('Multiple arguments separated by spaces', () => {
+                const input = `
+                    function Func(.Arg1 .Arg2){
+                        Print(.Arg1)
+                        Print(.Arg2)
+                    }
+                    Func(1 2)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1, 2]);
+            });
+
+            it('Multiple arguments separated by commas', () => {
+                const input = `
+                    function Func(.Arg1, .Arg2){
+                        Print(.Arg1)
+                        Print(.Arg2)
+                    }
+                    Func(1, 2)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1, 2]);
+            });
+
+            it('Wrong number of arguments (takes 0, passing 1)', () => {
+                const input = `
+                    function Func(){
+                    }
+                    Func(1)
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 0 arguments but passing 1.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 27));
+            });
+
+            it('Wrong number of arguments (takes 1, passing 0)', () => {
+                const input = `
+                    function Func(.Arg){
+                    }
+                    Func()
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 1 argument but passing 0.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 26));
+            });
+
+            it('Wrong number of arguments (takes 2, passing 1)', () => {
+                const input = `
+                    function Func(.Arg1, .Arg2){
+                    }
+                    Func(1)
+                `;
+                const expectedErrorMessage = 'User function "Func" takes 2 arguments but passing 1.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 27));
+            });
+        });
+
+        describe('Scope', () => {
+            it('Functions cannot access variable defined outside the function (using current-scope access)', () => {
+                const input = `
+                    .MyVar = 'X'
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
+                    MyFunc()
+                `;
+                const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
+            });
+            
+            it('Functions cannot access variable defined outside the function (using parent-scope access)', () => {
+                const input = `
+                    .MyVar = 'X'
+                    function MyFunc(){
+                        Print( ^MyVar )
+                    }
+                    MyFunc()
+                `;
+                const expectedErrorMessage = 'Referencing variable "MyVar" in a parent scope that is not defined in any parent scope.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
+            });
+        });
+
+        describe('Deferred evaluation', () => {
+            it('Function evaluation is deferred until the call - Declaration works', () => {
+                const input = `
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
+                `;
+                assertEvaluatedVariablesValueEqual(input, []);
+            });
+
+            it('Function evaluation is deferred until the call - Error occurs on invocation', () => {
+                const input = `
+                    function MyFunc(){
+                        Print( .MyVar )
+                    }
+                    MyFunc()
+                `;
+                const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 31, 2, 37));
+            });
+        });
+
+        describe('Nested functions', () => {
+            it('Functions may call other functions', () => {
+                const input = `
+                    function FuncA() {
+                        .MyVar = 1
+                        Print( .MyVar )
+                    }
+
+                    function FuncB() {
+                        FuncA()
+                    }
+
+                    FuncB()
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+        });
+
+        describe('Recursion', () => {
+            it('Recursion is supported, and a general cap on depth complexity prevents stack overflows', () => {
+                const input = `
+                    function Func(){
+                        Func()
+                    }
+                    Func()
+                `;
+                const expectedErrorMessage = 'Excessive scope depth. Possible infinite recursion from user function calls.';
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 24, 2, 30));
             });
         });
     });

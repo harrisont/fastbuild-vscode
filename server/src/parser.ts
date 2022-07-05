@@ -31,7 +31,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['doubleQuotedStringEnd', { value: 'double-quoted-String-end', symbol: '"', example: null }],
     ['startTemplatedVariable', { value: 'template-variable-start', symbol: '$', example: null }],
     ['endTemplatedVariable', { value: 'template-variable-end', symbol: '$', example: null }],
-    ['stringLiteral', { value: 'String-literal' , symbol: 'abc', example: null }],
+    ['stringLiteral', { value: 'String-literal' , symbol: null, example: 'abc' }],
     ['variableReferenceCurrentScope', { value: 'variable-reference', symbol: '.', example: null }],
     ['variableReferenceParentScope', { value: 'parent-scope-variable-reference', symbol: '^', example: null }],
     ['variableName', { value: 'variable-name', symbol: null, example: 'MyVarName' }],
@@ -47,7 +47,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['operatorAssignment', { value: 'assignment', symbol: '=', example: null }],
     ['operatorAddition', { value: 'addition', symbol: '+', example: null }],
     ['operatorSubtraction', { value: 'subtraction', symbol: '-', example: null }],
-    ['arrayItemSeparator', { value: 'Array-item-separator', symbol: ',', example: null }],
+    ['itemSeparator', { value: 'item-separator', symbol: ',', example: null }],
     ['structStart', { value: 'Struct-start', symbol: '[', example: null }],
     ['structEnd', { value: 'Struct-end', symbol: ']', example: null }],
     ['functionParametersStart', { value: 'function-parameters-start', symbol: '(', example: null }],
@@ -76,7 +76,7 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['keywordTest', { value: 'function-Test', symbol: 'Test', example: null }],
     ['keywordTextFile', { value: 'function-TextFile', symbol: 'TextFile', example: null }],
     ['keywordUnity', { value: 'function-Unity', symbol: 'Unity', example: null }],
-    ['keywordUserFunctionDeclaration', { value: 'function-UserFunctionDeclaration', symbol: 'UserFunctionDeclaration', example: null }],
+    ['keywordUserFunctionDeclaration', { value: 'user-function-declaration', symbol: 'UserFunctionDeclaration', example: null }],
     ['keywordUsing', { value: 'function-Using', symbol: 'Using', example: null }],
     ['keywordVCXProject', { value: 'function-VCXProject', symbol: 'VCXProject', example: null }],
     ['keywordVSProjectExternal', { value: 'function-VSProjectExternal', symbol: 'VSProjectExternal', example: null }],
@@ -95,6 +95,12 @@ const LEXER_TOKEN_NAME_TO_DATA = new Map<string, TokenData>([
     ['functionName', { value: 'function-name', symbol: null, example: 'MyFunctionName' }],
     ['parameterName', { value: 'parameter-name', symbol: null, example: '.MyParameterName' }],
 ]);
+
+function notNull<TValue>(value: TValue | null): value is TValue {
+    return value !== null;
+}
+
+export const RESERVED_SYMBOL_NAMES = new Set<string>([...LEXER_TOKEN_NAME_TO_DATA.values()].map(data => data.symbol).filter(notNull));
 
 function getTokenData(token: string): TokenData {
     const data = LEXER_TOKEN_NAME_TO_DATA.get(token);
@@ -213,17 +219,28 @@ function createParseErrorFromNearlyParseError(
     //             ^
     //     Unexpected functionParametersEnd token: ")". Instead, I was expecting to see one of the following:
     //     ...
-    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n.+\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
+    const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n(.+)\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
     if (match !== null) {
         // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
         const lineNum = parseInt(match[1]) - 1;
         const characterNum = parseInt(match[2]) - 1;
         const range = createRange(lineNum, characterNum, lineNum, characterNum + 1);
 
-        let errorReason: string = match[3];
+        let errorReason: string = match[4];
         let numErrorCharacters = 1;
-        if (errorReason === 'Unexpected input (lexer error).') {
-            errorReason = 'Unexpected input.';
+        if (errorReason === 'Unexpected endOfFile token: "<end-of-file>".') {
+            errorReason = 'Unexpected end of file.';
+            // There is nothing useful to show.
+            includeCodeLocationInError = false;
+        } else if (errorReason === 'Unexpected input (lexer error).') {
+            const lineThroughError: string = match[3].trim();
+            if (lineThroughError === '<end-of-file>') {
+                errorReason = 'Unexpected end of file.';
+                // There is nothing useful to show.
+                includeCodeLocationInError = false;
+            } else {
+                errorReason = 'Unexpected input.';
+            }
         } else {
             const errorReasonMatch = errorReason.match(/Unexpected ([^ ]+) token: "([^"]+)"(.+)/);
             if (errorReasonMatch !== null) {
@@ -235,7 +252,7 @@ function createParseErrorFromNearlyParseError(
                 numErrorCharacters = tokenInput.length;
             }
         }
-        const expected: string = match[4];
+        const expected: string = match[5];
         const expectedTokens = new Set<string>();
         // Until string.prototype.matchAll is available, use string.prototype.replace.
         expected.replace(
@@ -266,7 +283,7 @@ function createParseErrorFromNearlyParseError(
         return new ParseSyntaxError(parseErrorMessage, fileUri, range);
     } else {
         // We were unable to parse the location from the error, so use the whole document as the error range.
-        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.message}`, fileUri, createWholeDocumentRange());
+        return new ParseError(`Failed to parse error location from ParseError: ${nearlyParseError.stack}`, fileUri, createWholeDocumentRange());
     }
 }
 

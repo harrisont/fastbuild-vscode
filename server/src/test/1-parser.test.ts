@@ -18,13 +18,17 @@ function assertInputsGenerateSameParseResult(input1: string, input2: string): vo
     assert.deepStrictEqual(result1.statements, result2.statements);
 }
 
-function assertParseSyntaxError(input: string, expectedErrorMessage: string, range: ParseSourceRange): void {
+function getParseSourceRangeString(range: ParseSourceRange): string {
+    return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+}
+
+function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     assert.throws(
         () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
-        error => {
-            assert.strictEqual(error.name, 'ParseSyntaxError');
-            assert(error.message === expectedErrorMessage, `Error message <${error.message}> should be: <${expectedErrorMessage}>`);
-            assert.deepStrictEqual(error.range, range);
+        actualError => {
+            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
+            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
             return true;
         }
     );
@@ -895,7 +899,7 @@ describe('parser', () => {
     it('should error on using commas to separate struct items', () => {
         const input = `.MyVar = [ .A=1, .B=2 ]`;
         const expectedErrorMessage =
-`Syntax error: Unexpected Array-item-separator: ",".
+`Syntax error: Unexpected item-separator: ",".
 | .MyVar = [ .A=1, .B=2 ]
 |                ^
 Expecting to see one of the following:
@@ -2712,6 +2716,35 @@ Expecting to see one of the following:
                 });
             });
         }
+    });
+
+    describe('User function', () => {
+        it('Declare function with arguments', () => {
+            const input = `
+                function Func( .Arg1, .Arg2 ){
+                }
+            `;
+            assertParseResultsEqual(input, [
+                {
+                    type: 'userFunctionDeclaration',
+                    name: 'Func',
+                    nameRange: createRange(1, 25, 1, 29),
+                    parameters: [
+                        {
+                            type: 'userFunctionDeclarationParameter',
+                            name: 'Arg1',
+                            range: createRange(1, 31, 1, 36),
+                        },
+                        {
+                            type: 'userFunctionDeclarationParameter',
+                            name: 'Arg2',
+                            range: createRange(1, 38, 1, 43),
+                        },
+                    ],
+                    statements: [],
+                }
+            ]);
+        });
     });
 
     describe('Settings', () => {
