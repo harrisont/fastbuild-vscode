@@ -228,7 +228,7 @@ statement ->
   | directiveUndefine                {% ([valueWithContext]) => valueWithContext %}
   | directiveImport                  {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline lines %scopeOrArrayEnd  {% ([braceOpen, space, statements, braceClose]) => { return { type: 'scopedStatements', statements }; } %}
+scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline linesWithScopeEnd  {% ([braceOpen, space, statements]) => { return { type: 'scopedStatements', statements }; } %}
 
 @{%
 
