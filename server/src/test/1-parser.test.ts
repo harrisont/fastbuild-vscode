@@ -1263,7 +1263,17 @@ Expecting to see one of the following:
         ]);
     });
 
-    it('should work on an empty scope', () => {
+    it('should work on an empty scope on the same line', () => {
+        const input = `{}`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'scopedStatements',
+                statements: [],
+            }
+        ]);
+    });
+
+    it('should work on an empty scope on different lines', () => {
         const input = `
             {
             }
@@ -1301,6 +1311,36 @@ Expecting to see one of the following:
                             type: 'integer',
                             value: 123,
                             range: createRange(2, 25, 2, 28)
+                        }
+                    }
+                ],
+            }
+        ]);
+    });
+
+    it('should work on a scope with a statement on the same line', () => {
+        const input = `
+            { .MyVar = 123 }
+        `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'scopedStatements',
+                statements: [
+                    {
+                        type: 'variableDefinition',
+                        lhs: {
+                            name: {
+                                type: 'string',
+                                value: 'MyVar',
+                                range: createRange(1, 15, 1, 20)
+                            },
+                            scope: 'current',
+                            range: createRange(1, 14, 1, 20),
+                        },
+                        rhs: {
+                            type: 'integer',
+                            value: 123,
+                            range: createRange(1, 23, 1, 26)
                         }
                     }
                 ],
