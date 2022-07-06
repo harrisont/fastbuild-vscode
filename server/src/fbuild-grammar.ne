@@ -170,12 +170,17 @@ main -> lines %endOfFile  {% ([lines, endOfFile]) => lines %}
 lines ->
     null  {% () => [] %}
   | whitespaceOrNewline lines  {% ([space, lines]) => lines %}
-  | statementAndNewline lines  {% ([first, rest]) => [first, ...rest] %}
+  | statement %optionalWhitespaceAndMandatoryNewline lines  {% ([[firstStatement, firstStatementContext], space, rest]) => { callOnNextToken(firstStatementContext, space); return [firstStatement, ...rest]; } %}
 
+# Like `lines` but has a scope end, which can come before the newline.
 linesWithScopeEnd ->
-    null  {% () => [] %}
+    %scopeOrArrayEnd  {% () => [] %}
   | whitespaceOrNewline linesWithScopeEnd  {% ([space, lines]) => lines %}
-  | statementWithScopeEndAndNewline linesWithScopeEnd  {% ([first, rest]) => [first, ...rest] %}
+  # Statement with scope end.
+  | statement             %scopeOrArrayEnd  {% ([[statement, context],        closeBrace]) => { callOnNextToken(context, closeBrace); return [statement]; } %}
+  | statement %whitespace %scopeOrArrayEnd  {% ([[statement, context], space, closeBrace]) => { callOnNextToken(context, space    ); return [statement]; } %}
+  # Multiple statements.
+  | statement %optionalWhitespaceAndMandatoryNewline linesWithScopeEnd  {% ([[firstStatement, firstStatementContext], space, rest]) => { callOnNextToken(firstStatementContext, space); return [firstStatement, ...rest]; } %}
 
 @{%
 
@@ -198,15 +203,6 @@ function callOnNextToken(context: ParseContext, token: Token) {
 
 %}
 
-statementAndNewline ->
-    statement %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space]) => { callOnNextToken(context, space);  return statement; } %}
-
-# Like `statementAndNewline` but has a scope end.
-statementWithScopeEndAndNewline ->
-    statement                                        %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, closeBrace);  return statement; } %}
-  | statement %whitespace                            %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, space1);      return statement; } %}
-  | statement %optionalWhitespaceAndMandatoryNewline %scopeOrArrayEnd %optionalWhitespaceAndMandatoryNewline  {% ([[statement, context], space1, closeBrace, space2]) => { callOnNextToken(context, space1);      return statement; } %}
-
 statement ->
     scopedStatements                 {% ([value]) => [ value, new ParseContext() ] %}
   | variableDefinition               {% ([valueWithContext]) => valueWithContext %}
@@ -228,7 +224,7 @@ statement ->
   | directiveUndefine                {% ([valueWithContext]) => valueWithContext %}
   | directiveImport                  {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart %optionalWhitespaceAndMandatoryNewline linesWithScopeEnd  {% ([braceOpen, space, statements]) => { return { type: 'scopedStatements', statements }; } %}
+scopedStatements -> %scopeOrArrayStart linesWithScopeEnd  {% ([braceOpen, statements]) => { return { type: 'scopedStatements', statements }; } %}
 
 @{%
 
