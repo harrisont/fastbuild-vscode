@@ -791,7 +791,7 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a struct with multiple items', () => {
+    it('should work on assigning a struct with multiple items on multiple lines', () => {
         const input = `
             .MyVar = [
                 .MyBool = true
@@ -867,6 +867,66 @@ describe('parser', () => {
                         }
                     ],
                     range: createRange(1, 21, 5, 13),
+                }
+            }
+        ]);
+    });
+
+    it('should work on assigning a struct with multiple items on a single line', () => {
+        const input = `
+            .MyVar = [ .MyBool = true .MyInt = 123 ]
+            `;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(1, 13, 1, 18)
+                    },
+                    scope: 'current',
+                    range: createRange(1, 12, 1, 18),
+                },
+                rhs: {
+                    type: 'struct',
+                    statements: [
+                        {
+                            type: 'variableDefinition',
+                            lhs: {
+                                name: {
+                                    type: 'string',
+                                    value: 'MyBool',
+                                    range: createRange(1, 24, 1, 30)
+                                },
+                                scope: 'current',
+                                range: createRange(1, 23, 1, 30),
+                            },
+                            rhs: {
+                                type: 'boolean',
+                                value: true,
+                                range: createRange(1, 33, 1, 37)
+                            }
+                        },
+                        {
+                            type: 'variableDefinition',
+                            lhs: {
+                                name: {
+                                    type: 'string',
+                                    value: 'MyInt',
+                                    range: createRange(1, 39, 1, 44)
+                                },
+                                scope: 'current',
+                                range: createRange(1, 38, 1, 44),
+                            },
+                            rhs: {
+                                type: 'integer',
+                                value: 123,
+                                range: createRange(1, 47, 1, 50)
+                            }
+                        },
+                    ],
+                    range: createRange(1, 21, 1, 52),
                 }
             }
         ]);

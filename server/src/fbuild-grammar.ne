@@ -554,7 +554,7 @@ nonEmptyStructStatements ->
     optionalWhitespaceOrNewline statement                      {% ([space1, [statement, context]        ]) => {                                   return [[statement], context]; } %}
   | optionalWhitespaceOrNewline statement whitespaceOrNewline  {% ([space1, [statement, context], space2]) => { callOnNextToken(context, space2); return [[statement], context]; } %}
     # Item and then another item(s), separated by a newline.
-  | optionalWhitespaceOrNewline statement %optionalWhitespaceAndMandatoryNewline nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2); return [[firstStatement, ...restStatements], restContext]; } %}
+  | optionalWhitespaceOrNewline statement whitespaceOrNewline nonEmptyStructStatements  {% ([space1, [firstStatement, firstContext], space2, [restStatements, restContext]]) => { callOnNextToken(firstContext, space2); return [[firstStatement, ...restStatements], restContext]; } %}
 
 @{%
 
