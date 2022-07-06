@@ -4982,7 +4982,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, ['ABC']);
         });
 
-        it('#if / #else can be used inline in an assignment expression', () => {
+        it('#if / #else can be used inline in a String-assignment expression', () => {
             const input = `
                 .Value
                     = 'A'
@@ -4992,6 +4992,23 @@ Expecting to see the following:
                     + 'b'
                 #endif
                     + 'C'
+                Print( .Value )
+            `;
+
+            assertEvaluatedVariablesValueEqual(input, ['AbC']);
+        });
+
+        it('#if / #else can be used inline in a StringArray-assignment expression', () => {
+            const input = `
+                .Value = {
+                    'A'
+                    #if !${builtInDefine}
+                        'B'
+                    #else
+                        'b'
+                    #endif
+                    'C'
+                }
                 Print( .Value )
             `;
 
