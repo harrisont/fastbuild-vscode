@@ -534,6 +534,8 @@ nonEmptyArrayContents ->
   | optionalWhitespaceOrNewline rValue %optionalWhitespaceAndMandatoryNewline                nonEmptyArrayContents  {% ([space1, [first, firstContext], space2,            [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
   | optionalWhitespaceOrNewline rValue                                        %itemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext],         separator, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [[first, ...rest], restContext]; } %}
   | optionalWhitespaceOrNewline rValue whitespaceOrNewline                    %itemSeparator nonEmptyArrayContents  {% ([space1, [first, firstContext], space2, separator, [rest, restContext]]) => { callOnNextToken(firstContext, space2);    return [[first, ...rest], restContext]; } %}
+    # #if
+  | optionalWhitespaceOrNewline directiveIfContainingArrayContents arrayContents {% ([space, directiveIf, [rest, restContext]]) => [[directiveIf, ...rest], restContext] %}
 
 struct -> %structStart structContents %structEnd  {% ([braceOpen, [statements, context], braceClose]) => {
     callOnNextToken(context, braceClose);
@@ -871,6 +873,11 @@ directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
 directiveIf ->
     %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements,                                        directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf) }; } %}
   | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf) }; } %}
+
+# Like `directIf` but the contents can only be `arrayContents`.
+directiveIfContainingArrayContents ->
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, condition, space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, condition, space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
 
 directiveIfConditionOrExpression ->
     # Single item

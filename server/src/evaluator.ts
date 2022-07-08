@@ -1325,52 +1325,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
             } else if (isParsedStatementDirectiveIf(statement)) {  // #if
-                // Evaluate the condition, which is an array of AND statements OR'd together.
-                const orExpressions = statement.condition;
-                let orExpressionResult = false;
-                for (const andExpressions of orExpressions) {
-                    let andExpressionResult = true;
-                    for (const conditionTermOrNot of andExpressions) {
-                        const term = conditionTermOrNot.term;
-                        const invert = conditionTermOrNot.invert;
-                        let evaulatedTerm = false;
-                        if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
-                            evaulatedTerm = context.defines.has(term.symbol);
-                        } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
-                            // The language server cannot know what environment variables will exist when FASTBuild is run,
-                            // so always assume "exists(...)" evaluates to false.
-                            evaulatedTerm = false;
-                        } else if (isParsedDirectiveIfConditionTermFileExists(term)) {
-                            const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
-                            evaulatedTerm = context.fileSystem.fileExists(fileUri);
-                        } else {
-                            const rangeStart = statement.rangeStart;
-                            const range = SourceRange.create(context.thisFbuildUri, rangeStart.line, rangeStart.character, rangeStart.line, Number.MAX_VALUE);
-                            const error = new InternalEvaluationError(range, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`);
-                            return new DataAndMaybeError(result, error);
-                        }
-
-                        if (invert) {
-                            evaulatedTerm = !evaulatedTerm;
-                        }
-
-                        // All parts of the AND expression must be true for the expression to be true.
-                        if (!evaulatedTerm) {
-                            andExpressionResult = false;
-                            break;
-                        }
-                    }
-
-                    // Any part of the OR expression must be true for the expression to be true.
-                    if (andExpressionResult) {
-                        orExpressionResult = true;
-                        break;
-                    }
+                const evaluatedConditionAndMaybeError = evaluateDirectiveIfCondition(statement, context);
+                if (evaluatedConditionAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
                 }
 
                 // Evaluate the '#if' body statements if the condition was true.
                 // Otherwise, evaluate the '#else' body statements.
-                const statements = orExpressionResult ? statement.ifStatements : statement.elseStatements;
+                const statements = evaluatedConditionAndMaybeError.data ? statement.ifStatements : statement.elseStatements;
                 const evaluatedStatementsAndMaybeError = evaluateStatements(statements, context);
                 const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                 pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
@@ -1465,18 +1427,83 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
             },
             evaluatedAndMaybeError.error);
     } else if (isParsedArray(rValue)) {
-        const result: EvaluatedRValue = {
-            value: [],
+        const evaluatedAndMaybeError = evaluateRValueArray(rValue.value, rValue.range, context);
+        const evaluated = evaluatedAndMaybeError.data;
+        if (evaluatedAndMaybeError.error !== null) {
+            const result: EvaluatedRValue = {
+                value: [],
+                range: rValue.range,
+                evaluatedVariables: [],
+                variableReferences: [],
+                variableDefinitions: [],
+            };
+            return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
+        }
+        return new DataAndMaybeError({
+            value: evaluated.value,
+            range: rValue.range,
+            evaluatedVariables: evaluated.evaluatedVariables,
+            variableReferences: evaluated.variableReferences,
+            variableDefinitions: evaluated.variableDefinitions,
+        });
+    } else if (isParsedBoolean(rValue) || isParsedInteger(rValue)) {
+        return new DataAndMaybeError({
+            value: rValue.value,
             range: rValue.range,
             evaluatedVariables: [],
             variableReferences: [],
             variableDefinitions: [],
-        };
-        result.value = [];
+        });
+    } else {
+        const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
+        return createErrorEvaluatedRValue(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
+    }
+}
 
+function evaluateRValueArray(
+    rValue: any[],
+    range: ParseSourceRange,
+    context: EvaluationContext
+): DataAndMaybeError<EvaluatedRValue>
+{
+    const result: EvaluatedRValue = {
+        value: [],
+        range,
+        evaluatedVariables: [],
+        variableReferences: [],
+        variableDefinitions: [],
+    };
+    result.value = [];
 
-        let firstItemTypeNameA: string | null = null;
-        for (const item of rValue.value) {
+    let firstItemTypeNameA: string | null = null;
+    for (const item of rValue) {
+        // Specially handle a #if inside an array's contents.
+        if (isParsedStatementDirectiveIf(item)) {
+            const directiveIfStatement = item;
+            const evaluatedConditionAndMaybeError = evaluateDirectiveIfCondition(directiveIfStatement, context);
+            if (evaluatedConditionAndMaybeError.error !== null) {
+                return new DataAndMaybeError(result, evaluatedConditionAndMaybeError.error);
+            }
+
+            // Evaluate the '#if' body statements if the condition was true.
+            // Otherwise, evaluate the '#else' body statements.
+            const contents = evaluatedConditionAndMaybeError.data ? directiveIfStatement.ifStatements : directiveIfStatement.elseStatements;
+            const evaluatedAndMaybeError = evaluateRValueArray(contents, range, context);
+            const evaluated = evaluatedAndMaybeError.data;
+            pushToFirstArray(result.evaluatedVariables, evaluated.evaluatedVariables);
+            pushToFirstArray(result.variableReferences, evaluated.variableReferences);
+            pushToFirstArray(result.variableDefinitions, evaluated.variableDefinitions);
+            if (evaluatedAndMaybeError.error !== null) {
+                return new DataAndMaybeError(result, evaluatedAndMaybeError.error);
+            }
+
+            if (!(evaluated.value instanceof Array)) {
+                const error = new InternalEvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), 'Bug: directive if ("#if") body must evaluate to an Array.');
+                return new DataAndMaybeError(result, error);
+            }
+
+            pushToFirstArray(result.value, evaluated.value);
+        } else {
             const evaluatedAndMaybeError = evaluateRValue(item, context);
             const evaluated = evaluatedAndMaybeError.data;
             pushToFirstArray(result.evaluatedVariables, evaluated.evaluatedVariables);
@@ -1512,19 +1539,8 @@ function evaluateRValue(rValue: any, context: EvaluationContext): DataAndMaybeEr
                 result.value.push(evaluated.value);
             }
         }
-        return new DataAndMaybeError(result);
-    } else if (isParsedBoolean(rValue) || isParsedInteger(rValue)) {
-        return new DataAndMaybeError({
-            value: rValue.value,
-            range: rValue.range,
-            evaluatedVariables: [],
-            variableReferences: [],
-            variableDefinitions: [],
-        });
-    } else {
-        const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-        return createErrorEvaluatedRValue(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
     }
+    return new DataAndMaybeError(result);
 }
 
 function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): DataAndMaybeError<EvaluatedEvaluatedVariable> {
@@ -1976,6 +1992,58 @@ function evaluateIfCondition(
         const error = new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`);
         return new DataAndMaybeError(result, error);
     }
+}
+
+
+// Evaluate the condition, which is an array of AND statements OR'd together.
+function evaluateDirectiveIfCondition(
+    statement: ParsedStatementDirectiveIf,
+    context: EvaluationContext
+): DataAndMaybeError<boolean>
+{
+    let result = false;
+    const orExpressions = statement.condition;
+    for (const andExpressions of orExpressions) {
+        let andExpressionResult = true;
+        for (const conditionTermOrNot of andExpressions) {
+            const term = conditionTermOrNot.term;
+            const invert = conditionTermOrNot.invert;
+            let evaulatedTerm = false;
+            if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
+                evaulatedTerm = context.defines.has(term.symbol);
+            } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
+                // The language server cannot know what environment variables will exist when FASTBuild is run,
+                // so always assume "exists(...)" evaluates to false.
+                evaulatedTerm = false;
+            } else if (isParsedDirectiveIfConditionTermFileExists(term)) {
+                const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
+                evaulatedTerm = context.fileSystem.fileExists(fileUri);
+            } else {
+                const rangeStart = statement.rangeStart;
+                const range = SourceRange.create(context.thisFbuildUri, rangeStart.line, rangeStart.character, rangeStart.line, Number.MAX_VALUE);
+                const error = new InternalEvaluationError(range, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`);
+                return new DataAndMaybeError(false, error);
+            }
+
+            if (invert) {
+                evaulatedTerm = !evaulatedTerm;
+            }
+
+            // All parts of the AND expression must be true for the expression to be true.
+            if (!evaulatedTerm) {
+                andExpressionResult = false;
+                break;
+            }
+        }
+
+        // Any part of the OR expression must be true for the expression to be true.
+        if (andExpressionResult) {
+            result = true;
+            break;
+        }
+    }
+
+    return new DataAndMaybeError(result);
 }
 
 function evaluateUserFunctionDeclaration(
