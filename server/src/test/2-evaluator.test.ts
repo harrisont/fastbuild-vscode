@@ -5015,7 +5015,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [['A', 'B', 'C']]);
         });
 
-        it.only('#if / #else can be used inline in a Struct-assignment expression', () => {
+        it('#if / #else can be used inline in a Struct-assignment expression', () => {
             const input = `
                 .Value = [
                     .A = 1
