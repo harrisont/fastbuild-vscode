@@ -5002,7 +5002,7 @@ Expecting to see the following:
             const input = `
                 .Value = {
                     'A'
-                    #if !${builtInDefine}
+                    #if ${builtInDefine}
                         'B'
                     #else
                         'b'
@@ -5012,7 +5012,33 @@ Expecting to see the following:
                 Print( .Value )
             `;
 
-            assertEvaluatedVariablesValueEqual(input, ['AbC']);
+            assertEvaluatedVariablesValueEqual(input, [['A', 'B', 'C']]);
+        });
+
+        it.only('#if / #else can be used inline in a Struct-assignment expression', () => {
+            const input = `
+                .Value = [
+                    .A = 1
+                    #if ${builtInDefine}
+                        .B = 2
+                    #else
+                        .B = 22
+                    #endif
+                    .C = 3
+                ]
+                Print( .Value )
+            `;
+
+            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22) };
+            const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26) };
+            const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22) };
+            assertEvaluatedVariablesValueEqual(input, [
+                Struct.from(Object.entries({
+                    A: new StructMember(1, myVarADefinition),
+                    B: new StructMember(2, myVarBDefinition),
+                    C: new StructMember(3, myVarCDefinition),
+                }))
+            ]);
         });
     });
 
