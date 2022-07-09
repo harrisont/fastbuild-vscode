@@ -881,15 +881,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 let variable: ScopeVariable | null = null;
+                let existingValue: Value | null = null;
                 // Copy the RHS value so that future modifications to the value do not modify the RHS value.
                 const value = deepCopyValue(evaluatedRhs.value);
                 if (lhs.scope === 'current') {
-                    const noExistingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null;
+                    const existingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value);
+                    if (existingVariable !== null) {
+                        existingValue = existingVariable.value;
+                    }
 
                     const definition = context.scopeStack.createVariableDefinition(lhsRange);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
 
-                    if (noExistingVariable) {
+                    if (existingVariable === null) {
                         // The definition's LHS is a variable definition.
                         result.variableDefinitions.push(variable.definition);
                     }
@@ -899,7 +903,31 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, maybeVariable.getError());
                     }
                     variable = maybeVariable.getValue();
+                    existingValue = variable.value;
                     variable.value = value;
+                }
+
+                // Assigning a non-Array to an Array results in an Array with a single item: the RHS.
+                if (existingValue !== null && existingValue instanceof Array && !(value instanceof Array)) {
+                    if (existingValue.length === 0) {
+                        // Assignment to an empty Array: the RHS can be any valid Array.
+                        if (typeof value !== 'string' && !(value instanceof Struct)) {
+                            const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
+                            const error = new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`);
+                            return new DataAndMaybeError(result, error);
+                        }
+                    } else {
+                        // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
+                        const lhsFirstItem = existingValue[0];
+                        if ((typeof lhsFirstItem === 'string' && typeof value !== 'string')
+                            || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
+                        {
+                            const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
+                            const error = new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`);
+                            return new DataAndMaybeError(result, error);
+                        }
+                    }
+                    variable.value = [value];
                 }
 
                 statementLhsVariable = variable;

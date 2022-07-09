@@ -381,6 +381,84 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('assigning a String to an ArrayOfStrings in the current scope results in an ArrayOfStrings with a single item: the RHS String', () => {
+            const input = `
+                .MyVar = { 'old1', 'old2' }
+                .MyVar = 'new'
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['new']
+            ]);
+        });
+
+        it('assigning a String to an ArrayOfStrings in a parent scope results in an ArrayOfStrings with a single item: the RHS String', () => {
+            const input = `
+                .MyVar = { 'old1', 'old2' }
+                {
+                    ^MyVar = 'new'
+                }
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['new']
+            ]);
+        });
+
+        it('assigning a String to an empty Array results in an ArrayOfStrings with a single item: the RHS String', () => {
+            const input = `
+                .MyVar = {}
+                .MyVar = 'new'
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['new']
+            ]);
+        });
+
+        it('assigning an ArrayOfStrings to an empty Array results in an ArrayOfStrings with the RHS ArrayOfStrings', () => {
+            const input = `
+                .MyVar = {}
+                .MyVar = { 'new' }
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['new']
+            ]);
+        });
+
+        it('assigning an empty Array to an empty Array results in an ArrayOfStrings with the RHS ArrayOfStrings', () => {
+            const input = `
+                .MyVar = {}
+                .MyVar = {}
+                .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                []
+            ]);
+        });
+
+        it('assigning a Number to an empty Array errors', () => {
+            const input = `
+                .MyVar = {}
+                .MyVar = 1
+                .Copy = .MyVar
+            `;
+            const expectedErrorMessage = 'Cannot assign an Integer to an Array. Arrays can only contain Strings or Structs.';
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 25, 2, 26));
+        });
+
+        it('assigning a String an ArrayOfStructs errors', () => {
+            const input = `
+                .MyStruct = []
+                .MyVar = { .MyStruct }
+                .MyVar = 'new'
+                .Copy = .MyVar
+            `;
+            const expectedErrorMessage = 'Cannot assign a String to an Array of Structs.';
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 25, 3, 30));
+        });
+
         it('should evaluate an array of string templates', () => {
             const input = `
                 .Type = 'thing'
@@ -2447,7 +2525,7 @@ describe('evaluator', () => {
                 }))
             ]);
         });
-        
+
         it('body is on the same line', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
@@ -2754,7 +2832,7 @@ describe('evaluator', () => {
                     }
                 );
             });
-            
+
             it('Body on the same line', () => {
                 const input = `
                     .Result = false
@@ -4367,7 +4445,7 @@ Expecting to see one of the following:
                 const expectedErrorMessage = 'User-function argument names must be unique.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 40, 1, 44));
             });
-            
+
             it('Body on the same line', () => {
                 const input = `
                     function Func( .Arg ){ Print( .Arg ) }
@@ -4512,7 +4590,7 @@ Expecting to see the following:
                 const expectedErrorMessage = 'Referencing variable "MyVar" that is not defined in the current scope or any of the parent scopes.';
                 assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 31, 3, 37));
             });
-            
+
             it('Functions cannot access variable defined outside the function (using parent-scope access)', () => {
                 const input = `
                     .MyVar = 'X'
