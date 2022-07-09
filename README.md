@@ -11,7 +11,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
     * [Testing](#testing)
     * [Releasing the Visual Studio Code Extension](#releasing-the-visual-studio-code-extension)
     * [Implementation Notes](#implementation-notes)
-    * [TODO](#todo)
+    * [Backlog](#backlog)
 
 ## Functionality
 
@@ -29,7 +29,7 @@ It does not yet provide syntax highlighting. For that in the meantime, I recomme
     * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
     * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
 * Only evaluates user functions if they are called at least once. This means that you cannot jump to the definition of a variable defined inside a user function if that user function is never called, for example.
-* Note that some of the language is not yet implemented. See [TODO](#todo) for details.
+* Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](#support-full-fastbuild-syntax) backlog item for details.
 
 ## Compatibility
 
@@ -37,7 +37,7 @@ Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.05 ([FASTBuild
 
 It may be compatible with a newer version of FASTBuild, but this was the latest version tested.
 
-Note that some of the language is not yet implemented. See [TODO](#todo) for details.
+Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](#support-full-fastbuild-syntax) backlog item for details.
 
 ## Installing the Visual Studio Code Extension
 
@@ -73,22 +73,28 @@ TODO
 * Other resources:
     * [RegEx101](https://regex101.com/): regex playgound
 
-### TODO
+### Backlog
 
-Add server tests. This will also be useful for using in benchmarks.
+#### Release a Visual Studio Code extension
 
-Support full FASTBuild syntax:
-* Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
+[Docs](https://code.visualstudio.com/api/get-started/wrapping-up#testing-and-publishing)
 
-Release a Visual Studio Code extension ([docs](https://code.visualstudio.com/api/get-started/wrapping-up#testing-and-publishing)).
+When there's an extension created:
 * Update the [README's release instructions](#releasing-the-visual-studio-code-extension).
 * Update the [README's install instructions](#installing-the-visual-studio-code-extension).
 
-Add more language server provider features:
+#### Add more language server provider features
+
 * Support listing document symbols, including alias names ([docs](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#show-all-symbol-definitions-within-a-document)).
 * Support "go to definition" and "find references" for aliases.
 
-Improve performance:
+#### Support full FASTBuild syntax
+
+* Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported) ([docs](https://www.fastbuild.org/docs/functions/foreach.html)). This is low priority, since I have never seen it used.
+
+#### Improve performance
+
+* Add server tests. This will also be useful for using in benchmarks.
 * Add server benchmarks.
 * Prevent unnecessarily re-evaluating on every keystroke while the user is typing.
     * Potential solution #1: When a document-update event occurs while an existing one is still being processed, cancel the existing processing. Do so by: pass through a cancellation token, intermittently check if it has been canceled, and either return or raise an exception if so.
@@ -125,6 +131,7 @@ Improve performance:
         * If cache, store (statement number, inputs, outputs), where inputs is the value of and variables read from outside the scope, and outputs is the value of variables modified outside the scope.
         * On processing scope, if cached and inputs are the same, set the outputs and skip processing the scope.
 
-Improve docs:
+#### Improve docs:
+
 * Update the [Implementation Notes](#implementation-notes) section with a high-level architecture (lexer, parser, evaluator).
 * Update the [Implementation Notes](#implementation-notes) section with a file-layout overview.
