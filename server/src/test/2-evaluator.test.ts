@@ -4507,7 +4507,7 @@ Expecting to see the following:
         });
 
         describe('Call function with arguments', () => {
-            it('Single argument', () => {
+            it('Single literal argument', () => {
                 const input = `
                     function Func(.Arg){
                         Print(.Arg)
@@ -4515,6 +4515,17 @@ Expecting to see the following:
                     Func(1)
                 `;
                 assertEvaluatedVariablesValueEqual(input, [1]);
+            });
+
+            it('Single evaluated argument', () => {
+                const input = `
+                    .MyVar = 1
+                    function Func(.Arg){
+                        Print(.Arg)
+                    }
+                    Func(.MyVar)
+                `;
+                assertEvaluatedVariablesValueEqual(input, [1, 1]);
             });
 
             it('Body on the same line', () => {

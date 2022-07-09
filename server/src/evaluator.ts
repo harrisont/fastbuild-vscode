@@ -2174,6 +2174,21 @@ function evaluateUserFunctionCall(
         return new DataAndMaybeError(result, error);
     }
 
+    // Evaluate the call-parameters' values.
+    // Note that we evaluate the call's parameter in the current context, not the function call context.
+    const paramValues: Value[] = new Array(call.parameters.length);
+    for (const [i, callParam] of call.parameters.entries()) {
+        const evaluatedValueAndMaybeError = evaluateRValue(callParam.value, context);
+        const evaluatedValue = evaluatedValueAndMaybeError.data;
+        pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
+        pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
+        pushToFirstArray(result.variableDefinitions, evaluatedValue.variableDefinitions);
+        if (evaluatedValueAndMaybeError.error !== null) {
+            return new DataAndMaybeError(result, evaluatedValueAndMaybeError.error);
+        }
+        paramValues[i] = evaluatedValue.value;
+    }
+
     //
     // Call the function.
     //
@@ -2198,26 +2213,14 @@ function evaluateUserFunctionCall(
 
         // Set a variable for each parameter.
         for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
-            const callParam = call.parameters[i];
             if (funcDeclarationParam.definition === undefined) {
+                const callParam = call.parameters[i];
                 const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
                 throw new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
             }
 
-            // Evaluate the call-parameter's value.
-            // Note that we evaluate the call's parameter in the current context, not the function call context.
-            const evaluatedValueAndMaybeError = evaluateRValue(callParam.value, context);
-            const evaluatedValue = evaluatedValueAndMaybeError.data;
-            pushToFirstArray(result.evaluatedVariables, evaluatedValue.evaluatedVariables);
-            pushToFirstArray(result.variableReferences, evaluatedValue.variableReferences);
-            pushToFirstArray(result.variableDefinitions, evaluatedValue.variableDefinitions);
-            if (evaluatedValueAndMaybeError.error !== null) {
-                error = evaluatedValueAndMaybeError.error;
-                return;
-            }
-
             // Note that we set the variable in the function call context, not the current context.
-            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, evaluatedValue.value, funcDeclarationParam.definition);
+            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], funcDeclarationParam.definition);
         }
 
         const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, functionCallContext);
