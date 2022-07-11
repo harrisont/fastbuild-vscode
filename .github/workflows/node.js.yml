@@ -27,5 +27,6 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+    - run: node server/node_modules/nearley/bin/nearleyc.js server/src/fbuild-grammar.ne --out server/src/fbuild-grammar.ts
     - run: npm run compile
     - run: npm test
