@@ -71,11 +71,11 @@ function createFileRange(uri: UriStr, startLine: number, startCharacter: number,
     );
 }
 
-function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>): EvaluatedData {
+function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluatedData {
     const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
         fileSystem,
-        { enableDiagnostics: true, includeCodeLocationInError: true }
+        { enableDiagnostics, includeCodeLocationInError: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
     const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);
@@ -90,14 +90,14 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
     return evaluatedStatementsAndMaybeError.data;
 }
 
-function evaluateInput(input: FileContents): EvaluatedData {
+function evaluateInput(input: FileContents, enableDiagnostics: boolean): EvaluatedData {
     const thisFbuildUri = 'file:///dummy.bff';
-    return evaluateInputs(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]));
+    return evaluateInputs(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), enableDiagnostics);
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
 function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues: Value[]): void {
-    const result = evaluateInput(input);
+    const result = evaluateInput(input, true /*enableDiagnostics*/);
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
 }
@@ -107,8 +107,11 @@ function getParseSourceRangeString(range: ParseSourceRange): string {
 }
 
 function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
+    // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
+    const enableDiagnostics = false;
+
     assert.throws(
-        () => evaluateInput(input),
+        () => evaluateInput(input, enableDiagnostics),
         actualError => {
             assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
@@ -119,8 +122,11 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
 }
 
 function assertEvaluationError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
+    // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
+    const enableDiagnostics = false;
+
     assert.throws(
-        () => evaluateInput(input),
+        () => evaluateInput(input, enableDiagnostics),
         actualError => {
             assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
             assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
@@ -737,7 +743,7 @@ describe('evaluator', () => {
                         Print( ._CURRENT_BFF_DIR_ )
                     `
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -781,7 +787,7 @@ describe('evaluator', () => {
                         Print( ._WORKING_DIR_ )
                     `
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             const root_fbuild_dir = `${path.sep}some${path.sep}path`;
 
@@ -1783,7 +1789,7 @@ describe('evaluator', () => {
                 .MyVar2 = 'MyValue2'
                 .Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue1',
@@ -1802,7 +1808,7 @@ describe('evaluator', () => {
                 .MyVar = 'MyValue'
                 .Copy = .MyVar
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'MyValue',
@@ -1819,7 +1825,7 @@ describe('evaluator', () => {
                 .MyVar = 1
                 .MyVar = 2
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedDefinitions: VariableDefinition[] = [
                 {
                     id: 1,
@@ -1835,7 +1841,7 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = 1
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -1853,7 +1859,7 @@ describe('evaluator', () => {
                 .MyVar = 1
                 .MyVar + 2
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -1878,7 +1884,7 @@ describe('evaluator', () => {
                 .MyVar1 = 1
                 .MyVar2 = .MyVar1
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -1910,7 +1916,7 @@ describe('evaluator', () => {
                 .MyVar1 = 'hello'
                 .MyVar2 = '$MyVar1$ world'
             `;
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
                     definition: {
@@ -2022,7 +2028,7 @@ describe('evaluator', () => {
                 Using( .MyStruct )
             `;
 
-            const result = evaluateInput(input);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
 
             const rangeMyVar1 = createFileRange('file:///dummy.bff', 1, 16, 1, 23);
             const rangeMyStructMyVar1 = createFileRange('file:///dummy.bff', 3, 20, 3, 27);
@@ -4314,7 +4320,7 @@ Expecting to see the following:
                         .Copy = .FromHelper
                     `
                 ]
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -4387,7 +4393,7 @@ Expecting to see the following:
                         Print( 'Hello $Name$' )
                     `
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -4432,7 +4438,7 @@ Expecting to see the following:
                         Print( .Message )
                     `
                 ]
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -4473,7 +4479,7 @@ Expecting to see the following:
                         Print( 'Hello $Name$' )
                     `
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -4513,7 +4519,7 @@ Expecting to see the following:
                         #include '../greetings.bff'
                     `
                 ]
-            ]));
+            ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -4826,7 +4832,7 @@ Expecting to see the following:
                     'file:///base/sibling.txt',
                     ''
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -4847,7 +4853,7 @@ Expecting to see the following:
                     'file:///uncle.txt',
                     ''
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -4868,7 +4874,7 @@ Expecting to see the following:
                     'file:///base/sibling.txt',
                     ''
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -4900,7 +4906,7 @@ Expecting to see the following:
                     'file:///base/sibling.txt',
                     ''
                 ],
-            ]));
+            ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [false]);
         });
