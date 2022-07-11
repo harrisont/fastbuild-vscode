@@ -2,9 +2,9 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "compile",
+			"label": "build",
 			"type": "npm",
-			"script": "compile",
+			"script": "build",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -21,9 +21,9 @@
 			]
 		},
 		{
-			"label": "watch-compile",
+			"label": "watch-build",
 			"type": "npm",
-			"script": "watch-compile",
+			"script": "watch-build",
 			"isBackground": true,
 			"group": "build",
 			"presentation": {
@@ -54,7 +54,7 @@
 			"presentation": {
 				"clear": true
 			},
-			"dependsOn": "compile"
+			"dependsOn": "build"
 		},
 		{
 			"label": "watch-test",
@@ -66,18 +66,12 @@
 				"panel": "dedicated",
 				"reveal": "silent"
 			},
-			"dependsOn": "watch-compile"
+			"dependsOn": "watch-build"
 		},
 		{
 			"label": "build grammar",
-			"type": "process",
-			"command": "node",
-			"args": [
-				"server/node_modules/nearley/bin/nearleyc.js",
-				"server/src/fbuild-grammar.ne",
-				"--out",
-				"server/src/fbuild-grammar.ts"
-			],
+			"type": "npm",
+			"script": "build-grammar",
 			"group": "build",
 			"presentation": {
 				"reveal": "silent",

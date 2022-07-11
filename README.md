@@ -49,7 +49,7 @@ TODO
 
 1. Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder.
 2. Open VS Code on this folder.
-3. Run the `compile` task, which compiles the client and server. Alternatively, run the `watch-compile` task to watch for changes and automatically compile.
+3. Run the `build` task, which builds the client and server. Alternatively, run the `watch-build` task to watch for changes and automatically build.
 4. Run the `Launch Client` launch configuration. If you want to debug the server as well, use `Launch Client + Server` instead.
 
 ### Testing
