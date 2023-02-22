@@ -1,14 +1,29 @@
 {
-	"name": "fastbuild-lsp",
-	"description": "FASTBuild language server and Visual Studio client",
-	"author": "harrisont",
+	"name": "fastbuild-support",
+	"displayName": "FASTBuild Support",
+	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
+	"version": "0.1.1",
+	"preview": true,
+	"publisher": "HarrisonT",
+	"author": {
+		"name": "HarrisonT"
+	},
 	"license": "MIT",
-	"version": "0.1.0",
+	"icon": "icon.png",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/harrisont/fbuild-vscode-lsp"
 	},
-	"categories": [],
+	"bugs": {
+	  "url": "https://github.com/harrisont/fbuild-vscode-lsp/issues"
+	},
+	"categories": [
+		"Linters",
+		"Programming Languages"
+	],
+	"keywords": [
+		"fastbuild"
+	],
 	"engines": {
 		"vscode": "^1.43.0"
 	},
@@ -36,23 +51,24 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run build",
 		"build-grammar": "node server/node_modules/nearley/bin/nearleyc.js server/src/fbuild-grammar.ne --out server/src/fbuild-grammar.ts",
 		"build": "tsc --build",
 		"watch-build": "tsc --build --watch",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
 		"test": "node ./node_modules/mocha/bin/_mocha --timeout 100000 --colors --require source-map-support/register server/out/test --bail",
-		"watch-test": "node ./node_modules/mocha/bin/_mocha --colors --require source-map-support/register --watch --watch-files server/out server/out/test"
+		"watch-test": "node ./node_modules/mocha/bin/_mocha --colors --require source-map-support/register --watch --watch-files server/out server/out/test",
+		"vscode:prepublish": "npm run build",
+		"deploy": "vsce publish"
 	},
 	"devDependencies": {
 		"@types/mocha": "8.0.4",
 		"@types/node": "14.14.7",
 		"@typescript-eslint/eslint-plugin": "4.8.0",
 		"@typescript-eslint/parser": "4.8.0",
+		"@vscode/vsce": "2.15.0",
 		"eslint": "7.13.0",
 		"mocha": "8.2.1",
 		"source-map-support": "0.5.19",
-		"typescript": "4.0.5",
-		"vsce": "2.9.2"
+		"typescript": "4.0.5"
 	}
 }

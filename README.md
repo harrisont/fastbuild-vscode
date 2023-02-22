@@ -5,7 +5,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
   * [Functionality](#functionality)
   * [Limitations](#limitations)
   * [Compatibility](#compatibility)
-  * [Installing the Visual Studio Code Extension](#installing-the-visual-studio-code-extension)
+  * [Installing](#installing)
   * [Contributing](#contributing)
     * [Running](#running)
     * [Testing](#testing)
@@ -39,9 +39,9 @@ It may be compatible with a newer version of FASTBuild, but this was the latest 
 
 Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](#support-full-fastbuild-syntax) backlog item for details.
 
-## Installing the Visual Studio Code Extension
+## Installing
 
-TODO
+Install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=HarrisonT.fastbuild-support).
 
 ## Contributing
 
@@ -59,7 +59,9 @@ TODO
 
 ### Releasing the Visual Studio Code Extension
 
-TODO
+```
+vsce publish
+```
 
 ### Implementation Notes
 
@@ -82,6 +84,10 @@ TODO
 When there's an extension created:
 * Update the [README's release instructions](#releasing-the-visual-studio-code-extension).
 * Update the [README's install instructions](#installing-the-visual-studio-code-extension).
+
+##### Bundle the extension files for performance
+
+[Docs](https://code.visualstudio.com/api/working-with-extensions/bundling-extension)
 
 #### Add more language server provider features
 
