@@ -60,7 +60,7 @@ Install the extension from the [Visual Studio Marketplace](https://marketplace.v
 ### Releasing the Visual Studio Code Extension
 
 ```
-vsce publish
+npm run publish
 ```
 
 ### Implementation Notes

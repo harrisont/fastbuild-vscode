@@ -58,7 +58,7 @@
 		"test": "node ./node_modules/mocha/bin/_mocha --timeout 100000 --colors --require source-map-support/register server/out/test --bail",
 		"watch-test": "node ./node_modules/mocha/bin/_mocha --colors --require source-map-support/register --watch --watch-files server/out server/out/test",
 		"vscode:prepublish": "npm run build",
-		"deploy": "vsce publish"
+		"publish": "vsce publish"
 	},
 	"devDependencies": {
 		"@types/mocha": "8.0.4",
