@@ -994,6 +994,25 @@ describe('evaluator', () => {
             ]);
         });
 
+        // Similar to the above test, but in a loop
+        it('in a loop, adding to a current-scope non-existant, parent-scope existant, current-scope variable redefines it each time in the current scope to be the sum', () => {
+            const input = `
+                .MyArray = {'a', 'b', 'c'}
+                .MyMessage = 'Base'
+                ForEach( .Item in .MyArray )
+                {
+                    .MyMessage + '-$Item$'
+                    Print( .MyMessage )
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
+                'a', 'Base', 'Base-a',
+                'b', 'Base', 'Base-b',
+                'c', 'Base', 'Base-c',
+            ]);
+        });
+
         it('adding to a current-scope non-existant, parent-scope existant, current-scope struct variable defines it in the current scope to be the sum', () => {
             const input = `
                 .MyMessage = 'hello'

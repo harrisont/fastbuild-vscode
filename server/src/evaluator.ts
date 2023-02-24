@@ -1157,8 +1157,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 let error: Error | null = null;
-                context.scopeStack.withScope(() => {
-                    for (const arrayItem of arrayItems) {
+                for (const arrayItem of arrayItems) {
+                    context.scopeStack.withScope(() => {
                         const variable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, arrayItem, definition);
 
                         // The loop variable is a variable reference.
@@ -1176,8 +1176,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             error = evaluatedStatementsAndMaybeError.error;
                             return;
                         }
-                    }
-                });
+                    });
+                }
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
                 }
