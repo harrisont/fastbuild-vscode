@@ -33,6 +33,7 @@ import { ParseDataProvider } from './parseDataProvider';
 import * as fs from 'fs';
 
 const ROOT_FBUILD_FILE = 'fbuild.bff';
+const UPDATE_DOCUMENT_DELAY_MS = 500;
 
 type UriStr = string;
 
@@ -84,6 +85,8 @@ class State {
     // Map of open documents to their root FASTBuild file
     readonly openDocumentToRootMap = new Map<UriStr, UriStr>();
 
+    readonly queuedDocumentUpdates = new Map<UriStr, NodeJS.Timer>();
+
     // Same API as the non-member getRootFbuildFile.
     getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
         const cachedRootUri = this.fileToRootFbuildFileCache.get(uri.toString());
@@ -130,7 +133,25 @@ state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.d
 state.connection.onReferences(state.referenceProvider.onReferences.bind(state.referenceProvider));
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
-state.documents.onDidChangeContent(change => updateDocument(change.document.uri));
+state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document.uri));
+
+// Wait for a period of time before updating.
+// This improves the performance when the user is rapidly modifying the document (e.g. typing),
+// at the cost of introducing a small amount of latency.
+function queueDocumentUpdate(documentUriStr: UriStr): void {
+    // Cancel any existing queued update.
+    const request = state.queuedDocumentUpdates.get(documentUriStr);
+    if (request !== undefined) {
+        clearTimeout(request);
+        state.queuedDocumentUpdates.delete(documentUriStr);
+    }
+
+    // Queue the new update.
+    state.queuedDocumentUpdates.set(documentUriStr, setTimeout(() => {
+        state.queuedDocumentUpdates.delete(documentUriStr);
+        updateDocument(documentUriStr);
+    }, UPDATE_DOCUMENT_DELAY_MS));
+}
 
 function updateDocument(changedDocumentUriStr: UriStr): void {
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
