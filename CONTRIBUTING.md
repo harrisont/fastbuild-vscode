@@ -8,7 +8,7 @@
     2. Update the `version` in [package.json](package.json).
     3. Update [CHANGELOG.md](CHANGELOG.md) with the release notes for the new version.
 3. [Run/debug tests](#rundebug-tests).
-4. Submit a [pull request](https://github.com/harrisont/fbuild-vscode-lsp/pulls) with the change for review.
+4. Submit a [pull request](https://github.com/harrisont/fastbuild-vscode/pulls) with the change for review.
 5. Once the PR is accepted, create a new release, using a new release tag for the new version. Include the release notes from [CHANGELOG.md](CHANGELOG.md). This will automatically publish the extension to the VS Code Marketplace via the GitHub Action.
 
 ## Build and run/debug the extension

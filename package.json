@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -12,10 +12,10 @@
 	"icon": "icon.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/harrisont/fbuild-vscode-lsp"
+		"url": "https://github.com/harrisont/fastbuild-vscode"
 	},
 	"bugs": {
-	  "url": "https://github.com/harrisont/fbuild-vscode-lsp/issues"
+	  "url": "https://github.com/harrisont/fastbuild-vscode/issues"
 	},
 	"categories": [
 		"Linters",

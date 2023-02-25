@@ -24,7 +24,7 @@ It does not yet provide syntax highlighting. For that in the meantime, I recomme
     * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
     * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
 * Only evaluates user functions if they are called at least once. This means that you cannot jump to the definition of a variable defined inside a user function if that user function is never called, for example.
-* Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](https://github.com/harrisont/fbuild-vscode-lsp/issues/6) issue for details.
+* Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](https://github.com/harrisont/fastbuild-vscode/issues/6) issue for details.
 
 ## Compatibility
 
@@ -32,7 +32,7 @@ Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.08 ([FASTBuild
 
 It may be compatible with a newer version of FASTBuild, but this was the latest version tested.
 
-Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](https://github.com/harrisont/fbuild-vscode-lsp/issues/6) issue for details.
+Note that some of the language is not yet implemented. See the [Support full FASTBuild syntax](https://github.com/harrisont/fastbuild-vscode/issues/6) issue for details.
 
 ## Installing
 
