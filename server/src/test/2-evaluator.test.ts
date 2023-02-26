@@ -2245,12 +2245,33 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('iterates over multiple arrays at a time', () => {
+        it('iterates over multiple arrays (separated by commas) at a time', () => {
             const input = `
                 .MyArray1 = {'a1', 'b1', 'c1'}
                 .MyArray2 = {'a2', 'b2', 'c2'}
                 .MyArray3 = {'a3', 'b3', 'c3'}
-                ForEach( .Item1 in .MyArray1,
+                ForEach( .Item1 in .MyArray1,.Item2 in .MyArray2,
+                         .Item3 in .MyArray3 )
+                {
+                    Print( .Item1, .Item2, .Item3 )
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a1', 'b1', 'c1'],
+                ['a2', 'b2', 'c2'],
+                ['a3', 'b3', 'c3'],
+                'a1', 'a2', 'a3',
+                'b1', 'b2', 'b3',
+                'c1', 'c2', 'c3',
+            ]);
+        });
+
+        it('iterates over multiple arrays (separated by whitespace) at a time', () => {
+            const input = `
+                .MyArray1 = {'a1', 'b1', 'c1'}
+                .MyArray2 = {'a2', 'b2', 'c2'}
+                .MyArray3 = {'a3', 'b3', 'c3'}
+                ForEach( .Item1 in .MyArray1
                          .Item2 in .MyArray2
                          .Item3 in .MyArray3 )
                 {
@@ -2267,7 +2288,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('errors when iterating over multiple arrays with differnt sizes', () => {
+        it('errors when iterating over multiple arrays with different sizes', () => {
             const input = `
                 .MyArray1 = {'a1'}
                 .MyArray2 = {'a2', 'b2'}
@@ -2276,14 +2297,8 @@ describe('evaluator', () => {
                     Print( .Item1, .Item2 )
                 }
             `;
-            assertEvaluatedVariablesValueEqual(input, [
-                ['a1', 'b1', 'c1'],
-                ['a2', 'b2', 'c2'],
-                ['a3', 'b3', 'c3'],
-                'a1', 'a2', 'a3',
-                'b1', 'b2', 'b3',
-                'c1', 'c2', 'c3',
-            ]);
+            const expectedErrorMessage = `ForEach(): variable '.Options' contains 2 elements, but the loop is for 3 elements.`;
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 123, 3, 123));
         });
 
         it('body is on the same line', () => {
@@ -2299,7 +2314,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('Loop variable must be an array', () => {
+        it('errors if the loop variable is not an array', () => {
             const input = `
                 .MyArray = 123
                 ForEach( .Item in .MyArray )
