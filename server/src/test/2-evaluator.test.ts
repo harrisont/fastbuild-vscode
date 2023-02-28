@@ -2327,7 +2327,7 @@ describe('evaluator', () => {
     });
 
     // Functions that all we handle are registering their target and evaluating their statements.
-    describe('Gneric functions declaring targets', () => {
+    describe('Generic functions declaring targets', () => {
         const genericFunctionNames = [
             'Alias',
             'Compiler',
@@ -2383,6 +2383,49 @@ describe('evaluator', () => {
                         'MyTargetName',
                         'SomeName'
                     ]);
+                });
+
+                it('creates a definition for the target name that can be referenced', () => {
+                    const input = `
+                        {
+                            ${functionName}('MyTargetName')
+                            {
+                            }
+
+                            .MyTargetNameReferenceStatic = 'MyTargetName'
+                            .MyTargetNameReferenceDynamic = 'My' + 'TargetName'
+                        }
+
+                        // The target reference does not need to be in the same scope as the target definition.
+                        {
+                            .MyTargetNameReferenceInDifferentScope = 'MyTargetName'
+                        }
+                    `;
+
+                    const result = evaluateInput(input, true /*enableDiagnostics*/);
+
+                    const expectedTargetDefinition: VariableDefinition =
+                    {
+                        id: 1,
+                        range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
+                    };
+                    assert.deepStrictEqual(result.variableDefinitions, [ expectedTargetDefinition ]);
+
+                    const expectedReferences: VariableReference[] = [
+                        {
+                            definition: expectedTargetDefinition,
+                            range: createRange(6, 59, 6, 73),
+                        },
+                        {
+                            definition: expectedTargetDefinition,
+                            range: createRange(7, 60, 7, 79),
+                        },
+                        {
+                            definition: expectedTargetDefinition,
+                            range: createRange(12, 69, 12, 83),
+                        },
+                    ];
+                    assert.deepStrictEqual(result.variableReferences, expectedReferences);
                 });
 
                 it('body on the same line', () => {
