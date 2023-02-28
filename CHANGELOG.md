@@ -1,3 +1,7 @@
+# v0.1.9
+
+* [#6](https://github.com/harrisont/fastbuild-vscode/issues/6) Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported). This completes support for the full FASTBuild language.
+
 # v0.1.8
 
 * Rename repository from `fbuild-vscode-lsp` to `fastbuild-vscode`.

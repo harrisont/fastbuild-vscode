@@ -129,7 +129,7 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, expe
         () => evaluateInput(input, enableDiagnostics),
         actualError => {
             assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
-            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.strictEqual(actualError.message, expectedErrorMessage, `Error message was different than expected`);
             // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
             const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
             assert.deepStrictEqual(actualRange, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
@@ -2245,6 +2245,62 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('iterates over multiple arrays (separated by commas) at a time', () => {
+            const input = `
+                .MyArray1 = {'a1', 'b1', 'c1'}
+                .MyArray2 = {'a2', 'b2', 'c2'}
+                .MyArray3 = {'a3', 'b3', 'c3'}
+                ForEach( .Item1 in .MyArray1,.Item2 in .MyArray2,
+                         .Item3 in .MyArray3 )
+                {
+                    .Combined = '$Item1$-$Item2$-$Item3$'
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a1', 'b1', 'c1'],
+                ['a2', 'b2', 'c2'],
+                ['a3', 'b3', 'c3'],
+                'a1', 'a2', 'a3',
+                'b1', 'b2', 'b3',
+                'c1', 'c2', 'c3',
+            ]);
+        });
+
+        it('iterates over multiple arrays (separated by whitespace) at a time', () => {
+            const input = `
+                .MyArray1 = {'a1', 'b1', 'c1'}
+                .MyArray2 = {'a2', 'b2', 'c2'}
+                .MyArray3 = {'a3', 'b3', 'c3'}
+                ForEach( .Item1 in .MyArray1
+                         .Item2 in .MyArray2
+                         .Item3 in .MyArray3 )
+                {
+                    .Combined = '$Item1$-$Item2$-$Item3$'
+                }
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                ['a1', 'b1', 'c1'],
+                ['a2', 'b2', 'c2'],
+                ['a3', 'b3', 'c3'],
+                'a1', 'a2', 'a3',
+                'b1', 'b2', 'b3',
+                'c1', 'c2', 'c3',
+            ]);
+        });
+
+        it('errors when iterating over multiple arrays with different sizes', () => {
+            const input = `
+                .MyArray1 = {'a1'}
+                .MyArray2 = {'a2', 'b2'}
+                ForEach( .Item1 in .MyArray1, .Item2 in .MyArray2 )
+                {
+                    .Combined = '$Item1$-$Item2$'
+                }
+            `;
+            const expectedErrorMessage = `'ForEach' Array variable to loop over contains 2 elements, but the loop is for 1 elements.`;
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 56, 3, 65));
+        });
+
         it('body is on the same line', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
@@ -2258,7 +2314,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('Loop variable must be an array', () => {
+        it('errors if the loop variable is not an array', () => {
             const input = `
                 .MyArray = 123
                 ForEach( .Item in .MyArray )

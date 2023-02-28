@@ -272,14 +272,18 @@ function isParsedStatementUsing(obj: Record<string, any>): obj is ParsedStatemen
     return (obj as ParsedStatementUsing).type === 'using';
 }
 
-interface ParsedStatementForEach {
-    type: 'forEach';
-    range: ParseSourceRange;
-    arrayToLoopOver: ParsedEvaluatedVariable;
+interface ParsedForEachIterator {
     loopVar: {
         name: string,
         range: ParseSourceRange,
     }
+    arrayToLoopOver: ParsedEvaluatedVariable;
+}
+
+interface ParsedStatementForEach {
+    type: 'forEach';
+    range: ParseSourceRange;
+    iterators: ParsedForEachIterator[];
     statements: Statement[];
 }
 
@@ -1115,57 +1119,83 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     );
                 }
             } else if (isParsedStatementForEach(statement)) {
-                // Evaluate the array to loop over.
-                if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
-                    const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${statement.arrayToLoopOver.type}'`);
-                    return new DataAndMaybeError(result, error);
+                // Evaluate the iterators (array to loop over plus the loop-variable)
+                interface ForEachIterator {
+                    arrayItems: Value[];
+                    evaluatedLoopVarNameValue: string;
+                    loopVarRange: SourceRange;
+                    loopVarDefinition: VariableDefinition;
                 }
-                const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
-                const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, arrayToLoopOver.range);
-                const evaluatedArrayToLoopOverAndMaybeError = evaluateEvaluatedVariable(arrayToLoopOver, context);
-                const evaluatedArrayToLoopOver = evaluatedArrayToLoopOverAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedArrayToLoopOver.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedArrayToLoopOver.variableReferences);
-                if (evaluatedArrayToLoopOverAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedArrayToLoopOverAndMaybeError.error);
-                }
+                const iterators: ForEachIterator[] = [];
+                for (const iterator of statement.iterators) {
+                    // Evaluate the array to loop over.
+                    if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
+                        const range = new SourceRange(context.thisFbuildUri, statement.range);
+                        const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
+                        return new DataAndMaybeError(result, error);
+                    }
+                    const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
+                    const evaluatedArrayToLoopOverAndMaybeError = evaluateEvaluatedVariable(iterator.arrayToLoopOver, context);
+                    const evaluatedArrayToLoopOver = evaluatedArrayToLoopOverAndMaybeError.data;
+                    pushToFirstArray(result.evaluatedVariables, evaluatedArrayToLoopOver.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedArrayToLoopOver.variableReferences);
+                    if (evaluatedArrayToLoopOverAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedArrayToLoopOverAndMaybeError.error);
+                    }
+                    const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
+                    if (!(arrayItems instanceof Array)) {
+                        const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`);
+                        return new DataAndMaybeError(result, error);
+                    }
 
-                const loopVarRange = new SourceRange(context.thisFbuildUri, statement.loopVar.range);
+                    if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
+                        const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`);
+                        return new DataAndMaybeError(result, error);
+                    }
 
-                // Evaluate the loop-variable name.
-                const evaluatedLoopVarNameAndMaybeError = evaluateRValue(statement.loopVar.name, context);
-                const evaluatedLoopVarName = evaluatedLoopVarNameAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedLoopVarName.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedLoopVarName.variableReferences);
-                if (evaluatedLoopVarNameAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedLoopVarNameAndMaybeError.error);
+                    const loopVar = iterator.loopVar;
+                    const loopVarRange = new SourceRange(context.thisFbuildUri, loopVar.range);
+                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange);
+
+                    // Evaluate the loop-variable name.
+                    const evaluatedLoopVarNameAndMaybeError = evaluateRValue(loopVar.name, context);
+                    const evaluatedLoopVarName = evaluatedLoopVarNameAndMaybeError.data;
+                    pushToFirstArray(result.evaluatedVariables, evaluatedLoopVarName.evaluatedVariables);
+                    pushToFirstArray(result.variableReferences, evaluatedLoopVarName.variableReferences);
+                    if (evaluatedLoopVarNameAndMaybeError.error !== null) {
+                        return new DataAndMaybeError(result, evaluatedLoopVarNameAndMaybeError.error);
+                    }
+                    if (typeof evaluatedLoopVarName.value !== 'string') {
+                        const error = new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
+                        return new DataAndMaybeError(result, error);
+                    }
+                    const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
+
+                    iterators.push({
+                        arrayItems,
+                        evaluatedLoopVarNameValue,
+                        loopVarRange,
+                        loopVarDefinition,
+                    });
                 }
-                if (typeof evaluatedLoopVarName.value !== 'string') {
-                    const error = new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
-                    return new DataAndMaybeError(result, error);
-                }
-                const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
 
                 // Evaluate the function body.
 
-                const definition = context.scopeStack.createVariableDefinition(loopVarRange);
-                const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
-                if (!(arrayItems instanceof Array)) {
-                    const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`);
-                    return new DataAndMaybeError(result, error);
-                }
-
                 let error: Error | null = null;
-                for (const arrayItem of arrayItems) {
+                const arrayItemsLength = iterators[0].arrayItems.length;
+                for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
                     context.scopeStack.withScope(() => {
-                        const variable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, arrayItem, definition);
+                        // Set a variable in the current scope for each iterator's loop variable.
+                        for (const iterator of iterators) {
+                            const arrayItem = iterator.arrayItems[arrayItemIndex];
+                            const loopVariable = context.scopeStack.setVariableInCurrentScope(iterator.evaluatedLoopVarNameValue, arrayItem, iterator.loopVarDefinition);
 
-                        // The loop variable is a variable reference.
-                        result.variableReferences.push({
-                            definition: variable.definition,
-                            range: loopVarRange,
-                        });
+                            // The loop variable is a variable reference.
+                            result.variableReferences.push({
+                                definition: loopVariable.definition,
+                                range: iterator.loopVarRange,
+                            });
+                        }
 
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
