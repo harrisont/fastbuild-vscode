@@ -576,11 +576,10 @@ functionUsing ->
 
 @{%
 
-function createForEach(loopVar: object, arrayToLoopOver: object, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createForEach(iterators: object[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'forEach',
-        loopVar,
-        arrayToLoopOver,
+        iterators,
         range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
     };
@@ -589,8 +588,18 @@ function createForEach(loopVar: object, arrayToLoopOver: object, statements: Rec
 %}
 
 functionForEach ->
-    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(forEachLoopVar, evaluatedVariable, statements, functionName, braceClose); } %}
-  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, forEachLoopVar, space3, [evaluatedVariable, context], space4, braceClose, statements]) => { callOnNextToken(context, space4);     return createForEach(forEachLoopVar, evaluatedVariable, statements, functionName, braceClose); } %}
+    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(iterators, statements, functionName, braceClose); } %}
+  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createForEach(iterators, statements, functionName, braceClose); } %}
+
+forEachIterators ->
+    # Single loop variable
+    forEachIterator  {% ([[iterator, context]]) => [[iterator], context] %}
+    # Multiple loop variables, separated by an optional ','
+  | forEachIterator                whitespaceOrNewline         forEachIterators  {% ([[first, firstContext],            space, [rest, restContext]]) => { callOnNextToken(firstContext, space);     return [ [first, ...rest], restContext ]; } %}
+  | forEachIterator %itemSeparator optionalWhitespaceOrNewline forEachIterators  {% ([[first, firstContext], separator, space, [rest, restContext]]) => { callOnNextToken(firstContext, separator); return [ [first, ...rest], restContext ]; } %}
+
+forEachIterator ->
+    forEachLoopVar optionalWhitespaceOrNewline evaluatedVariable  {% ([loopVar, space, [evaluatedVariable, context]]) => { return [ { loopVar, arrayToLoopOver: evaluatedVariable }, context]; } %}
 
 forEachLoopVar ->
     %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, [varName, varNameContext],        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
@@ -712,7 +721,7 @@ userFunctionDeclarationParams ->
   | whitespaceOrNewline  {% () => [[], new ParseContext()] %}
     # Not empty
   | nonEmptyUserFunctionDeclarationParams  {% ([paramsWithContext]) => paramsWithContext %}
-  
+
 nonEmptyUserFunctionDeclarationParams ->
     # Single param. Optional trailing param separator (",").
     optionalWhitespaceOrNewline %parameterName                                                                 {% ([space1, paramName                           ]) => { const [param, context] = createUserFunctionDeclarationParameterWithStartRange(paramName); return [[param], context]; } %}

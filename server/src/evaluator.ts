@@ -272,14 +272,18 @@ function isParsedStatementUsing(obj: Record<string, any>): obj is ParsedStatemen
     return (obj as ParsedStatementUsing).type === 'using';
 }
 
-interface ParsedStatementForEach {
-    type: 'forEach';
-    range: ParseSourceRange;
-    arrayToLoopOver: ParsedEvaluatedVariable;
+interface ParsedForEachIterator {
     loopVar: {
         name: string,
         range: ParseSourceRange,
     }
+    arrayToLoopOver: ParsedEvaluatedVariable;
+}
+
+interface ParsedStatementForEach {
+    type: 'forEach';
+    range: ParseSourceRange;
+    iterators: ParsedForEachIterator[];
     statements: Statement[];
 }
 
@@ -1116,12 +1120,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
             } else if (isParsedStatementForEach(statement)) {
                 // Evaluate the array to loop over.
-                if (statement.arrayToLoopOver.type !== 'evaluatedVariable') {
+                const maybeArrayToLoopOver = statement.iterators[0].arrayToLoopOver;
+                if (maybeArrayToLoopOver.type !== 'evaluatedVariable') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${statement.arrayToLoopOver.type}'`);
+                    const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${maybeArrayToLoopOver.type}'`);
                     return new DataAndMaybeError(result, error);
                 }
-                const arrayToLoopOver: ParsedEvaluatedVariable = statement.arrayToLoopOver;
+                const arrayToLoopOver: ParsedEvaluatedVariable = maybeArrayToLoopOver;
                 const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, arrayToLoopOver.range);
                 const evaluatedArrayToLoopOverAndMaybeError = evaluateEvaluatedVariable(arrayToLoopOver, context);
                 const evaluatedArrayToLoopOver = evaluatedArrayToLoopOverAndMaybeError.data;
@@ -1131,10 +1136,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, evaluatedArrayToLoopOverAndMaybeError.error);
                 }
 
-                const loopVarRange = new SourceRange(context.thisFbuildUri, statement.loopVar.range);
+                const loopVar = statement.iterators[0].loopVar;
+                const loopVarRange = new SourceRange(context.thisFbuildUri, loopVar.range);
 
                 // Evaluate the loop-variable name.
-                const evaluatedLoopVarNameAndMaybeError = evaluateRValue(statement.loopVar.name, context);
+                const evaluatedLoopVarNameAndMaybeError = evaluateRValue(loopVar.name, context);
                 const evaluatedLoopVarName = evaluatedLoopVarNameAndMaybeError.data;
                 pushToFirstArray(result.evaluatedVariables, evaluatedLoopVarName.evaluatedVariables);
                 pushToFirstArray(result.variableReferences, evaluatedLoopVarName.variableReferences);

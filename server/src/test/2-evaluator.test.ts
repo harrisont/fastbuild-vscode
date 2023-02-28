@@ -2253,7 +2253,7 @@ describe('evaluator', () => {
                 ForEach( .Item1 in .MyArray1,.Item2 in .MyArray2,
                          .Item3 in .MyArray3 )
                 {
-                    Print( .Item1, .Item2, .Item3 )
+                    .Combined = '$Item1$-$Item2$-$Item3$'
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
@@ -2275,7 +2275,7 @@ describe('evaluator', () => {
                          .Item2 in .MyArray2
                          .Item3 in .MyArray3 )
                 {
-                    Print( .Item1, .Item2, .Item3 )
+                    .Combined = '$Item1$-$Item2$-$Item3$'
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
@@ -2294,7 +2294,7 @@ describe('evaluator', () => {
                 .MyArray2 = {'a2', 'b2'}
                 ForEach( .Item1 in .MyArray1, .Item2 in .MyArray2 )
                 {
-                    Print( .Item1, .Item2 )
+                    .Combined = '$Item1$-$Item2$'
                 }
             `;
             const expectedErrorMessage = `ForEach(): variable '.Options' contains 2 elements, but the loop is for 3 elements.`;
