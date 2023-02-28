@@ -2326,8 +2326,8 @@ describe('evaluator', () => {
         });
     });
 
-    // Functions that we don't care about handling, but we just need to make sure that their statements are evaluated.
-    describe('Generic functions', () => {
+    // Functions that all we handle are registering their target and evaluating their statements.
+    describe('Gneric functions declaring targets', () => {
         const genericFunctionNames = [
             'Alias',
             'Compiler',
@@ -2352,61 +2352,61 @@ describe('evaluator', () => {
 
         for (const functionName of genericFunctionNames) {
             describe(functionName, () => {
-                it('handles a literal alias name', () => {
+                it('handles a literal target name', () => {
                     const input = `
-                        ${functionName}('MyAliasName')
+                        ${functionName}('MyTargetName')
                         {
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, []);
                 });
 
-                it('handles an evaluated variable alias name', () => {
+                it('handles an evaluated variable target name', () => {
                     const input = `
-                        .MyAliasName = 'SomeName'
-                        ${functionName}(.MyAliasName)
+                        .MyTargetName = 'SomeName'
+                        ${functionName}(.MyTargetName)
                         {
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, ['SomeName']);
                 });
 
-                it('handles a dynamic-variable alias name', () => {
+                it('handles a dynamic-variable target name', () => {
                     const input = `
-                        .MyAliasName = 'SomeName'
-                        .AliasNameVariable = 'MyAliasName'
-                        ${functionName}(.'$AliasNameVariable$')
+                        .MyTargetName = 'SomeName'
+                        .TargetNameVariable = 'MyTargetName'
+                        ${functionName}(.'$TargetNameVariable$')
                         {
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
-                        'MyAliasName',
+                        'MyTargetName',
                         'SomeName'
                     ]);
                 });
 
                 it('body on the same line', () => {
                     const input = `
-                        ${functionName}('MyAliasName'){}
+                        ${functionName}('MyTargetName'){}
                     `;
                     assertEvaluatedVariablesValueEqual(input, []);
                 });
 
-                it('errors if the evaluated variable alias name is not a string', () => {
+                it('errors if the evaluated variable target name is not a string', () => {
                     const input = `
-                        .MyAliasName = 123
-                        ${functionName}( .MyAliasName )
+                        .MyTargetName = 123
+                        ${functionName}( .MyTargetName )
                         {
                         }
                     `;
-                    const expectedErrorMessage = `Alias must evaluate to a String, but instead evaluates to an Integer`;
-                    assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 26 + functionName.length, 2, 38 + functionName.length));
+                    const expectedErrorMessage = `Target name must evaluate to a String, but instead evaluates to an Integer`;
+                    assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 26 + functionName.length, 2, 39 + functionName.length));
                 });
 
                 it('evaluates body statements', () => {
                     const input = `
                         .MyVar = 1
-                        ${functionName}('MyAliasName')
+                        ${functionName}('MyTargetName')
                         {
                             .Copy = .MyVar
                             .Copy = ^MyVar

@@ -294,7 +294,7 @@ function isParsedStatementForEach(obj: Record<string, any>): obj is ParsedStatem
 interface ParsedStatementGenericFunction {
     type: 'genericFunction';
     range: ParseSourceRange;
-    alias: any;
+    targetName: any;
     statements: Statement[];
 }
 
@@ -1212,17 +1212,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementGenericFunction(statement)) {
-                // Evaluate the alias.
-                const evaluatedAliasNameAndMaybeError = evaluateRValue(statement.alias, context);
-                const evaluatedAliasName = evaluatedAliasNameAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedAliasName.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedAliasName.variableReferences);
-                if (evaluatedAliasNameAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedAliasNameAndMaybeError.error);
+                // Evaluate the target name.
+                const evaluatedTargetNameNameAndMaybeError = evaluateRValue(statement.targetName, context);
+                const evaluatedTargetName = evaluatedTargetNameNameAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedTargetName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedTargetName.variableReferences);
+                if (evaluatedTargetNameNameAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedTargetNameNameAndMaybeError.error);
                 }
-                if (typeof evaluatedAliasName.value !== 'string') {
-                    const range = new SourceRange(context.thisFbuildUri, evaluatedAliasName.range);
-                    const error = new EvaluationError(range, `Alias must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedAliasName.value)}`);
+                if (typeof evaluatedTargetName.value !== 'string') {
+                    const range = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
+                    const error = new EvaluationError(range, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`);
                     return new DataAndMaybeError(result, error);
                 }
 
