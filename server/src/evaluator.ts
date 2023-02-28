@@ -1148,8 +1148,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, error);
                     }
 
-                    if ((iterators.length > 1) && (arrayItems.length != iterators[0].arrayItems.length)) {
-                        const error = new EvaluationError(arrayToLoopOverRange, `TODO`);
+                    if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
+                        const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`);
                         return new DataAndMaybeError(result, error);
                     }
 

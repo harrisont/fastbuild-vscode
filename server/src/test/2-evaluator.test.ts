@@ -129,7 +129,7 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, expe
         () => evaluateInput(input, enableDiagnostics),
         actualError => {
             assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
-            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
+            assert.strictEqual(actualError.message, expectedErrorMessage, `Error message was different than expected`);
             // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
             const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
             assert.deepStrictEqual(actualRange, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
@@ -2297,8 +2297,8 @@ describe('evaluator', () => {
                     .Combined = '$Item1$-$Item2$'
                 }
             `;
-            const expectedErrorMessage = `ForEach(): variable '.Options' contains 2 elements, but the loop is for 3 elements.`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 123, 3, 123));
+            const expectedErrorMessage = `'ForEach' Array variable to loop over contains 2 elements, but the loop is for 1 elements.`;
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 56, 3, 65));
         });
 
         it('body is on the same line', () => {
