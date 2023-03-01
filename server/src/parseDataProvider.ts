@@ -10,7 +10,6 @@ import {
 import {
     parse,
     ParseData,
-    ParseError,
     ParseOptions,
 } from './parser';
 
@@ -38,7 +37,14 @@ export class ParseDataProvider {
             this.data.set(uri.toString(), parseData);
             return Maybe.ok(parseData);
         } catch (error) {
-            return Maybe.error(error);
+            if (error instanceof Error) {
+                return Maybe.error(error);
+            } else {
+                // We should only throw `Error` instances, but handle other types as a fallback.
+                // `error` could be anything. Try to get a useful message out of it.
+                const typedError = new Error(String(error));
+                return Maybe.error(typedError);
+            }
         }
     }
 

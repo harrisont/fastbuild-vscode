@@ -1440,8 +1440,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             context.previousStatementLhsVariable = statementLhsVariable;
         }
     } catch (error) {
-        // error should be an instance of Error.
-        return new DataAndMaybeError(result, error);
+        if (error instanceof Error) {
+            return new DataAndMaybeError(result, error);
+        } else {
+            // We should only throw `Error` instances, but handle other types as a fallback.
+            // `error` could be anything. Try to get a useful message out of it.
+            const typedError = new Error(String(error));
+            return new DataAndMaybeError(result, typedError);
+        }
     }
 
     return new DataAndMaybeError(result);

@@ -198,8 +198,13 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
             state.diagnosticProvider.setParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else if (error instanceof EvaluationError) {
             state.diagnosticProvider.setEvaluationErrorDiagnostic(rootFbuildUriStr, error, state.connection);
-        } else {
+        } else if (error instanceof Error) {
             state.diagnosticProvider.setUnknownErrorDiagnostic(rootFbuildUriStr, error, state.connection);
+        } else {
+            // We should only throw `Error` instances, but handle other types as a fallback.
+            // `error` could be anything. Try to get a useful message out of it.
+            const typedError = new Error(String(error));
+            state.diagnosticProvider.setUnknownErrorDiagnostic(rootFbuildUriStr, typedError, state.connection);
         }
     }
 

@@ -288,6 +288,8 @@ function createParseErrorFromNearlyParseError(
 }
 
 // Parse the input and return the statements.
+//
+// Throws |ParseError| on a parse error, or |Error| on unknown errors.
 export function parse(input: string, fileUri: UriStr, options: ParseOptions): ParseData {
     // Pre-process the input:
     //  * Remove comments.
@@ -311,7 +313,14 @@ export function parse(input: string, fileUri: UriStr, options: ParseOptions): Pa
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw createParseErrorFromNearlyParseError(nearlyParseError, modifiedInput, fileUri, options.includeCodeLocationInError);
+
+        if (nearlyParseError instanceof Error) {
+            throw createParseErrorFromNearlyParseError(nearlyParseError, modifiedInput, fileUri, options.includeCodeLocationInError);
+        } else {
+            // We should only throw `Error` instances, but handle other types as a fallback.
+            // `error` could be anything. Try to get a useful message out of it.
+            throw new Error(String(nearlyParseError));
+        }
     }
 
     const numResults = parser.results.length;
