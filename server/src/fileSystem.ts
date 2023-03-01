@@ -26,7 +26,7 @@ export interface IFileSystem {
 export class DiskFileSystem implements IFileSystem {
     constructor(private readonly documents: TextDocuments<TextDocument>) {
     }
-    
+
     fileExists(uri: vscodeUri.URI): boolean
     {
         const hasCachedDocument = this.documents.get(uri.toString()) !== undefined;
@@ -48,7 +48,14 @@ export class DiskFileSystem implements IFileSystem {
             try {
                 return Maybe.ok(fs.readFileSync(uri.fsPath, 'utf-8'));
             } catch (error) {
-                return Maybe.error(error);
+                if (error instanceof Error) {
+                    return Maybe.error(error);
+                } else {
+                    // `error` should be an `Error` instance, but handle other types as a fallback.
+                    // `error` could be anything. Try to get a useful message out of it.
+                    const typedError = new Error(String(error));
+                    return Maybe.error(typedError);
+                }
             }
         }
     }

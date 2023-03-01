@@ -49,7 +49,7 @@ export class DiagnosticProvider {
     setUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
         // We do not know which URI caused the error, so use a dummy error range.
         const uri = '';
-        const message = `Internal error: ${error.stack}`;
+        const message = `Internal error: ${error.stack ?? error.message}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
         this._setDiagnostic(rootUri, uri, diagnostic, connection);
     }
