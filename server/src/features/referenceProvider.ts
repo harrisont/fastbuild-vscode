@@ -1,10 +1,15 @@
 import {
+    DocumentSymbolParams,
     ReferenceParams,
+    WorkspaceSymbolParams,
 } from 'vscode-languageserver-protocol';
 
 import {
+    DocumentSymbol,
     DocumentUri,
     Location,
+    SymbolInformation,
+    SymbolKind,
 } from 'vscode-languageserver-types';
 
 import {
@@ -54,5 +59,47 @@ export class ReferenceProvider {
         }
 
         return [...locations.values()];
+    }
+
+    getDocumentSymbols(params: DocumentSymbolParams): DocumentSymbol[] | null {
+        // TODO: why is the evaluated data specific to a URI? Is it supposed to be partitioned based on the root FASTBuild file?
+        const uri = params.textDocument.uri;
+        const evaluatedData = this.evaluatedData.get(uri);
+        if (evaluatedData === undefined) {
+            return null;
+        }
+        return evaluatedData.variableDefinitions
+            .filter(variableDefinition => variableDefinition.range.uri == uri)
+            .map(variableDefinition => {
+                const symbol: DocumentSymbol = {
+                    name: `TODO:name - ID=${variableDefinition.id}`,
+                    detail: 'TODO: detail',
+                    kind: SymbolKind.Variable,
+                    range: variableDefinition.range,
+                    selectionRange: variableDefinition.range,
+                };
+                return symbol;
+            });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    getWorkspaceSymbols(params: WorkspaceSymbolParams): SymbolInformation[] | null {
+        // TODO: have not be specific to URI.
+        const evaluatedData: EvaluatedData = this.evaluatedData.values().next().value;
+
+        //TODO: filter on params.query
+        return evaluatedData.variableDefinitions
+            .map(variableDefinition => {
+                const symbol: SymbolInformation = {
+                    name: `TODO:name - ID=${variableDefinition.id}`,
+                    kind: SymbolKind.Variable,
+                    location: {
+                        uri: variableDefinition.range.uri,
+                        range: variableDefinition.range,
+                    },
+                    containerName: 'TODO:containerName',
+                };
+                return symbol;
+            });
     }
 }

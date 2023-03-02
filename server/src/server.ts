@@ -123,7 +123,7 @@ state.connection.onInitialize((params: InitializeParams) => {
             definitionProvider: true,
             referencesProvider: true,
             documentSymbolProvider: true,
-            // TOOD: workspaceSymbolProvider
+            workspaceSymbolProvider: true,
             // TODO: add `workspace: { { workspaceFolders: { supported: true } } }` to add support for workspace folders.
         }
     };
@@ -134,6 +134,8 @@ state.connection.onInitialize((params: InitializeParams) => {
 state.connection.onHover(state.hoverProvider.onHover.bind(state.hoverProvider));
 state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.definitionProvider));
 state.connection.onReferences(state.referenceProvider.onReferences.bind(state.referenceProvider));
+state.connection.onDocumentSymbol(state.referenceProvider.getDocumentSymbols.bind(state.referenceProvider));
+state.connection.onWorkspaceSymbol(state.referenceProvider.getWorkspaceSymbols.bind(state.referenceProvider));
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document.uri));
