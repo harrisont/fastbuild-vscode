@@ -1261,6 +1261,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, error);
                 }
 
+                const existingTargetDefinition = result.targetDefinitions.find(definition => definition.name == evaluatedTargetName.value);
                 // Create a definition and reference for the target name.
                 const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
                 const targetNameReference: TargetReference = {
