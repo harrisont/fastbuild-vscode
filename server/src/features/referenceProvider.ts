@@ -81,11 +81,10 @@ export class ReferenceProvider {
     }
 
     getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
+        const MAX_NUM_SYMBOLS = 1000;
+
         const symbols: SymbolInformation[] = [];
         for (const evaluatedData of evaluatedDatas) {
-            // Pre-allocate the number array length as an optimization.
-            symbols.length += evaluatedData.variableDefinitions.length;
-
             for (const variableDefinition of evaluatedData.variableDefinitions) {
                 if (!fuzzy.test(params.query, variableDefinition.name)) {
                     continue;
@@ -100,6 +99,11 @@ export class ReferenceProvider {
                     },
                 };
                 symbols.push(symbol);
+
+                // Early out if there are too many symbols, since returning more is unlikely to be useful.
+                if (symbols.length === MAX_NUM_SYMBOLS) {
+                    return symbols;
+                }
             }
         }
 
