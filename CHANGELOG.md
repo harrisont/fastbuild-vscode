@@ -1,3 +1,9 @@
+# v0.3.0
+
+## New Features
+
+* [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+
 # v0.2.2
 
 * Distinguish between targets and variables in the symbol listing.
