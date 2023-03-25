@@ -23,14 +23,9 @@ import {
 export class ReferenceProvider {
     private evaluatedData = new Map<DocumentUri, EvaluatedData>();
 
-    onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
-        this.evaluatedData.set(uri, newEvaluatedData);
-    }
-
-    onReferences(params: ReferenceParams): Location[] | null {
+    getReferences(params: ReferenceParams, evaluatedData: EvaluatedData): Location[] | null {
         const uri = params.textDocument.uri;
         const position = params.position;
-        const evaluatedData = this.evaluatedData.get(uri);
         if (evaluatedData === undefined) {
             return null;
         }
@@ -61,10 +56,8 @@ export class ReferenceProvider {
         return [...locations.values()];
     }
 
-    getDocumentSymbols(params: DocumentSymbolParams): DocumentSymbol[] | null {
-        // TODO: why is the evaluated data specific to a URI? Is it supposed to be partitioned based on the root FASTBuild file?
+    getDocumentSymbols(params: DocumentSymbolParams, evaluatedData: EvaluatedData): DocumentSymbol[] | null {
         const uri = params.textDocument.uri;
-        const evaluatedData = this.evaluatedData.get(uri);
         if (evaluatedData === undefined) {
             return null;
         }
@@ -83,13 +76,15 @@ export class ReferenceProvider {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    getWorkspaceSymbols(params: WorkspaceSymbolParams): SymbolInformation[] | null {
-        // TODO: have not be specific to URI.
-        const evaluatedData: EvaluatedData = this.evaluatedData.values().next().value;
-
+    getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
         //TODO: filter on params.query
-        return evaluatedData.variableDefinitions
-            .map(variableDefinition => {
+
+        const symbols: SymbolInformation[] = [];
+        for (const evaluatedData of evaluatedDatas) {
+            // Pre-allocate the number array length as an optimization.
+            symbols.length += evaluatedData.variableDefinitions.length;
+
+            for (const variableDefinition of evaluatedData.variableDefinitions) {
                 const symbol: SymbolInformation = {
                     name: `TODO:name - ID=${variableDefinition.id}`,
                     kind: SymbolKind.Variable,
@@ -99,7 +94,10 @@ export class ReferenceProvider {
                     },
                     containerName: 'TODO:containerName',
                 };
-                return symbol;
-            });
+                symbols.push(symbol);
+            }
+        }
+
+        return symbols;
     }
 }

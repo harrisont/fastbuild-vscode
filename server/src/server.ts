@@ -1,10 +1,15 @@
 import {
     createConnection,
+    DefinitionParams,
+    DocumentSymbolParams,
+    HoverParams,
     InitializeParams,
     InitializeResult,
     ProposedFeatures,
+    ReferenceParams,
     TextDocuments,
     TextDocumentSyncKind,
+    WorkspaceSymbolParams,
 } from 'vscode-languageserver';
 
 import {
@@ -85,6 +90,9 @@ class State {
     // Map of open documents to their root FASTBuild file
     readonly openDocumentToRootMap = new Map<UriStr, UriStr>();
 
+    // Map of root FASTBuild files to their evaluated data
+    readonly rootToEvaluatedDataMap = new Map<UriStr, EvaluatedData>();
+
     readonly queuedDocumentUpdates = new Map<UriStr, NodeJS.Timer>();
 
     // Same API as the non-member getRootFbuildFile.
@@ -100,6 +108,20 @@ class State {
         } else {
             return cachedRootUri;
         }
+    }
+
+    getRootFbuildEvaluatedData(uriStr: UriStr): EvaluatedData | null {
+        const uri = vscodeUri.URI.parse(uriStr);
+        const rootFbuildUri = state.getRootFbuildFile(uri);
+        if (rootFbuildUri === null) {
+            return null;
+        }
+        const rootFbuildUriStr = rootFbuildUri.toString();
+        const evaluatedData = state.rootToEvaluatedDataMap.get(rootFbuildUriStr);
+        if (evaluatedData === undefined) {
+            return null;
+        }
+        return evaluatedData;
     }
 }
 
@@ -131,11 +153,41 @@ state.connection.onInitialize((params: InitializeParams) => {
     return result;
 });
 
-state.connection.onHover(state.hoverProvider.onHover.bind(state.hoverProvider));
-state.connection.onDefinition(state.definitionProvider.onDefinition.bind(state.definitionProvider));
-state.connection.onReferences(state.referenceProvider.onReferences.bind(state.referenceProvider));
-state.connection.onDocumentSymbol(state.referenceProvider.getDocumentSymbols.bind(state.referenceProvider));
-state.connection.onWorkspaceSymbol(state.referenceProvider.getWorkspaceSymbols.bind(state.referenceProvider));
+state.connection.onHover((params: HoverParams) => {
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return null;
+    }
+    return state.hoverProvider.getHover(params, evaluatedData);
+});
+
+state.connection.onDefinition((params: DefinitionParams) => {
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return null;
+    }
+    return state.definitionProvider.getDefinition(params, evaluatedData);
+});
+
+state.connection.onReferences((params: ReferenceParams) => {
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return null;
+    }
+    return state.referenceProvider.getReferences(params, evaluatedData);
+});
+
+state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return null;
+    }
+    return state.referenceProvider.getDocumentSymbols(params, evaluatedData);
+});
+
+state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
+    return state.referenceProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
+});
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document.uri));
@@ -191,6 +243,8 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
             throw evaluatedDataAndMaybeError.error;
         }
 
+        state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
+
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     } catch (error) {
         // Clear previous diagnostics because they are now potentially stale.
@@ -209,10 +263,6 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
             state.diagnosticProvider.setUnknownErrorDiagnostic(rootFbuildUriStr, typedError, state.connection);
         }
     }
-
-    state.hoverProvider.onEvaluatedDataChanged(evaluatedData);
-    state.definitionProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
-    state.referenceProvider.onEvaluatedDataChanged(changedDocumentUri.toString(), evaluatedData);
 }
 
 // Track the open files by root FASTBuild file.
@@ -225,7 +275,7 @@ state.documents.onDidOpen(change => {
     state.openDocumentToRootMap.set(changedDocumentUriStr, rootFbuildUriStr);
 });
 
-// If the closed document's root's tree has no more open documents, clear diagnostics for the root.
+// If the closed document's root's tree has no more open documents, clear state for the root.
 state.documents.onDidClose(change => {
     const closedDocumentUriStr: UriStr = change.document.uri;
     const rootFbuildUriStr = state.openDocumentToRootMap.get(closedDocumentUriStr);
@@ -235,6 +285,7 @@ state.documents.onDidClose(change => {
     state.openDocumentToRootMap.delete(closedDocumentUriStr);
     if (!Array.from(state.openDocumentToRootMap.values()).includes(rootFbuildUriStr)) {
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
+        state.rootToEvaluatedDataMap.delete(rootFbuildUriStr);
     }
 });
 
