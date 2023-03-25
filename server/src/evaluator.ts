@@ -107,16 +107,10 @@ export interface EvaluatedVariable {
     range: SourceRange;
 }
 
-export enum DefinitionKind {
-    Target,
-    Variable,
-}
-
 export interface VariableDefinition {
     id: number;
     range: SourceRange;
     name: string;
-    kind: DefinitionKind;
 }
 
 export interface VariableReference {
@@ -124,10 +118,31 @@ export interface VariableReference {
     range: SourceRange;
 }
 
+export interface TargetDefinition {
+    id: number;
+    range: SourceRange;
+    name: string;
+}
+
+export interface TargetReference {
+    definition: TargetDefinition;
+    range: SourceRange;
+}
+
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
     variableReferences: VariableReference[] = [];
     variableDefinitions: VariableDefinition[] = [];
+    targetReferences: TargetReference[] = [];
+    targetDefinitions: TargetDefinition[] = [];
+
+    append(other: EvaluatedData): void {
+        pushToFirstArray(this.evaluatedVariables, other.evaluatedVariables);
+        pushToFirstArray(this.variableReferences, other.variableReferences);
+        pushToFirstArray(this.variableDefinitions, other.variableDefinitions);
+        pushToFirstArray(this.targetReferences, other.targetReferences);
+        pushToFirstArray(this.targetDefinitions, other.targetDefinitions);
+    }
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -775,14 +790,23 @@ class ScopeStack {
         return this.stack[this.stack.length - 1];
     }
 
-    createVariableDefinition(range: SourceRange, name: string, kind: DefinitionKind): VariableDefinition {
+    createVariableDefinition(range: SourceRange, name: string): VariableDefinition {
         const id = this.nextVariableDefinitionId;
         this.nextVariableDefinitionId += 1;
         return {
             id,
             range,
             name,
-            kind,
+        };
+    }
+
+    createTargetDefinition(range: SourceRange, name: string): TargetDefinition {
+        const id = this.nextVariableDefinitionId;
+        this.nextVariableDefinitionId += 1;
+        return {
+            id,
+            range,
+            name,
         };
     }
 }
@@ -832,7 +856,6 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
                 }
             },
             name,
-            kind: DefinitionKind.Variable,
         };
         return definition;
     };
@@ -908,7 +931,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingValue = existingVariable.value;
                     }
 
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value, DefinitionKind.Variable);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
 
                     if (existingVariable === null) {
@@ -980,7 +1003,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
                 {
                     previousValue = maybeExistingVariableStartingFromParentScope.value;
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value, DefinitionKind.Variable);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
                     result.variableDefinitions.push(definition);
                     lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, definition);
                 } else {
@@ -1066,9 +1089,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                    result.append(evaluatedStatements);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1112,7 +1133,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingVariable.value = structMember.value;
                         variableDefinition = existingVariable.definition;
                     } else {
-                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName, DefinitionKind.Variable);
+                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
                         context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
                         result.variableDefinitions.push(variableDefinition);
                     }
@@ -1184,7 +1205,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                     const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
 
-                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue, DefinitionKind.Variable);
+                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
                     iterators.push({
                         arrayItems,
@@ -1214,9 +1235,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                        result.append(evaluatedStatements);
                         if (evaluatedStatementsAndMaybeError.error !== null) {
                             error = evaluatedStatementsAndMaybeError.error;
                             return;
@@ -1242,13 +1261,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 // Create a definition and reference for the target name.
-                const targetNameDefinition = context.scopeStack.createVariableDefinition(evaluatedTargetNameRange, evaluatedTargetName.value, DefinitionKind.Target);
-                const targetNameReference: VariableReference = {
+                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
+                const targetNameReference: TargetReference = {
                     definition: targetNameDefinition,
                     range: evaluatedTargetNameRange,
                 };
-                result.variableDefinitions.push(targetNameDefinition);
-                result.variableReferences.push(targetNameReference);
+                result.targetDefinitions.push(targetNameDefinition);
+                result.targetReferences.push(targetNameReference);
 
                 // Evaluate the function body.
                 let error: Error | null = null;
@@ -1256,9 +1275,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                    result.append(evaluatedStatements);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1297,9 +1314,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                    result.append(evaluatedStatements);
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
@@ -1323,9 +1338,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         const evaluatedStatementsAndMaybeError = evaluateStatements(statement.statements, context);
                         error = evaluatedStatementsAndMaybeError.error;
                         const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                        pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                        pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                        pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                        result.append(evaluatedStatements);
                     });
                     if (error !== null) {
                         return new DataAndMaybeError(result, error);
@@ -1334,18 +1347,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementUserFunction(statement)) {
                 const evaluatedDataAndMaybeError = evaluateUserFunctionDeclaration(statement, context);
                 const evaluatedData = evaluatedDataAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
-                pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+                result.append(evaluatedData);
                 if (evaluatedDataAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedDataAndMaybeError.error);
                 }
             } else if (isParsedStatementUserFunctionCall(statement)) {
                 const evaluatedDataAndMaybeError = evaluateUserFunctionCall(statement, context);
                 const evaluatedData = evaluatedDataAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
-                pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+                result.append(evaluatedData);
                 if (evaluatedDataAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedDataAndMaybeError.error);
                 }
@@ -1394,9 +1403,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const evaluatedStatementsAndMaybeError = evaluateStatements(includeParseData.statements, includeContext);
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                    pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                    pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                    pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                    result.append(evaluatedStatements);
                     if (evaluatedStatementsAndMaybeError.error !== null) {
                         return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                     }
@@ -1417,9 +1424,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const statements = evaluatedConditionAndMaybeError.data ? statement.ifStatements : statement.elseStatements;
                 const evaluatedStatementsAndMaybeError = evaluateStatements(statements, context);
                 const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedStatements.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedStatements.variableReferences);
-                pushToFirstArray(result.variableDefinitions, evaluatedStatements.variableDefinitions);
+                result.append(evaluatedStatements);
                 if (evaluatedStatementsAndMaybeError.error !== null) {
                     return new DataAndMaybeError(result, evaluatedStatementsAndMaybeError.error);
                 }
@@ -1453,7 +1458,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const symbol = statement.symbol.value;
                 const value = `placeholder-${symbol}-value`;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol, DefinitionKind.Variable);
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
                 context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
@@ -1638,7 +1643,6 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
             id: 0,
             range: SourceRange.create('', 0, 0, 0, 0),
             name: '',
-            kind: DefinitionKind.Variable,
         },
     };
 
@@ -2141,17 +2145,15 @@ function evaluateUserFunctionDeclaration(
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
-    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name, DefinitionKind.Variable);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
     const functionNameReference = {
         definition: functionNameDefinition,
         range: nameSourceRange,
     };
 
-    const result: EvaluatedData = {
-        evaluatedVariables: [],
-        variableReferences: [functionNameReference],
-        variableDefinitions: [functionNameDefinition],
-    };
+    const result = new EvaluatedData();
+    result.variableReferences.push(functionNameReference);
+    result.variableDefinitions.push(functionNameDefinition);
 
     // Ensure that the function name is not reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
@@ -2179,7 +2181,7 @@ function evaluateUserFunctionDeclaration(
         }
         usedParameterNames.push(parameter.name);
 
-        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name, DefinitionKind.Variable);
+        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name);
         parameter.definition = definition;
 
         result.variableDefinitions.push(definition);
@@ -2202,12 +2204,7 @@ function evaluateUserFunctionCall(
     call: ParsedStatementUserFunctionCall,
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
-    const result: EvaluatedData = {
-        evaluatedVariables: [],
-        variableReferences: [],
-        variableDefinitions: [],
-    };
-
+    const result = new EvaluatedData();
     const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
 
     // Lookup the function.
@@ -2287,9 +2284,7 @@ function evaluateUserFunctionCall(
 
         const evaluatedDataAndMaybeError = evaluateStatements(userFunction.statements, functionCallContext);
         const evaluatedData = evaluatedDataAndMaybeError.data;
-        pushToFirstArray(result.evaluatedVariables, evaluatedData.evaluatedVariables);
-        pushToFirstArray(result.variableReferences, evaluatedData.variableReferences);
-        pushToFirstArray(result.variableDefinitions, evaluatedData.variableDefinitions);
+        result.append(evaluatedData);
         error = evaluatedDataAndMaybeError.error;
     });
     if (error !== null) {

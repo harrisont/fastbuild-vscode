@@ -16,13 +16,14 @@ import {
 } from '../parser';
 
 import {
-    DefinitionKind,
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
     SourceRange,
     Struct,
     StructMember,
+    TargetDefinition,
+    TargetReference,
     Value,
     VariableDefinition,
     VariableReference,
@@ -542,9 +543,9 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
-            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27), name: 'MyBool', kind: DefinitionKind.Variable };
-            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 26), name: 'MyInt', kind: DefinitionKind.Variable };
-            const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyStr', kind: DefinitionKind.Variable };
+            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27), name: 'MyBool' };
+            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 26), name: 'MyInt' };
+            const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyStr' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     MyBool: new StructMember(true, myVarMyBoolDefinition),
@@ -562,7 +563,7 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
-            const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'A', kind: DefinitionKind.Variable };
+            const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'A' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 Struct.from(Object.entries({
@@ -581,8 +582,8 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
-            const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 23), name: 'A1', kind: DefinitionKind.Variable };
-            const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 23), name: 'A2', kind: DefinitionKind.Variable };
+            const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 23), name: 'A1' };
+            const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 23), name: 'A2' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 2,
@@ -600,7 +601,7 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
-            const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28), name: 'MyArray', kind: DefinitionKind.Variable };
+            const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28), name: 'MyArray' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     MyArray: new StructMember(['a', 'b', 'c'], myVarMyArrayDefinition),
@@ -617,8 +618,8 @@ describe('evaluator', () => {
                 ]
                 .Copy = .MyVar
             `;
-            const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30), name: 'MyInt', kind: DefinitionKind.Variable };
-            const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29), name: 'MyStruct', kind: DefinitionKind.Variable };
+            const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30), name: 'MyInt' };
+            const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29), name: 'MyStruct' };
             const expectedMyStructValue = Struct.from(Object.entries({
                 MyInt: new StructMember(1, myVarMyStructMyIntDefinition),
             }));
@@ -639,8 +640,8 @@ describe('evaluator', () => {
                 }
                 .Copy = .MyVar
             `;
-            const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 1, 34), name: 'MyInt', kind: DefinitionKind.Variable };
-            const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 2, 34), name: 'MyInt', kind: DefinitionKind.Variable };
+            const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 1, 34), name: 'MyInt' };
+            const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 2, 34), name: 'MyInt' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     MyInt: new StructMember(1, struct1MyIntDefinition),
@@ -1109,10 +1110,10 @@ describe('evaluator', () => {
                 .MyVar = .Struct1 + .Struct2
                 .Result = .MyVar
             `;
-            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A', kind: DefinitionKind.Variable };
-            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'B', kind: DefinitionKind.Variable };
-            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22), name: 'A', kind: DefinitionKind.Variable };
-            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22), name: 'C', kind: DefinitionKind.Variable };
+            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
+            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'B' };
+            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22), name: 'A' };
+            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22), name: 'C' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     A: new StructMember(0, struct1ADefinition),
@@ -1850,8 +1851,7 @@ describe('evaluator', () => {
                 {
                     id: 1,
                     range: createRange(1, 16, 1, 22),
-                    name: 'MyVar',
-                    kind: DefinitionKind.Variable,
+                    name: 'MyVar'
                 }
             ];
             assert.deepStrictEqual(result.variableDefinitions, expectedDefinitions);
@@ -1870,7 +1870,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(1, 16, 1, 22),
                 }
@@ -1890,7 +1889,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(1, 16, 1, 22),
                 },
@@ -1899,7 +1897,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(2, 16, 2, 22),
                 }
@@ -1919,7 +1916,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(1, 16, 1, 23),
                 },
@@ -1928,7 +1924,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(2, 26, 2, 33),
                 },
@@ -1937,7 +1932,6 @@ describe('evaluator', () => {
                         id: 2,
                         range: createRange(2, 16, 2, 23),
                         name: 'MyVar2',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(2, 16, 2, 23),
                 }
@@ -1957,7 +1951,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(1, 16, 1, 23),
                 },
@@ -1966,7 +1959,6 @@ describe('evaluator', () => {
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(2, 27, 2, 35),
                 },
@@ -1975,7 +1967,6 @@ describe('evaluator', () => {
                         id: 2,
                         range: createRange(2, 16, 2, 23),
                         name: 'MyVar2',
-                        kind: DefinitionKind.Variable,
                     },
                     range: createRange(2, 16, 2, 23),
                 }
@@ -1998,9 +1989,9 @@ describe('evaluator', () => {
                 .MyIntCopy = .MyInt
                 .MyStringCopy = .MyString
             `;
-            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool', kind: DefinitionKind.Variable };
-            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt', kind: DefinitionKind.Variable };
-            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString', kind: DefinitionKind.Variable };
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     MyBool: new StructMember(true, myStructMyBoolDefinition),
@@ -2027,15 +2018,15 @@ describe('evaluator', () => {
                 ]
                 .Copy = .Other
             `;
-            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool', kind: DefinitionKind.Variable };
-            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt', kind: DefinitionKind.Variable };
-            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString', kind: DefinitionKind.Variable };
-            const myStructMyEvaluatedVarDefinition: VariableDefinition = { id: 5, range: createRange(6, 20, 6, 35), name: 'MyEvaluatedVar', kind: DefinitionKind.Variable };
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
+            const myStructMyEvaluatedVarDefinition: VariableDefinition = { id: 5, range: createRange(6, 20, 6, 35), name: 'MyEvaluatedVar' };
             const usingMyStructRange = createRange(9, 20, 9, 36);
-            const usingMyStructMyBoolDefinition: VariableDefinition = { id: 7, range: usingMyStructRange, name: 'MyBool', kind: DefinitionKind.Variable };
-            const usingMyStructMyIntDefinition: VariableDefinition = { id: 8, range: usingMyStructRange, name: 'MyInt', kind: DefinitionKind.Variable };
-            const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange, name: 'MyString', kind: DefinitionKind.Variable };
-            const usingMyStructMyEvaluatedVarDefinition: VariableDefinition = { id: 10, range: usingMyStructRange, name: 'MyEvaluatedVar', kind: DefinitionKind.Variable };
+            const usingMyStructMyBoolDefinition: VariableDefinition = { id: 7, range: usingMyStructRange, name: 'MyBool' };
+            const usingMyStructMyIntDefinition: VariableDefinition = { id: 8, range: usingMyStructRange, name: 'MyInt' };
+            const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange, name: 'MyString' };
+            const usingMyStructMyEvaluatedVarDefinition: VariableDefinition = { id: 10, range: usingMyStructRange, name: 'MyEvaluatedVar' };
             assertEvaluatedVariablesValueEqual(input, [
                 'fun',
                 // Using(.MyStruct)
@@ -2077,11 +2068,11 @@ describe('evaluator', () => {
             const rangeUsingStatement = createFileRange('file:///dummy.bff', 6, 16, 6, 34);
             const rangeUsingStructVar = createFileRange('file:///dummy.bff', 6, 23, 6, 32);
 
-            const definitionMyVar1 = { id: 1, range:  rangeMyVar1, name: 'MyVar1', kind: DefinitionKind.Variable };  // MyVar1
-            const definitionMyStructMyVar1 = { id: 2, range: rangeMyStructMyVar1, name: 'MyVar1', kind: DefinitionKind.Variable };  // MyStruct's MyVar1
-            const definitionMyStructMyVar2 = { id: 3, range: rangeMyStructMyVar2, name: 'MyVar2', kind: DefinitionKind.Variable };  // MyStruct's MyVar2
-            const definitionMyStruct = { id: 4, range: rangeMyStruct, name: 'MyStruct', kind: DefinitionKind.Variable };  // MyStruct
-            const definitionMyVar2 = { id: 5, range: rangeUsingStatement, name: 'MyVar2', kind: DefinitionKind.Variable };  // MyVar2
+            const definitionMyVar1 = { id: 1, range:  rangeMyVar1, name: 'MyVar1' };  // MyVar1
+            const definitionMyStructMyVar1 = { id: 2, range: rangeMyStructMyVar1, name: 'MyVar1' };  // MyStruct's MyVar1
+            const definitionMyStructMyVar2 = { id: 3, range: rangeMyStructMyVar2, name: 'MyVar2' };  // MyStruct's MyVar2
+            const definitionMyStruct = { id: 4, range: rangeMyStruct, name: 'MyStruct' };  // MyStruct
+            const definitionMyVar2 = { id: 5, range: rangeUsingStatement, name: 'MyVar2' };  // MyVar2
             const expectedDefinitions = [
                 // .MyVar1 = 0
                 definitionMyVar1,
@@ -2130,9 +2121,9 @@ describe('evaluator', () => {
                 ]
                 Print( .MyStruct3 )
             `;
-            const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 26), name: 'MyInt', kind: DefinitionKind.Variable };
-            const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39), name: 'MyInt', kind: DefinitionKind.Variable };
-            const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39), name: 'MyInt', kind: DefinitionKind.Variable };
+            const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 26), name: 'MyInt' };
+            const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39), name: 'MyInt' };
+            const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39), name: 'MyInt' };
             assertEvaluatedVariablesValueEqual(input, [
                 // Using( .MyStruct1 )
                 Struct.from(Object.entries({
@@ -2170,7 +2161,7 @@ describe('evaluator', () => {
 
                 Using( .MyStruct )
             `;
-            const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31), name: 'StructVar1', kind: DefinitionKind.Variable };
+            const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31), name: 'StructVar1' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     StructVar1: new StructMember(1, myStructStructVar1Definition)
@@ -2240,8 +2231,8 @@ describe('evaluator', () => {
                     .Copy = .Item
                 }
             `;
-            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value', kind: DefinitionKind.Variable };
-            const myArray2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value', kind: DefinitionKind.Variable };
+            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value' };
+            const myArray2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     Value: new StructMember(1, myArray1ValueDefinition)
@@ -2406,45 +2397,81 @@ describe('evaluator', () => {
                     ]);
                 });
 
-                it('creates a definition for the target name that can be referenced', () => {
+                it.only('creates a definition for the target name that can be referenced', () => {
                     const input = `
                         {
-                            ${functionName}('MyTargetName')
+                            ${functionName}('MyTarget1')
                             {
                             }
 
-                            // TODO
-                            //.MyTargetNameReferenceStatic = 'MyTargetName'
-                            //.MyTargetNameReferenceDynamic = 'My' + 'TargetName'
+                            Alias('MyTarget2')
+                            {
+                                .Targets = { 'MyTarget1' }
+                            }
                         }
 
-                        // TODO
-                        // The target reference does not need to be in the same scope as the target definition.
-                        //{
-                        //    .MyTargetNameReferenceInDifferentScope = 'MyTargetName'
-                        //}
+                        // The target reference does not need to be in the same or child scope as the target definition.
+                        {
+                            Alias('MyTarget3')
+                            {
+                                .Targets = { 'MyTarget1' }
+                            }
+                        }
                     `;
 
                     const result = evaluateInput(input, true /*enableDiagnostics*/);
 
-                    const expectedTargetDefinition: VariableDefinition =
-                    {
+                    const expectedDefinitionMyTarget1: TargetDefinition = {
                         id: 1,
-                        range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
-                        name: 'MyTargetName',
-                        kind: DefinitionKind.Target,
+                        range: createRange(2, 29 + functionName.length, 2, 40 + functionName.length),
+                        name: 'MyTarget1',
                     };
-                    assert.deepStrictEqual(result.variableDefinitions, [
-                        expectedTargetDefinition
-                    ]);
+                    const expectedDefinitionMyTarget2: TargetDefinition = {
+                        id: 2,
+                        range: createRange(6, 34, 6, 45),
+                        name: 'MyTarget2',
+                    };
+                    const expectedDefinitionMyTarget3: TargetDefinition = {
+                        id: 4,
+                        range: createRange(14, 34, 14, 45),
+                        name: 'MyTarget3',
+                    };
 
-                    const expectedReferences: VariableReference[] = [
+                    const expectedTargetDefinitions: TargetDefinition[] = [
+                        expectedDefinitionMyTarget1,
+                        expectedDefinitionMyTarget2,
+                        expectedDefinitionMyTarget3,
+                    ];
+                    assert.deepStrictEqual(result.targetDefinitions, expectedTargetDefinitions);
+
+                    const expectedReferences: TargetReference[] = [
+                        // MyTarget1's definition's reference
                         {
-                            definition: expectedTargetDefinition,
-                            range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
+                            definition: expectedDefinitionMyTarget1,
+                            range: createRange(2, 29 + functionName.length, 2, 40 + functionName.length),
+                        },
+                        // MyTarget2's definition's reference
+                        {
+                            definition: expectedDefinitionMyTarget2,
+                            range: createRange(6, 34, 6, 45),
+                        },
+                        // MyTarget2's reference to MyTarget1
+                        {
+                            definition: expectedDefinitionMyTarget1,
+                            range: createRange(8, 45, 8, 57),
+                        },
+                        // MyTarget3's definition's reference
+                        {
+                            definition: expectedDefinitionMyTarget3,
+                            range: createRange(14, 34, 14, 45),
+                        },
+                        // MyTarget3's reference to MyTarget1
+                        {
+                            definition: expectedDefinitionMyTarget1,
+                            range: createRange(16, 45, 16, 57),
                         },
                     ];
-                    assert.deepStrictEqual(result.variableReferences, expectedReferences);
+                    assert.deepStrictEqual(result.targetReferences, expectedReferences);
                 });
 
                 it('body on the same line', () => {
@@ -4474,14 +4501,12 @@ Expecting to see the following:
                 id: 1,
                 range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 name: 'FromHelper',
-                kind: DefinitionKind.Variable,
             };
 
             const definitionCopy: VariableDefinition = {
                 id: 2,
                 range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
                 name: 'Copy',
-                kind: DefinitionKind.Variable,
             };
 
             assert.deepStrictEqual(result.variableDefinitions, [
@@ -4893,9 +4918,9 @@ Expecting to see the following:
                 Print( .Value )
             `;
 
-            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A', kind: DefinitionKind.Variable };
-            const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26), name: 'B', kind: DefinitionKind.Variable };
-            const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22), name: 'C', kind: DefinitionKind.Variable };
+            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
+            const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26), name: 'B' };
+            const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22), name: 'C' };
             assertEvaluatedVariablesValueEqual(input, [
                 Struct.from(Object.entries({
                     A: new StructMember(1, myVarADefinition),
