@@ -1,6 +1,6 @@
 # v0.2.0
 
-* [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+* [#4](https://github.com/harrisont/fastbuild-vscode/issues/4) Support listing document and workspace symbols.
 
 # v0.1.9
 
