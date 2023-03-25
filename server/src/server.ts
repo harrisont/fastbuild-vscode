@@ -146,7 +146,7 @@ state.connection.onInitialize((params: InitializeParams) => {
             referencesProvider: true,
             documentSymbolProvider: true,
             workspaceSymbolProvider: true,
-            // TODO: add `workspace: { { workspaceFolders: { supported: true } } }` to add support for workspace folders.
+            // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
         }
     };
 

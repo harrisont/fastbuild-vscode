@@ -20,6 +20,8 @@ import {
     EvaluatedData,
 } from '../evaluator';
 
+import * as fuzzy from 'fuzzy';
+
 export class ReferenceProvider {
     private evaluatedData = new Map<DocumentUri, EvaluatedData>();
 
@@ -79,14 +81,16 @@ export class ReferenceProvider {
     }
 
     getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
-        //TODO: filter on params.query
-
         const symbols: SymbolInformation[] = [];
         for (const evaluatedData of evaluatedDatas) {
             // Pre-allocate the number array length as an optimization.
             symbols.length += evaluatedData.variableDefinitions.length;
 
             for (const variableDefinition of evaluatedData.variableDefinitions) {
+                if (!fuzzy.test(params.query, variableDefinition.name)) {
+                    continue;
+                }
+
                 const symbol: SymbolInformation = {
                     name: variableDefinition.name,
                     kind: SymbolKind.Variable,
