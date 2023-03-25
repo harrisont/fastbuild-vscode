@@ -61,21 +61,23 @@ export class ReferenceProvider {
         if (evaluatedData === undefined) {
             return null;
         }
-        return evaluatedData.variableDefinitions
-            .filter(variableDefinition => variableDefinition.range.uri == uri)
-            .map(variableDefinition => {
-                const symbol: DocumentSymbol = {
-                    name: `TODO:name - ID=${variableDefinition.id}`,
-                    detail: 'TODO: detail',
-                    kind: SymbolKind.Variable,
-                    range: variableDefinition.range,
-                    selectionRange: variableDefinition.range,
-                };
-                return symbol;
-            });
+        const symbols: DocumentSymbol[] = [];
+        for (const variableDefinition of evaluatedData.variableDefinitions) {
+            if (variableDefinition.range.uri !== uri) {
+                continue;
+            }
+
+            const symbol: DocumentSymbol = {
+                name: variableDefinition.name,
+                kind: SymbolKind.Variable,
+                range: variableDefinition.range,
+                selectionRange: variableDefinition.range,
+            };
+            symbols.push(symbol);
+        }
+        return symbols;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
         //TODO: filter on params.query
 
@@ -86,13 +88,12 @@ export class ReferenceProvider {
 
             for (const variableDefinition of evaluatedData.variableDefinitions) {
                 const symbol: SymbolInformation = {
-                    name: `TODO:name - ID=${variableDefinition.id}`,
+                    name: variableDefinition.name,
                     kind: SymbolKind.Variable,
                     location: {
                         uri: variableDefinition.range.uri,
                         range: variableDefinition.range,
                     },
-                    containerName: 'TODO:containerName',
                 };
                 symbols.push(symbol);
             }

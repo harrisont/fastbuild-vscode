@@ -41,17 +41,17 @@ describe('hoversProvider', () => {
             const str = valueToString(true);
             assert.strictEqual('true', str);
         });
-        
+
         it('works for a string', () => {
             const str = valueToString('Hello world');
             assert.strictEqual('"Hello world"', str);
         });
-        
+
         it('works for a string with escape characters', () => {
             const str = valueToString('a \\ b');
             assert.strictEqual('"a \\ b"', str);
         });
-        
+
         it('works for an empty array', () => {
             const value: Value = [];
             const str = valueToString(value);
@@ -59,7 +59,7 @@ describe('hoversProvider', () => {
                 `{}`,
                 str);
         });
-        
+
         it('works for an array of primitives', () => {
             const value = ['Hello', 'world'];
             const str = valueToString(value);
@@ -70,7 +70,7 @@ describe('hoversProvider', () => {
 }`,
                 str);
         });
-        
+
         it('works for an array of arrays', () => {
             const value = [
                 [
@@ -96,7 +96,7 @@ describe('hoversProvider', () => {
 }`,
                 str);
         });
-        
+
         it('works for an empty struct', () => {
             const value = new Struct();
             const str = valueToString(value);
@@ -104,9 +104,9 @@ describe('hoversProvider', () => {
                 `[]`,
                 str);
         });
-        
+
         it('works for a struct', () => {
-            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0) };
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
                 A: new StructMember(1, dummyDefinition),
                 B: new StructMember(2, dummyDefinition)
@@ -119,9 +119,9 @@ describe('hoversProvider', () => {
 ]`,
                 str);
         });
-        
+
         it('works for a struct of structs', () => {
-            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0) };
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
                 A: new StructMember(Struct.from(Object.entries({
                     A1: new StructMember(1, dummyDefinition),
