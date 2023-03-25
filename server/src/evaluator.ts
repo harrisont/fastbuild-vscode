@@ -316,6 +316,7 @@ function isParsedStatementForEach(obj: Record<string, any>): obj is ParsedStatem
 interface ParsedStatementGenericFunction {
     type: 'genericFunction';
     range: ParseSourceRange;
+    functionName: string;
     targetName: any;
     statements: Statement[];
 }
