@@ -76,15 +76,11 @@ export class ReferenceProvider {
                 selectionRange: variableDefinition.range,
             };
             symbols.push(symbol);
-
-            // Unlike `getWorkspaceSymbols`, do not early out once we hit a symbol limit because the filtering is done client-side instead of server-side.
         }
         return symbols;
     }
 
     getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
-        const MAX_NUM_SYMBOLS = 1000;
-
         const symbols: SymbolInformation[] = [];
         for (const evaluatedData of evaluatedDatas) {
             for (const variableDefinition of evaluatedData.variableDefinitions) {
@@ -101,11 +97,6 @@ export class ReferenceProvider {
                     },
                 };
                 symbols.push(symbol);
-
-                // Early out if there are too many symbols, since returning more is unlikely to be useful.
-                if (symbols.length === MAX_NUM_SYMBOLS) {
-                    return symbols;
-                }
             }
         }
 
