@@ -76,6 +76,8 @@ export class ReferenceProvider {
                 selectionRange: variableDefinition.range,
             };
             symbols.push(symbol);
+
+            // Unlike `getWorkspaceSymbols`, do not early out once we hit a symbol limit because the filtering is done client-side instead of server-side.
         }
         return symbols;
     }
