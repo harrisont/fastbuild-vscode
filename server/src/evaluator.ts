@@ -1277,6 +1277,50 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     error = evaluatedStatementsAndMaybeError.error;
                     const evaluatedStatements = evaluatedStatementsAndMaybeError.data;
                     result.append(evaluatedStatements);
+
+                    if (error !== null) {
+                        return;
+                    }
+
+                    // TODO: don't hard-code 'Alias' and 'Targets', and extend to work with other functions and varables that refrence targets.
+                    // Handle `Alias`'s `Targets`.
+                    if (statement.functionName == 'Alias') {
+                        const targetsVariableName = 'Targets';
+
+                        const targetsVariable = context.scopeStack.getVariableInCurrentScope(targetsVariableName);
+                        if (targetsVariable === null) {
+                            const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+                            error = new EvaluationError(statementRange, `Function "${statement.functionName}" is missing required variable "${targetsVariableName}".`);
+                            return;
+                        }
+
+                        // Create a reference for the targets.
+                        const targets = (targetsVariable.value instanceof Array) ? targetsVariable.value : [targetsVariable.value];
+                        for (const target of targets) {
+                            if (typeof target !== 'string') {
+                                error = new EvaluationError(targetsVariable.definition.range, `Function "${statement.functionName}"'s variable "${targetsVariableName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(targetsVariable.value)}.`);
+                                return;
+                            }
+
+                            // TODO: use the actual range of the refererence (the array item) instead of the whole array
+                            const targetRange = targetsVariable.definition.range;
+
+                            // TODO: support looking up a target by the target's output-file.
+                            // TODO: change targetDefinitions to a map for faster lookups.
+                            const targetDefinition = result.targetDefinitions.find(definition => definition.name == target);
+                            if (targetDefinition === undefined) {
+                                error = new EvaluationError(targetRange, `Target "${target}" does not exist.`);
+                                return;
+                            }
+                            const targetReference: TargetReference = {
+                                definition: targetDefinition,
+                                // TODO: use the actual range of the refererence (the array item) instead of the whole array
+                                range: targetRange,
+                            };
+                            result.targetDefinitions.push(targetDefinition);
+                            result.targetReferences.push(targetReference);
+                        }
+                    }
                 });
                 if (error !== null) {
                     return new DataAndMaybeError(result, error);
