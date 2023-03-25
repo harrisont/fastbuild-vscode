@@ -1,3 +1,7 @@
+# v0.2.1
+
+* Fix bug where document symbols are not available for documents already open at launch.
+
 # v0.2.0
 
 * [#4](https://github.com/harrisont/fastbuild-vscode/issues/4) Support listing document and workspace symbols.

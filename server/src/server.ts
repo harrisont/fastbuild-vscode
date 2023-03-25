@@ -203,11 +203,18 @@ function queueDocumentUpdate(documentUriStr: UriStr): void {
         state.queuedDocumentUpdates.delete(documentUriStr);
     }
 
-    // Queue the new update.
-    state.queuedDocumentUpdates.set(documentUriStr, setTimeout(() => {
-        state.queuedDocumentUpdates.delete(documentUriStr);
+    // Skip the delay and immediately update if the document has no evaulated data.
+    // This is necesasry in order to do initially populate the data.
+    const evaluatedData = state.getRootFbuildEvaluatedData(documentUriStr);
+    if (evaluatedData === null) {
         updateDocument(documentUriStr);
-    }, UPDATE_DOCUMENT_DELAY_MS));
+    } else {
+        // Queue the new update.
+        state.queuedDocumentUpdates.set(documentUriStr, setTimeout(() => {
+            state.queuedDocumentUpdates.delete(documentUriStr);
+            updateDocument(documentUriStr);
+        }, UPDATE_DOCUMENT_DELAY_MS));
+    }
 }
 
 function updateDocument(changedDocumentUriStr: UriStr): void {
