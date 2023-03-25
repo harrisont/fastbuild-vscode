@@ -1,3 +1,7 @@
+# v0.2.2
+
+* Distinguish between targets and variables in the symbol listing.
+
 # v0.2.1
 
 * Fix bug where document symbols are not available for documents already open at launch.

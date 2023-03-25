@@ -107,10 +107,16 @@ export interface EvaluatedVariable {
     range: SourceRange;
 }
 
+export enum DefinitionKind {
+    Target,
+    Variable,
+}
+
 export interface VariableDefinition {
     id: number;
     range: SourceRange;
     name: string;
+    kind: DefinitionKind;
 }
 
 export interface VariableReference {
@@ -769,13 +775,14 @@ class ScopeStack {
         return this.stack[this.stack.length - 1];
     }
 
-    createVariableDefinition(range: SourceRange, name: string): VariableDefinition {
+    createVariableDefinition(range: SourceRange, name: string, kind: DefinitionKind): VariableDefinition {
         const id = this.nextVariableDefinitionId;
         this.nextVariableDefinitionId += 1;
         return {
             id,
             range,
             name,
+            kind,
         };
     }
 }
@@ -810,26 +817,30 @@ interface EvaluationContext {
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     const scopeStack = new ScopeStack();
 
-    const dummyVariableDefinition: VariableDefinition = {
-        id: -1,
-        range: {
-            uri: '',
-            start: {
-                line: -1,
-                character: -1
+    const createNoLocationVariableDefinition = (name: string) => {
+        const definition: VariableDefinition = {
+            id: -1,
+            range: {
+                uri: '',
+                start: {
+                    line: -1,
+                    character: -1
+                },
+                end: {
+                    line: -1,
+                    character: -1
+                }
             },
-            end: {
-                line: -1,
-                character: -1
-            }
-        },
-        name: '',
+            name,
+            kind: DefinitionKind.Variable,
+        };
+        return definition;
     };
 
-    scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, dummyVariableDefinition);
-    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', dummyVariableDefinition);
-    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', dummyVariableDefinition);
-    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, dummyVariableDefinition);
+    scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, createNoLocationVariableDefinition('_WORKING_DIR_'));
+    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', createNoLocationVariableDefinition('_CURRENT_BFF_DIR_'));
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', createNoLocationVariableDefinition('_FASTBUILD_VERSION_STRING_'));
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, createNoLocationVariableDefinition('_FASTBUILD_VERSION_'));
 
     return scopeStack;
 }
@@ -897,7 +908,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingValue = existingVariable.value;
                     }
 
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value, DefinitionKind.Variable);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
 
                     if (existingVariable === null) {
@@ -969,7 +980,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
                 {
                     previousValue = maybeExistingVariableStartingFromParentScope.value;
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value, DefinitionKind.Variable);
                     result.variableDefinitions.push(definition);
                     lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, definition);
                 } else {
@@ -1101,7 +1112,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingVariable.value = structMember.value;
                         variableDefinition = existingVariable.definition;
                     } else {
-                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
+                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName, DefinitionKind.Variable);
                         context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
                         result.variableDefinitions.push(variableDefinition);
                     }
@@ -1173,7 +1184,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                     const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
 
-                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
+                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue, DefinitionKind.Variable);
 
                     iterators.push({
                         arrayItems,
@@ -1231,7 +1242,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 // Create a definition and reference for the target name.
-                const targetNameDefinition = context.scopeStack.createVariableDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
+                const targetNameDefinition = context.scopeStack.createVariableDefinition(evaluatedTargetNameRange, evaluatedTargetName.value, DefinitionKind.Target);
                 const targetNameReference: VariableReference = {
                     definition: targetNameDefinition,
                     range: evaluatedTargetNameRange,
@@ -1442,7 +1453,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const symbol = statement.symbol.value;
                 const value = `placeholder-${symbol}-value`;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol, DefinitionKind.Variable);
                 context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
@@ -1627,6 +1638,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
             id: 0,
             range: SourceRange.create('', 0, 0, 0, 0),
             name: '',
+            kind: DefinitionKind.Variable,
         },
     };
 
@@ -2129,7 +2141,7 @@ function evaluateUserFunctionDeclaration(
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
-    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name, DefinitionKind.Variable);
     const functionNameReference = {
         definition: functionNameDefinition,
         range: nameSourceRange,
@@ -2167,7 +2179,7 @@ function evaluateUserFunctionDeclaration(
         }
         usedParameterNames.push(parameter.name);
 
-        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name);
+        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name, DefinitionKind.Variable);
         parameter.definition = definition;
 
         result.variableDefinitions.push(definition);

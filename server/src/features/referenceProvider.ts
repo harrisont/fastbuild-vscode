@@ -17,6 +17,7 @@ import {
 } from '../parser';
 
 import {
+    DefinitionKind,
     EvaluatedData,
 } from '../evaluator';
 
@@ -71,7 +72,7 @@ export class ReferenceProvider {
 
             const symbol: DocumentSymbol = {
                 name: variableDefinition.name,
-                kind: SymbolKind.Variable,
+                kind: variableDefinition.kind == DefinitionKind.Target ? SymbolKind.Function : SymbolKind.Variable,
                 range: variableDefinition.range,
                 selectionRange: variableDefinition.range,
             };
@@ -90,7 +91,7 @@ export class ReferenceProvider {
 
                 const symbol: SymbolInformation = {
                     name: variableDefinition.name,
-                    kind: SymbolKind.Variable,
+                    kind: variableDefinition.kind == DefinitionKind.Target ? SymbolKind.Function : SymbolKind.Variable,
                     location: {
                         uri: variableDefinition.range.uri,
                         range: variableDefinition.range,
