@@ -110,6 +110,7 @@ export interface EvaluatedVariable {
 export interface VariableDefinition {
     id: number;
     range: SourceRange;
+    name: string;
 }
 
 export interface VariableReference {
@@ -294,7 +295,7 @@ function isParsedStatementForEach(obj: Record<string, any>): obj is ParsedStatem
 interface ParsedStatementGenericFunction {
     type: 'genericFunction';
     range: ParseSourceRange;
-    alias: any;
+    targetName: any;
     statements: Statement[];
 }
 
@@ -768,12 +769,13 @@ class ScopeStack {
         return this.stack[this.stack.length - 1];
     }
 
-    createVariableDefinition(range: SourceRange): VariableDefinition {
+    createVariableDefinition(range: SourceRange, name: string): VariableDefinition {
         const id = this.nextVariableDefinitionId;
         this.nextVariableDefinitionId += 1;
         return {
             id,
             range,
+            name,
         };
     }
 }
@@ -820,7 +822,8 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
                 line: -1,
                 character: -1
             }
-        }
+        },
+        name: '',
     };
 
     scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, dummyVariableDefinition);
@@ -894,7 +897,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingValue = existingVariable.value;
                     }
 
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
                     variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
 
                     if (existingVariable === null) {
@@ -966,7 +969,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
                 {
                     previousValue = maybeExistingVariableStartingFromParentScope.value;
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange);
+                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
                     result.variableDefinitions.push(definition);
                     lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, definition);
                 } else {
@@ -1098,7 +1101,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         existingVariable.value = structMember.value;
                         variableDefinition = existingVariable.definition;
                     } else {
-                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange);
+                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
                         context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
                         result.variableDefinitions.push(variableDefinition);
                     }
@@ -1155,7 +1158,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const loopVar = iterator.loopVar;
                     const loopVarRange = new SourceRange(context.thisFbuildUri, loopVar.range);
-                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange);
 
                     // Evaluate the loop-variable name.
                     const evaluatedLoopVarNameAndMaybeError = evaluateRValue(loopVar.name, context);
@@ -1170,6 +1172,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, error);
                     }
                     const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
+
+                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
                     iterators.push({
                         arrayItems,
@@ -1212,19 +1216,28 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, error);
                 }
             } else if (isParsedStatementGenericFunction(statement)) {
-                // Evaluate the alias.
-                const evaluatedAliasNameAndMaybeError = evaluateRValue(statement.alias, context);
-                const evaluatedAliasName = evaluatedAliasNameAndMaybeError.data;
-                pushToFirstArray(result.evaluatedVariables, evaluatedAliasName.evaluatedVariables);
-                pushToFirstArray(result.variableReferences, evaluatedAliasName.variableReferences);
-                if (evaluatedAliasNameAndMaybeError.error !== null) {
-                    return new DataAndMaybeError(result, evaluatedAliasNameAndMaybeError.error);
+                // Evaluate the target name.
+                const evaluatedTargetNameNameAndMaybeError = evaluateRValue(statement.targetName, context);
+                const evaluatedTargetName = evaluatedTargetNameNameAndMaybeError.data;
+                pushToFirstArray(result.evaluatedVariables, evaluatedTargetName.evaluatedVariables);
+                pushToFirstArray(result.variableReferences, evaluatedTargetName.variableReferences);
+                if (evaluatedTargetNameNameAndMaybeError.error !== null) {
+                    return new DataAndMaybeError(result, evaluatedTargetNameNameAndMaybeError.error);
                 }
-                if (typeof evaluatedAliasName.value !== 'string') {
-                    const range = new SourceRange(context.thisFbuildUri, evaluatedAliasName.range);
-                    const error = new EvaluationError(range, `Alias must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedAliasName.value)}`);
+                const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
+                if (typeof evaluatedTargetName.value !== 'string') {
+                    const error = new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`);
                     return new DataAndMaybeError(result, error);
                 }
+
+                // Create a definition and reference for the target name.
+                const targetNameDefinition = context.scopeStack.createVariableDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
+                const targetNameReference: VariableReference = {
+                    definition: targetNameDefinition,
+                    range: evaluatedTargetNameRange,
+                };
+                result.variableDefinitions.push(targetNameDefinition);
+                result.variableReferences.push(targetNameReference);
 
                 // Evaluate the function body.
                 let error: Error | null = null;
@@ -1429,7 +1442,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const symbol = statement.symbol.value;
                 const value = `placeholder-${symbol}-value`;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const definition = context.scopeStack.createVariableDefinition(statementRange);
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
                 context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
@@ -1612,7 +1625,8 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
         value: 0,
         definition: {
             id: 0,
-            range: SourceRange.create('', 0, 0, 0, 0)
+            range: SourceRange.create('', 0, 0, 0, 0),
+            name: '',
         },
     };
 
@@ -2115,7 +2129,7 @@ function evaluateUserFunctionDeclaration(
     context: EvaluationContext
 ): DataAndMaybeError<EvaluatedData> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
-    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
     const functionNameReference = {
         definition: functionNameDefinition,
         range: nameSourceRange,
@@ -2153,7 +2167,7 @@ function evaluateUserFunctionDeclaration(
         }
         usedParameterNames.push(parameter.name);
 
-        const definition = context.scopeStack.createVariableDefinition(paramSourceRange);
+        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name);
         parameter.definition = definition;
 
         result.variableDefinitions.push(definition);

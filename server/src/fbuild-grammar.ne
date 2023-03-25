@@ -214,7 +214,7 @@ statement ->
   | functionPrint                    {% ([value]) => [ value, new ParseContext() ] %}
   | functionSettings                 {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
-  | genericFunctionWithAlias         {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithTargetName         {% ([value]) => [ value, new ParseContext() ] %}
   | userFunctionDeclaration          {% ([value]) => [ value, new ParseContext() ] %}
   | userFunctionCall                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}
@@ -610,10 +610,10 @@ functionBody ->
 
 @{%
 
-function createGenericFunction(alias: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createGenericFunction(targetName: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'genericFunction',
-        alias,
+        targetName,
         range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
     };
@@ -621,13 +621,13 @@ function createGenericFunction(alias: any, statements: Record<string, any>, stat
 
 %}
 
-# Functions that we don't care about handling except for the function's alias parameter.
-genericFunctionWithAlias ->
-    genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(alias, statements, functionName, braceClose); } %}
-  | genericFunctionNameWithAlias optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline alias whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [alias, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(alias, statements, functionName, braceClose); } %}
+# Functions that we don't care about handling except for the function's target-name parameter.
+genericFunctionWithTargetName ->
+    genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(targetName, statements, functionName, braceClose); } %}
+  | genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(targetName, statements, functionName, braceClose); } %}
 
-# Function names of functions that we don't care about handling except for the function's alias parameter.
-genericFunctionNameWithAlias ->
+# Function names of functions that we don't care about handling except for the function's target-name parameter.
+genericFunctionNameWithTargetName ->
     %keywordAlias              {% id %}
   | %keywordCompiler           {% id %}
   | %keywordCopy               {% id %}
@@ -648,7 +648,7 @@ genericFunctionNameWithAlias ->
   | %keywordVSSolution         {% id %}
   | %keywordXCodeProject       {% id %}
 
-alias ->
+targetName ->
     string             {% ([value]) => [ value, new ParseContext() ] %}
   | evaluatedVariable  {% ([valueWithContext]) => valueWithContext %}
 

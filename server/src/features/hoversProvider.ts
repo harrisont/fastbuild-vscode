@@ -56,22 +56,15 @@ export function valueToString(value: Value, indentation = ''): string {
 }
 
 export class HoverProvider {
-    private evaluatedData: EvaluatedData | null = null;
-
-    onEvaluatedDataChanged(newEvaluatedData: EvaluatedData): void {
-        this.evaluatedData = newEvaluatedData;
-    }
-
-    onHover(params: HoverParams): Hover | null {
+    getHover(params: HoverParams, evaluatedData: EvaluatedData): Hover | null {
         const uri = params.textDocument.uri;
         const position = params.position;
-        const evaluatedVariables = this.evaluatedData?.evaluatedVariables ?? [];
 
         const possibleValues: Set<Value> = new Set();
         let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
         // Potential optmization: use a different data structure to allow for a more efficient search.
-        for (const evaluatedVariable of evaluatedVariables) {
+        for (const evaluatedVariable of evaluatedData.evaluatedVariables) {
             if (uri == evaluatedVariable.range.uri
                 && isPositionInRange(position, evaluatedVariable.range))
             {

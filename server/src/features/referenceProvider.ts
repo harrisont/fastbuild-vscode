@@ -1,10 +1,15 @@
 import {
+    DocumentSymbolParams,
     ReferenceParams,
+    WorkspaceSymbolParams,
 } from 'vscode-languageserver-protocol';
 
 import {
+    DocumentSymbol,
     DocumentUri,
     Location,
+    SymbolInformation,
+    SymbolKind,
 } from 'vscode-languageserver-types';
 
 import {
@@ -15,17 +20,14 @@ import {
     EvaluatedData,
 } from '../evaluator';
 
+import * as fuzzy from 'fuzzy';
+
 export class ReferenceProvider {
     private evaluatedData = new Map<DocumentUri, EvaluatedData>();
 
-    onEvaluatedDataChanged(uri: DocumentUri, newEvaluatedData: EvaluatedData): void {
-        this.evaluatedData.set(uri, newEvaluatedData);
-    }
-
-    onReferences(params: ReferenceParams): Location[] | null {
+    getReferences(params: ReferenceParams, evaluatedData: EvaluatedData): Location[] | null {
         const uri = params.textDocument.uri;
         const position = params.position;
-        const evaluatedData = this.evaluatedData.get(uri);
         if (evaluatedData === undefined) {
             return null;
         }
@@ -54,5 +56,59 @@ export class ReferenceProvider {
         }
 
         return [...locations.values()];
+    }
+
+    getDocumentSymbols(params: DocumentSymbolParams, evaluatedData: EvaluatedData): DocumentSymbol[] | null {
+        const uri = params.textDocument.uri;
+        if (evaluatedData === undefined) {
+            return null;
+        }
+        const symbols: DocumentSymbol[] = [];
+        for (const variableDefinition of evaluatedData.variableDefinitions) {
+            if (variableDefinition.range.uri !== uri) {
+                continue;
+            }
+
+            const symbol: DocumentSymbol = {
+                name: variableDefinition.name,
+                kind: SymbolKind.Variable,
+                range: variableDefinition.range,
+                selectionRange: variableDefinition.range,
+            };
+            symbols.push(symbol);
+
+            // Unlike `getWorkspaceSymbols`, do not early out once we hit a symbol limit because the filtering is done client-side instead of server-side.
+        }
+        return symbols;
+    }
+
+    getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
+        const MAX_NUM_SYMBOLS = 1000;
+
+        const symbols: SymbolInformation[] = [];
+        for (const evaluatedData of evaluatedDatas) {
+            for (const variableDefinition of evaluatedData.variableDefinitions) {
+                if (!fuzzy.test(params.query, variableDefinition.name)) {
+                    continue;
+                }
+
+                const symbol: SymbolInformation = {
+                    name: variableDefinition.name,
+                    kind: SymbolKind.Variable,
+                    location: {
+                        uri: variableDefinition.range.uri,
+                        range: variableDefinition.range,
+                    },
+                };
+                symbols.push(symbol);
+
+                // Early out if there are too many symbols, since returning more is unlikely to be useful.
+                if (symbols.length === MAX_NUM_SYMBOLS) {
+                    return symbols;
+                }
+            }
+        }
+
+        return symbols;
     }
 }
