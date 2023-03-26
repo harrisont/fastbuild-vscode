@@ -2319,32 +2319,35 @@ describe('evaluator', () => {
                 }
                 ForEach( .Item in .MyArray )
                 {
-                    .Copy = .Item
+                    Print( .Item )
                 }
             `;
-            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value', kind: DefinitionKind.Variable };
-            const myArray2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value', kind: DefinitionKind.Variable };
+            const myStruct1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value', kind: DefinitionKind.Variable };
+            const myStruct2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value', kind: DefinitionKind.Variable };
+            const myStruct1 = Struct.from(Object.entries({
+                Value: new StructMember(1, myStruct1ValueDefinition)
+            }));
+            const myStruct2 = Struct.from(Object.entries({
+                Value: new StructMember(2, myStruct2ValueDefinition)
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    Value: new StructMember(1, myArray1ValueDefinition)
-                })),
-                Struct.from(Object.entries({
-                    Value: new StructMember(2, myArray2ValueDefinition)
-                })),
-                [
-                    Struct.from(Object.entries({
-                        Value: new StructMember(1, myArray1ValueDefinition)
-                    })),
-                    Struct.from(Object.entries({
-                        Value: new StructMember(2, myArray2ValueDefinition)
-                    }))
-                ],
-                Struct.from(Object.entries({
-                    Value: new StructMember(1, myArray1ValueDefinition)
-                })),
-                Struct.from(Object.entries({
-                    Value: new StructMember(2, myArray2ValueDefinition)
-                }))
+                // .Value = 1
+                1,
+                // .MyStruct1 = ...
+                myStruct1,
+                // .Value = 2
+                2,
+                // .MyStruct2 = ...
+                myStruct2,
+                // .MyArray = ...
+                myStruct1,
+                myStruct2,
+                [myStruct1, myStruct2],
+                //ForEach( .Item in .MyArray )
+                [myStruct1, myStruct2],
+                // Print( .Item )
+                myStruct1,
+                myStruct2,
             ]);
         });
 
@@ -2356,13 +2359,21 @@ describe('evaluator', () => {
                 ForEach( .Item1 in .MyArray1,.Item2 in .MyArray2,
                          .Item3 in .MyArray3 )
                 {
-                    .Combined = '$Item1$-$Item2$-$Item3$'
+                    Print( '$Item1$-$Item2$-$Item3$' )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray1 = ...
+                ['a1', 'b1', 'c1'],
+                // .MyArray3 = ...
+                ['a2', 'b2', 'c2'],
+                // .MyArray3 = ...
+                ['a3', 'b3', 'c3'],
+                // ForEach( ... )
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
+                // Print( '$Item1$-$Item2$-$Item3$' )
                 'a1', 'a2', 'a3',
                 'b1', 'b2', 'b3',
                 'c1', 'c2', 'c3',
@@ -2378,13 +2389,21 @@ describe('evaluator', () => {
                          .Item2 in .MyArray2
                          .Item3 in .MyArray3 )
                 {
-                    .Combined = '$Item1$-$Item2$-$Item3$'
+                    Print( '$Item1$-$Item2$-$Item3$' )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray1 = ...
+                ['a1', 'b1', 'c1'],
+                // .MyArray3 = ...
+                ['a2', 'b2', 'c2'],
+                // .MyArray3 = ...
+                ['a3', 'b3', 'c3'],
+                // ForEach( ... )
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
+                // Print( '$Item1$-$Item2$-$Item3$' )
                 'a1', 'a2', 'a3',
                 'b1', 'b2', 'b3',
                 'c1', 'c2', 'c3',
@@ -2407,10 +2426,14 @@ describe('evaluator', () => {
         it('body is on the same line', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
-                ForEach( .Item in .MyArray ) { .Copy = .Item }
+                ForEach( .Item in .MyArray ) { Print( .Item ) }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray = ...
                 ['a', 'b', 'c'],
+                // ForEach( ... )
+                ['a', 'b', 'c'],
+                // Print( .Item )
                 'a',
                 'b',
                 'c'
@@ -2471,7 +2494,10 @@ describe('evaluator', () => {
                         {
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['SomeName']);
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'SomeName',
+                        'SomeName',
+                    ]);
                 });
 
                 it('handles a dynamic-variable target name', () => {
@@ -2483,8 +2509,14 @@ describe('evaluator', () => {
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
+                        // .MyTargetName = ...
+                        'SomeName',
+                        // .TargetNameVariable = ...
                         'MyTargetName',
-                        'SomeName'
+                        // $TargetNameVariable$
+                        'MyTargetName',
+                        // .'$TargetNameVariable$'
+                        'SomeName',
                     ]);
                 });
 
@@ -2552,11 +2584,18 @@ describe('evaluator', () => {
                         .MyVar = 1
                         ${functionName}('MyTargetName')
                         {
-                            .Copy = .MyVar
-                            .Copy = ^MyVar
+                            Print( .MyVar )
+                            Print( ^MyVar )
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [
+                        // .MyVar = ...
+                        1,
+                        // Print( .MyVar )
+                        1,
+                        // Print( ^MyVar )
+                        1,
+                    ]);
                 });
             });
         }
@@ -2569,7 +2608,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Error( 'Value is $Value$' )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
 
             it('The message being just an evaluated variable', () => {
@@ -2577,7 +2619,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Error( '$Value$' )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
         });
 
@@ -2587,7 +2632,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Print('Value is $Value$')
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
 
             it('Print string variable', () => {
@@ -2595,7 +2643,10 @@ describe('evaluator', () => {
                     .Value = 'hello'
                     Print(.Value)
                 `;
-                assertEvaluatedVariablesValueEqual(input, ['hello']);
+                assertEvaluatedVariablesValueEqual(input, [
+                    'hello',
+                    'hello',
+                ]);
             });
 
             it('Print integer variable', () => {
@@ -2603,7 +2654,10 @@ describe('evaluator', () => {
                     .Value = 123
                     Print(.Value)
                 `;
-                assertEvaluatedVariablesValueEqual(input, [123]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    123,
+                    123,
+                ]);
             });
         });
 
@@ -2613,10 +2667,17 @@ describe('evaluator', () => {
                     .Value = 1
                     Settings
                     {
-                        .Copy = .Value
+                        .MyVar = .Value
                     }
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    1,
+                    // .Value
+                    1,
+                    // .MyVar = ...
+                    1,
+                ]);
             });
         });
     });
@@ -2630,9 +2691,16 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
+                    Print( .Result )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Result = ...
+                    false,
+                    // ^Result = true
+                    true,
+                    // Print( .Result )
+                    true,
+                ]);
             });
 
             it('evaluates a literal false to false', () => {
@@ -2642,9 +2710,14 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
+                    Print( .Result )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Result = ...
+                    false,
+                    // Print( .Result )
+                    false,
+                ]);
             });
 
             it('evaluates "! literal true" to false', () => {
@@ -2654,7 +2727,6 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false]);
             });
@@ -2666,9 +2738,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [false, true]);
             });
 
             it('evaluates a true boolean variable to true', () => {
@@ -2679,9 +2750,17 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true, true]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    true,
+                    // .Result = ...
+                    false,
+                    // If( .Value )
+                    true,
+                    // ^Result = ...
+                    true,
+                ]);
             });
 
             it('evaluates a false boolean variable to false', () => {
@@ -2692,9 +2771,15 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false, false]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    false,
+                    // .Result = ...
+                    false,
+                    // If( .Value )
+                    false,
+                ]);
             });
 
             it('evaluates the inversion of a true boolean variable to false', () => {
@@ -2705,9 +2790,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true, false]);
+                assertEvaluatedVariablesValueEqual(input, [true, false, true]);
             });
 
             it('evaluates the inversion of a false boolean variable to true', () => {
@@ -2718,9 +2802,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false, true]);
+                assertEvaluatedVariablesValueEqual(input, [false, false, false, true]);
             });
 
             it('errors on using a non-boolean variable for the condition', () => {
@@ -2738,9 +2821,8 @@ describe('evaluator', () => {
                 const input = `
                     .Result = false
                     If( true ) { ^Result = true }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [false, true]);
             });
         });
 
@@ -2753,9 +2835,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true]);
                 });
 
                 it('"{true-literal} == {false-literal}" evaluates to false', () => {
@@ -2765,7 +2846,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false]);
                 });
@@ -2778,9 +2858,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, true]);
                 });
 
                 it('"{true-literal} == true" evaluates to true', () => {
@@ -2791,9 +2870,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, true]);
                 });
 
                 it('"true == true" evaluates to true', () => {
@@ -2805,9 +2883,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, false, true, true, true]);
                 });
 
                 it('"false == false" evaluates to true', () => {
@@ -2819,9 +2896,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, false, true]);
                 });
 
                 it('"true == false" evaluates to false', () => {
@@ -2833,9 +2909,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, false]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, false, true, false]);
                 });
 
                 it('"false == true" evaluates to false', () => {
@@ -2847,9 +2922,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, false]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, false, true]);
                 });
 
                 it('"true != true" evaluates to false', () => {
@@ -2861,9 +2935,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, false]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, false, true, true]);
                 });
 
                 it('"false != false" evaluates to false', () => {
@@ -2875,9 +2948,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, false]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, false]);
                 });
 
                 it('"true != false" evaluates to true', () => {
@@ -2889,9 +2961,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, false, true, false, true]);
                 });
 
                 it('"false != true" evaluates to true', () => {
@@ -2903,9 +2974,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, false, true, true]);
                 });
 
                 const illegalComparisonOperators = [
@@ -2937,9 +3007,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true]);
                 });
 
                 it('"{1-literal} == {0-literal}" evaluates to false', () => {
@@ -2949,7 +3018,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false]);
                 });
@@ -2962,9 +3030,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, false, 1, true]);
                 });
 
                 it('"{1-literal} == 1" evaluates to true', () => {
@@ -2975,9 +3042,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, false, 1, true]);
                 });
 
                 it('"1 == 1" evaluates to true', () => {
@@ -2989,9 +3055,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
                 });
 
                 it('"1 == 0" evaluates to false', () => {
@@ -3003,9 +3068,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
                 });
 
                 it('"1 != 1" evaluates to false', () => {
@@ -3017,9 +3081,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
                 });
 
                 it('"1 != 0" evaluates to true', () => {
@@ -3031,9 +3094,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
                 });
 
                 it('"0 < 1" evaluates to true', () => {
@@ -3045,9 +3107,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1, true]);
                 });
 
                 it('"1 < 0" evaluates to false', () => {
@@ -3059,9 +3120,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
                 });
 
                 it('"1 < 1" evaluates to false', () => {
@@ -3073,9 +3133,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
                 });
 
                 it('"0 <= 1" evaluates to true', () => {
@@ -3087,9 +3146,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1, true]);
                 });
 
                 it('"1 <= 0" evaluates to false', () => {
@@ -3101,9 +3159,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
                 });
 
                 it('"1 <= 1" evaluates to true', () => {
@@ -3115,9 +3172,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
                 });
 
                 it('"0 > 1" evaluates to false', () => {
@@ -3129,9 +3185,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1]);
                 });
 
                 it('"1 > 0" evaluates to true', () => {
@@ -3143,9 +3198,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
                 });
 
                 it('"1 > 1" evaluates to false', () => {
@@ -3157,9 +3211,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
                 });
 
                 it('"0 >= 1" evaluates to false', () => {
@@ -3171,9 +3224,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1]);
                 });
 
                 it('"1 >= 0" evaluates to true', () => {
@@ -3185,9 +3237,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
                 });
 
                 it('"1 >= 1" evaluates to true', () => {
@@ -3199,9 +3250,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
                 });
             });
 
@@ -3213,9 +3263,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true]);
                 });
 
                 it('"{cat-literal} == {dog-literal}" evaluates to false', () => {
@@ -3225,7 +3274,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [false]);
                 });
@@ -3238,9 +3286,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', false, 'cat', true]);
                 });
 
                 it('"{cat-literal} = cat" evaluates to true', () => {
@@ -3251,9 +3298,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', false, 'cat', true]);
                 });
 
                 it('"cat == cat" evaluates to true', () => {
@@ -3265,9 +3311,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false, 'cat', 'cat', true]);
                 });
 
                 it('"cat == Cat" (different case) evaluates to false', () => {
@@ -3279,9 +3324,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false, 'cat', 'Cat']);
                 });
 
                 it('"cat == dog" evaluates to false', () => {
@@ -3293,9 +3337,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
                 });
 
                 it('"cat != cat" evaluates to false', () => {
@@ -3307,9 +3350,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false, 'cat', 'cat']);
                 });
 
                 it('"cat != Cat" (different case) evaluates to true', () => {
@@ -3321,9 +3363,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false, 'cat', 'Cat', true]);
                 });
 
                 it('"cat != dog" evaluates to true', () => {
@@ -3335,9 +3376,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
                 });
 
                 it('"cat < dog" evaluates to true', () => {
@@ -3349,9 +3389,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
                 });
 
                 it('"dog < cat" evaluates to false', () => {
@@ -3363,9 +3402,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat']);
                 });
 
                 it('"dog < dog" evaluates to false', () => {
@@ -3377,9 +3415,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog']);
                 });
 
                 it('"Dog < dog" (different case) evaluates to true', () => {
@@ -3391,9 +3428,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog', true]);
                 });
 
                 it('"dog < Dog" (different case) evaluates to false', () => {
@@ -3405,9 +3441,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog']);
                 });
 
                 it('"cat <= dog" evaluates to true', () => {
@@ -3419,9 +3454,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
                 });
 
                 it('"dog <= cat" evaluates to false', () => {
@@ -3433,9 +3467,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat']);
                 });
 
                 it('"dog <= dog" evaluates to true', () => {
@@ -3447,9 +3480,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog', true]);
                 });
 
                 it('"Dog <= dog" (different case) evaluates to true', () => {
@@ -3461,9 +3493,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog', true]);
                 });
 
                 it('"dog <= Dog" (different case) evaluates to false', () => {
@@ -3475,9 +3506,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog']);
                 });
 
                 it('"cat > dog" evaluates to false', () => {
@@ -3489,9 +3519,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
                 });
 
                 it('"dog > cat" evaluates to true', () => {
@@ -3503,9 +3532,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat', true]);
                 });
 
                 it('"dog > dog" evaluates to false', () => {
@@ -3517,9 +3545,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog']);
                 });
 
                 it('"Dog > dog" (different case) evaluates to false', () => {
@@ -3531,9 +3558,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog']);
                 });
 
                 it('"dog > Dog" (different case) evaluates to true', () => {
@@ -3545,9 +3571,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog', true]);
                 });
 
                 it('"cat >= dog" evaluates to false', () => {
@@ -3559,9 +3584,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
                 });
 
                 it('"dog >= cat" evaluates to true', () => {
@@ -3573,9 +3597,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat', true]);
                 });
 
                 it('"dog >= dog" evaluates to true', () => {
@@ -3587,9 +3610,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog', true]);
                 });
 
                 it('"Dog >= dog" (different case) evaluates to false', () => {
@@ -3601,9 +3623,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog']);
                 });
 
                 it('"dog >= Dog" (different case) evaluates to true', () => {
@@ -3615,9 +3636,8 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog', true]);
                 });
             });
 
@@ -3638,16 +3658,15 @@ describe('evaluator', () => {
             it('present-literal-string "in" array of strings evaluates to true', () => {
                 const input = `
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( 'b' in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['a', 'b', 'c'],
-                    true
+                    ['a', 'b', 'c'],
+                    true,
                 ]);
             });
 
@@ -3655,14 +3674,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    ['a', 'b', 'c'],
                     'b',
                     ['a', 'b', 'c'],
                     true
@@ -3673,17 +3692,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'd'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'd',
                     ['a', 'b', 'c'],
-                    false
+                    'd',
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3691,17 +3709,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'b',
                     [],
-                    false
+                    'b',
+                    [],
                 ]);
             });
 
@@ -3709,17 +3726,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'b',
                     ['a', 'b', 'c'],
-                    false
+                    'b',
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3727,14 +3743,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'd'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'd',
+                    ['a', 'b', 'c'],
                     'd',
                     ['a', 'b', 'c'],
                     true
@@ -3745,14 +3761,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    [],
                     'b',
                     [],
                     true
@@ -3763,14 +3779,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d', 'b'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
                     ['d', 'b'],
                     ['a', 'b', 'c'],
                     true
@@ -3781,17 +3797,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['d'],
                     ['a', 'b', 'c'],
-                    false
+                    ['d'],
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3799,17 +3814,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'b'}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['b'],
                     [],
-                    false
+                    ['b'],
+                    [],
                 ]);
             });
 
@@ -3817,17 +3831,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     [],
                     [],
-                    false
+                    [],
+                    [],
                 ]);
             });
 
@@ -3835,17 +3848,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d', 'b'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['d', 'b'],
                     ['a', 'b', 'c'],
-                    false
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3853,14 +3865,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['d'],
+                    ['a', 'b', 'c'],
                     ['d'],
                     ['a', 'b', 'c'],
                     true
@@ -3871,14 +3883,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'b'}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['b'],
+                    [],
                     ['b'],
                     [],
                     true
@@ -3889,14 +3901,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    [],
+                    [],
                     [],
                     [],
                     true
@@ -4005,14 +4017,23 @@ describe('evaluator', () => {
                                 const input = `
                                     .Value1 = ${value1}
                                     .Value2 = ${value2}
-                                    .Result = false
                                     If( ${comparison.condition} )
                                     {
-                                        ^Result = ${result}
+                                        .Result = ${result}
                                     }
-                                    .Copy = .Result
                                 `;
-                                assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
+
+                                const expectedEvaluatedVariables = [
+                                    value1,
+                                    value2,
+                                    value1,
+                                    value2,
+                                ];
+                                if (result) {
+                                    expectedEvaluatedVariables.push(result);
+                                }
+
+                                assertEvaluatedVariablesValueEqual(input, expectedEvaluatedVariables);
                             });
                         }
                     }
@@ -4038,14 +4059,25 @@ describe('evaluator', () => {
                                         .Value1 = ${value1}
                                         .Value2 = ${value2}
                                         .Value3 = ${value3}
-                                        .Result = false
                                         If( ${comparison.condition} )
                                         {
-                                            ^Result = ${result}
+                                            .Result = ${result}
                                         }
-                                        .Copy = .Result
                                     `;
-                                    assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
+
+                                    const expectedEvaluatedVariables = [
+                                        value1,
+                                        value2,
+                                        value3,
+                                        value1,
+                                        value2,
+                                        value3,
+                                    ];
+                                    if (result) {
+                                        expectedEvaluatedVariables.push(result);
+                                    }
+
+                                    assertEvaluatedVariablesValueEqual(input, expectedEvaluatedVariables);
                                 });
                             }
                         }
@@ -4063,7 +4095,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
                 });
@@ -4077,7 +4108,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
@@ -4091,7 +4121,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
@@ -4107,7 +4136,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
                         'b',
@@ -4125,7 +4153,6 @@ describe('evaluator', () => {
                         {
                             ^Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
                         'b',
