@@ -2397,7 +2397,7 @@ describe('evaluator', () => {
                     ]);
                 });
 
-                it.only('creates a definition for the target name that can be referenced', () => {
+                it('creates a definition for the target name that can be referenced', () => {
                     const input = `
                         {
                             ${functionName}('MyTarget1')
