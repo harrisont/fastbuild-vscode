@@ -1241,7 +1241,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                                 return;
                             }
 
-                            // TODO: use the actual range of the refererence (the array item) instead of the whole array
+                            // TODO: use the actual range of the refererence (the array item) instead of variable definition.
                             const targetRange = targetsVariable.definition.range;
 
                             // TODO: support looking up a target by the target's output-file.

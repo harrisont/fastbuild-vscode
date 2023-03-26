@@ -2458,7 +2458,7 @@ describe('evaluator', () => {
                         // MyTarget2's reference to MyTarget1
                         {
                             definition: expectedDefinitionMyTarget1,
-                            range: createRange(8, 45, 8, 57),
+                            range: createRange(8, 32, 8, 40),
                         },
                         // MyTarget3's definition's reference
                         {
@@ -2468,7 +2468,7 @@ describe('evaluator', () => {
                         // MyTarget3's reference to MyTarget1
                         {
                             definition: expectedDefinitionMyTarget1,
-                            range: createRange(16, 45, 16, 57),
+                            range: createRange(16, 32, 16, 40),
                         },
                     ];
                     assert.deepStrictEqual(result.targetReferences, expectedReferences);
