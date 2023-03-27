@@ -2830,152 +2830,140 @@ describe('evaluator', () => {
             describe('boolean', () => {
                 it('"{true-literal} == {true-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( true == true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{true-literal} == {false-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( true == false )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"true == {true-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = true
-                        .Result = false
                         If( .Value1 == true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
                 });
 
                 it('"{true-literal} == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
-                        .Result = false
                         If( true == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
                 });
 
                 it('"true == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = true
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, false, true, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true, true, true]);
                 });
 
                 it('"false == false" evaluates to true', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = false
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, true]);
                 });
 
                 it('"true == false" evaluates to false', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = false
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, false, true, false]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, false]);
                 });
 
                 it('"false == true" evaluates to false', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = true
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, false, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, true]);
                 });
 
                 it('"true != true" evaluates to false', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = true
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true, true]);
                 });
 
                 it('"false != false" evaluates to false', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = false
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, false]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false]);
                 });
 
                 it('"true != false" evaluates to true', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = false
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, false, true, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, false, true]);
                 });
 
                 it('"false != true" evaluates to true', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = true
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, false, false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, true, true]);
                 });
 
                 const illegalComparisonOperators = [
@@ -3002,642 +2990,592 @@ describe('evaluator', () => {
             describe('integer', () => {
                 it('"{1-literal} == {1-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( 1 == 1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{1-literal} == {0-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( 1 == 0 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"1 == {1-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
-                        .Result = false
                         If( .Value1 == 1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, false, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
                 });
 
                 it('"{1-literal} == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
-                        .Result = false
                         If( 1 == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, false, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
                 });
 
                 it('"1 == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
 
                 it('"1 == 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 != 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"1 != 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"0 < 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
 
                 it('"1 < 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 < 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"0 <= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
 
                 it('"1 <= 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 <= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
 
                 it('"0 > 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1]);
                 });
 
                 it('"1 > 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"1 > 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"0 >= 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false, 0, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1]);
                 });
 
                 it('"1 >= 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false, 1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"1 >= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false, 1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
             });
 
             describe('string', () => {
                 it('"{cat-literal} == {cat-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( 'cat' == 'cat' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{cat-literal} == {dog-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( 'cat' == 'dog' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"cat == {cat-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
-                        .Result = false
                         If( .Value1 == 'cat' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', false, 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
                 });
 
                 it('"{cat-literal} = cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
-                        .Result = false
                         If( 'cat' == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', false, 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
                 });
 
                 it('"cat == cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false, 'cat', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', 'cat', 'cat', true]);
                 });
 
                 it('"cat == Cat" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'Cat'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false, 'cat', 'Cat']);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', 'cat', 'Cat']);
                 });
 
                 it('"cat == dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"cat != cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false, 'cat', 'cat']);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', 'cat', 'cat']);
                 });
 
                 it('"cat != Cat" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'Cat'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false, 'cat', 'Cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', 'cat', 'Cat', true]);
                 });
 
                 it('"cat != dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"cat < dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"dog < cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat']);
                 });
 
                 it('"dog < dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog']);
                 });
 
                 it('"Dog < dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog', true]);
                 });
 
                 it('"dog < Dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog']);
                 });
 
                 it('"cat <= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"dog <= cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat']);
                 });
 
                 it('"dog <= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog', true]);
                 });
 
                 it('"Dog <= dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog', true]);
                 });
 
                 it('"dog <= Dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog']);
                 });
 
                 it('"cat > dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"dog > cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat', true]);
                 });
 
                 it('"dog > dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog']);
                 });
 
                 it('"Dog > dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog']);
                 });
 
                 it('"dog > Dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog', true]);
                 });
 
                 it('"cat >= dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false, 'cat', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"dog >= cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false, 'dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat', true]);
                 });
 
                 it('"dog >= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false, 'dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog', true]);
                 });
 
                 it('"Dog >= dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false, 'Dog', 'dog']);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog']);
                 });
 
                 it('"dog >= Dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false, 'dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog', true]);
                 });
             });
 
@@ -4090,39 +4028,36 @@ describe('evaluator', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 < .Value2) && (.Value1 > .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1]);
                 });
 
                 it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 < .Value2) || (.Value1 > .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1, true]);
                 });
 
                 it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 > .Value2) || (.Value1 < .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1, true]);
                 });
             });
 
@@ -4131,13 +4066,14 @@ describe('evaluator', () => {
                     const input = `
                         .Needle = 'b'
                         .Haystack = {'a', 'b', 'c'}
-                        .Result = false
                         If( (.Needle in .Haystack) && true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
                         'b',
                         ['a', 'b', 'c'],
                         true
@@ -4148,16 +4084,16 @@ describe('evaluator', () => {
                     const input = `
                         .Needle = 'b'
                         .Haystack = {'a', 'b', 'c'}
-                        .Result = false
                         If( (.Needle in .Haystack) && false )
                         {
-                            ^Result = true
+                            .Result = true
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
                         'b',
                         ['a', 'b', 'c'],
-                        false
+                        'b',
+                        ['a', 'b', 'c'],
                     ]);
                 });
             });
@@ -4353,7 +4289,7 @@ Expecting to see one of the following:
                     }
                     Func()
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [1, 1]);
             });
 
             it('Body on the same line', () => {
@@ -4405,7 +4341,7 @@ Expecting to see the following:
                     }
                     Func(.MyVar)
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1, 1]);
+                assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
             });
 
             it('Body on the same line', () => {
@@ -4522,7 +4458,6 @@ Expecting to see the following:
                 const input = `
                     function FuncA() {
                         .MyVar = 1
-                        Print( .MyVar )
                     }
 
                     function FuncB() {
@@ -4556,14 +4491,13 @@ Expecting to see the following:
                     'file:///fbuild.bff',
                     `
                         #include 'helper.bff'
-                        .Copy = .FromHelper
+                        Print( .FromHelper )
                     `
                 ],
                 [
                     'file:///helper.bff',
                     `
                         .FromHelper = 1
-                        .Copy = .FromHelper
                     `
                 ]
             ]), true /*enableDiagnostics*/);
@@ -4571,11 +4505,11 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 1,
-                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
+                    range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 },
                 {
                     value: 1,
-                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
+                    range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 }
             ]);
 
@@ -4586,16 +4520,8 @@ Expecting to see the following:
                 kind: DefinitionKind.Variable,
             };
 
-            const definitionCopy: VariableDefinition = {
-                id: 2,
-                range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
-                name: 'Copy',
-                kind: DefinitionKind.Variable,
-            };
-
             assert.deepStrictEqual(result.variableDefinitions, [
                 definitionFromHelper,  // FromHelper
-                definitionCopy,  // Copy
             ]);
 
             assert.deepStrictEqual(result.variableReferences, [
@@ -4604,25 +4530,10 @@ Expecting to see the following:
                     definition: definitionFromHelper,
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 },
-                // helper.bff ".Copy = .FromHelper" RHS
+                // fbuild.bff "Print( .FromHelper )"
                 {
                     definition: definitionFromHelper,
-                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
-                },
-                // helper.bff ".Copy = .FromHelper" LHS
-                {
-                    definition: definitionCopy,
-                    range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
-                },
-                // fbuild.bff ".Copy = .FromHelper" RHS
-                {
-                    definition: definitionFromHelper,
-                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
-                },
-                // fbuild.bff ".Copy = .FromHelper" LHS
-                {
-                    definition: definitionCopy,
-                    range: createFileRange('file:///fbuild.bff', 2, 24, 2, 29),
+                    range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 },
             ]);
         });
@@ -4646,6 +4557,10 @@ Expecting to see the following:
             ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 24, 1, 29),
+                },
                 {
                     value: 'Bobo',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 38, 1, 44),
@@ -4693,7 +4608,15 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
+                    range: createFileRange('file:///some/path/animals/dog.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'dog',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 24, 1, 32),
                 },
                 {
                     value: 'Hello dog',
@@ -4701,7 +4624,15 @@ Expecting to see the following:
                 },
                 {
                     value: 'cat',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'cat',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello cat',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 24, 1, 32),
                 },
                 {
                     value: 'Hello cat',
@@ -4732,6 +4663,10 @@ Expecting to see the following:
             ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 24, 1, 29),
+                },
                 {
                     value: 'Bobo',
                     range: createFileRange('file:///some/path/greetings.bff', 2, 38, 2, 44),
