@@ -882,8 +882,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
                 if (typeof evaluatedLhsName.value !== 'string') {
-                    const error = new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`);
-                    return context.evaluatedData, error;
+                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`);
                 }
 
                 let variable: ScopeVariable | null = null;
@@ -1027,8 +1026,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
                 if (context.previousStatementLhs === null) {
                     const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
-                    const error = new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.');
-                    return error;
+                    return new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.');
                 }
                 const lhsVariable = context.previousStatementLhs.variable;
                 // Allow chaining of unnamed operators.
@@ -1072,8 +1070,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
 
                 if (statement.struct.type !== 'evaluatedVariable') {
-                    const error = new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`);
-                    return error;
+                    return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`);
                 }
                 const maybeEvaluated = evaluateEvaluatedVariable(statement.struct, context);
                 if (maybeEvaluated.hasError) {
@@ -1084,8 +1081,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const structVariable = evaluated.valueScopeVariable;
                 const struct = structVariable.value;
                 if (!(struct instanceof Struct)) {
-                    const error = new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`);
-                    return error;
+                    return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`);
                 }
 
                 //
@@ -1137,8 +1133,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     // Evaluate the array to loop over.
                     if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
                         const range = new SourceRange(context.thisFbuildUri, statement.range);
-                        const error = new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
-                        return error;
+                        return new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
                     }
                     const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
                     const maybeEvaluatedArrayToLoopOver = evaluateEvaluatedVariable(iterator.arrayToLoopOver, context);
@@ -1148,13 +1143,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedArrayToLoopOver = maybeEvaluatedArrayToLoopOver.getValue();
                     const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
                     if (!(arrayItems instanceof Array)) {
-                        const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`);
-                        return error;
+                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`);
                     }
 
                     if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
-                        const error = new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`);
-                        return error;
+                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`);
                     }
 
                     const loopVar = iterator.loopVar;
@@ -1167,8 +1160,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                     const evaluatedLoopVarName = maybeEvaluatedLoopVarName.getValue();
                     if (typeof evaluatedLoopVarName.value !== 'string') {
-                        const error = new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
-                        return error;
+                        return new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
                     }
                     const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
 
@@ -1218,15 +1210,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedTargetName = maybeEvaluatedTargetNameName.getValue();
                 const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
                 if (typeof evaluatedTargetName.value !== 'string') {
-                    const error = new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`);
-                    return error;
+                    return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`);
                 }
 
                 // Ensure that this doesn't resuse an existing target name.
                 const existingTargetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
-                    const error = new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${existingTargetDefinition.range}.`);
-                    return error;
+                    return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${existingTargetDefinition.range}.`);
                 }
 
                 // Create a definition and reference for the target name.
@@ -1274,7 +1264,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             // TODO: change targetDefinitions to a map for faster lookups.
                             const targetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == target);
                             if (targetDefinition === undefined) {
-                                error = new EvaluationError(targetRange, `Target "${target}" does not exist.`);
+                                // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
+                                //error = new EvaluationError(targetRange, `Target "${target}" does not exist.`);
                                 return;
                             }
                             const targetReference: TargetReference = {
@@ -1296,8 +1287,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedValue = maybeEvaluatedValue.getValue();
                 if (typeof evaluatedValue.value !== 'string') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    const error = new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`);
-                    return error;
+                    return new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`);
                 }
             } else if (isParsedStatementPrint(statement)) {
                 const value = statement.value;
@@ -1308,8 +1298,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedValue = maybeEvaluatedValue.getValue();
                 if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
                     const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    const error = new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
-                    return error;
+                    return new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
                 }
             } else if (isParsedStatementSettings(statement)) {
                 // Evaluate the function body.
@@ -1424,20 +1413,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const symbol = statement.symbol.value;
                 if (context.defines.has(symbol)) {
                     const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
-                    const error = new EvaluationError(sourceRange, `Cannot #define already defined symbol "${symbol}".`);
-                    return error;
+                    return new EvaluationError(sourceRange, `Cannot #define already defined symbol "${symbol}".`);
                 }
                 context.defines.add(symbol);
             } else if (isParsedStatementUndefine(statement)) {  // #undef
                 const symbol = statement.symbol.value;
                 const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
                 if (symbol === getPlatformSpecificDefineSymbol()) {
-                    const error = new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`);
-                    return error;
+                    return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`);
                 }
                 if (!context.defines.has(symbol)) {
-                    const error = new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`);
-                    return error;
+                    return new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`);
                 }
                 context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
@@ -1451,8 +1437,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-                const error = new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
-                return error;
+                return new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
             }
 
             context.previousStatementLhs = statementLhs;
@@ -1600,8 +1585,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     const evaluatedVariableName = maybeEvaluatedVariableName.getValue();
     const evaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
     if (typeof evaluatedVariableName.value !== 'string') {
-        const error = new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a String, but instead is ${getValueTypeNameA(evaluatedVariableName.value)}`);
-        return Maybe.error(error);
+        return Maybe.error(new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a String, but instead is ${getValueTypeNameA(evaluatedVariableName.value)}`));
     }
 
     const maybeValueScopeVariable = (parsedEvaluatedVariable.scope === 'current')
