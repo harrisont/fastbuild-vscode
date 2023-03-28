@@ -246,11 +246,10 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
 
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
+        state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
         if (evaluatedDataAndMaybeError.error !== null) {
             throw evaluatedDataAndMaybeError.error;
         }
-
-        state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
 
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
     } catch (error) {
