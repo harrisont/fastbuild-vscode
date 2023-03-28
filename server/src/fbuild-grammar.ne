@@ -610,9 +610,10 @@ functionBody ->
 
 @{%
 
-function createGenericFunction(targetName: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createGenericFunction(functionName: string, targetName: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'genericFunction',
+        functionName,
         targetName,
         range: createRangeEndInclusive(statementStartToken, statementEndToken),
         statements
@@ -623,8 +624,8 @@ function createGenericFunction(targetName: any, statements: Record<string, any>,
 
 # Functions that we don't care about handling except for the function's target-name parameter.
 genericFunctionWithTargetName ->
-    genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(targetName, statements, functionName, braceClose); } %}
-  | genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(targetName, statements, functionName, braceClose); } %}
+    genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose); } %}
+  | genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose); } %}
 
 # Function names of functions that we don't care about handling except for the function's target-name parameter.
 genericFunctionNameWithTargetName ->
