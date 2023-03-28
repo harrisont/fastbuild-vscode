@@ -4687,7 +4687,7 @@ Expecting to see the following:
                     'file:///some/path/greetings.bff',
                     `
                         #once
-                        .Message = 'Hello $Name$'
+                        Print( 'Hello $Name$' )
                     `
                 ],
                 [
@@ -4709,7 +4709,15 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
-                    range: createFileRange('file:///some/path/greetings.bff', 2, 42, 2, 48),
+                    range: createFileRange('file:///some/path/animals/dog.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 2, 38, 2, 44),
+                },
+                {
+                    value: 'cat',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 1, 24, 1, 29),
                 },
             ]);
         });
@@ -4721,156 +4729,128 @@ Expecting to see the following:
 
         it('A platform-specific symbol is defined', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"!DEFINE" on a defined symbol evaluates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"!DEFINE" on an undefined symbol evaluates to true', () => {
             const input = `
-                .Value = false
                 #if ! NON_EXISTENT_SYMBOL
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true && true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true && false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && true evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('true || true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true || false evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('false || true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('false || false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && false || true evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true || false && false evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('#else body is evaluated when the #if condition is false', () => {
             const input = `
-                .Value = ''
                 #if !${builtInDefine}
                     .Value = 'if'
                 #else
                     .Value = 'else'
                 #endif
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['else']);
@@ -4884,7 +4864,6 @@ Expecting to see the following:
                     + 'B'
                 #endif
                     + 'C'
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['ABC']);
@@ -4900,7 +4879,6 @@ Expecting to see the following:
                     + 'b'
                 #endif
                     + 'C'
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['AbC']);
@@ -4917,7 +4895,6 @@ Expecting to see the following:
                     #endif
                     'C'
                 }
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, [['A', 'B', 'C']]);
@@ -4934,13 +4911,15 @@ Expecting to see the following:
                     #endif
                     .C = 3
                 ]
-                Print( .Value )
             `;
 
             const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A', kind: DefinitionKind.Variable };
             const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26), name: 'B', kind: DefinitionKind.Variable };
             const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22), name: 'C', kind: DefinitionKind.Variable };
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                2,
+                3,
                 Struct.from(Object.entries({
                     A: new StructMember(1, myVarADefinition),
                     B: new StructMember(2, myVarBDefinition),
@@ -4955,44 +4934,36 @@ Expecting to see the following:
 
         it('"#if exists(...)" always evaluates to false', () => {
             const input = `
-                .Value = false
                 #if exists(MY_ENV_VAR)
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"#if !exists(...)" always evaluates to true', () => {
             const input = `
-                .Value = false
                 #if !exists( MY_ENV_VAR )
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"exists" can be combined with ||', () => {
             const input = `
-                .Value = false
                 #if exists(MY_ENV_VAR) || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"exists" can be combined with &&', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && !exists(MY_ENV_VAR)
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
@@ -5006,11 +4977,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5027,11 +4996,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('../uncle.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5048,11 +5015,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('/base/sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5066,13 +5031,11 @@ Expecting to see the following:
 
         it('"#if file_exists(...)" evaluates to false for a path that does not exist', () => {
             const input = `
-                .Value = false
                 #if file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"#if !file_exists(...)" evaluates to false for a path that exists', () => {
@@ -5080,11 +5043,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if !file_exists('sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5093,40 +5054,34 @@ Expecting to see the following:
                 ],
             ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
-            assert.deepStrictEqual(actualValues, [false]);
+            assert.deepStrictEqual(actualValues, []);
         });
 
         it('"#if !file_exists(...)" evaluates to true for a path that does not exist', () => {
             const input = `
-                .Value = false
                 #if !file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"file_exists" can be combined with ||', () => {
             const input = `
-                .Value = false
                 #if file_exists('path/that/does/not/exist.txt') || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"file_exists" can be combined with &&', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
     });
 
@@ -5134,11 +5089,9 @@ Expecting to see the following:
         it('basic', () => {
             const input = `
                 #define MY_DEFINE
-                .Value = false
                 #if MY_DEFINE
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
@@ -5158,13 +5111,11 @@ Expecting to see the following:
             const input = `
                 #define MY_DEFINE
                 #undef MY_DEFINE
-                .Value = false
                 #if MY_DEFINE
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('undefining an undefined symbol is an error', () => {
