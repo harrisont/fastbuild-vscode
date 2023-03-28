@@ -801,6 +801,11 @@ function getPlatformSpecificDefineSymbol(): string {
     }
 }
 
+interface VariableAndEvaluatedVariable {
+    variable: ScopeVariable;
+    evaluatedVariable: EvaluatedVariable;
+}
+
 interface EvaluationContext {
     scopeStack: ScopeStack,
     defines: Set<string>,
@@ -811,7 +816,8 @@ interface EvaluationContext {
     parseDataProvider: ParseDataProvider,
     // Used to ensure that a URI is only included a single time.
     onceIncludeUrisAlreadyIncluded: string[];
-    previousStatementLhsVariable: ScopeVariable | null;
+    // Used for unnamed modifiers (e.g. adding to the LHS of the previous statement).
+    previousStatementLhs: VariableAndEvaluatedVariable | null;
 }
 
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
@@ -862,7 +868,7 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
         fileSystem,
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
-        previousStatementLhsVariable: null,
+        previousStatementLhs: null,
     };
     return evaluateStatements(parseData.statements, context);
 }
@@ -871,7 +877,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
     const result = new EvaluatedData();
     try {
         for (const statement of statements) {
-            let statementLhsVariable: ScopeVariable | null = null;
+            let statementLhs: VariableAndEvaluatedVariable | null = null;
 
             if (isParsedStatementVariableDefintion(statement)) {
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
@@ -948,13 +954,24 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     variable.value = [value];
                 }
 
-                statementLhsVariable = variable;
-
                 // The definition's LHS is a variable reference.
                 result.variableReferences.push({
                     definition: variable.definition,
                     range: lhsRange,
                 });
+
+                // The definition's LHS is an evaluation.
+                const evaluatedVariable: EvaluatedVariable = {
+                    // Deep copy the value so that future modifications don't modify this captured evaluation.
+                    value: deepCopyValue(variable.value),
+                    range: lhsRange,
+                };
+                result.evaluatedVariables.push(evaluatedVariable);
+
+                statementLhs = {
+                    variable,
+                    evaluatedVariable,
+                };
             } else if (isParsedStatementBinaryOperator(statement)) {
                 const lhs = statement.lhs;
                 const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
@@ -972,14 +989,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 let lhsVariable: ScopeVariable;
-                let previousValue: Value;
                 let maybeExistingVariableStartingFromParentScope: ScopeVariable | null;
                 // Adding to a current-scope non-existant, parent-scope existant variable defines it in the current scope to be the sum.
                 if (lhs.scope === 'current'
                     && context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null
                     && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
                 {
-                    previousValue = maybeExistingVariableStartingFromParentScope.value;
+                    const previousValue = maybeExistingVariableStartingFromParentScope.value;
                     const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value, DefinitionKind.Variable);
                     result.variableDefinitions.push(definition);
                     lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, definition);
@@ -989,10 +1005,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         return new DataAndMaybeError(result, maybeExistingVariable.getError());
                     }
                     lhsVariable = maybeExistingVariable.getValue();
-                    previousValue = deepCopyValue(lhsVariable.value);
                 }
-
-                statementLhsVariable = lhsVariable;
 
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
@@ -1018,24 +1031,33 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 lhsVariable.value = maybeOperatorResult.getValue();
 
-                // The LHS is an evaluated variable and is a variable reference.
-                result.evaluatedVariables.push({
-                    value: previousValue,
-                    range: lhsRange,
-                });
+                // The LHS is a variable reference.
                 result.variableReferences.push({
                     definition: lhsVariable.definition,
                     range: lhsRange,
                 });
+
+                // The LHS is an evaluated variable.
+                // We could also add an entry for the pre-operator value that we read, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
+                const evaluatedVariable: EvaluatedVariable = {
+                    value: deepCopyValue(lhsVariable.value),
+                    range: lhsRange,
+                };
+                result.evaluatedVariables.push(evaluatedVariable);
+
+                statementLhs = {
+                    variable: lhsVariable,
+                    evaluatedVariable,
+                };
             } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
-                if (context.previousStatementLhsVariable === null) {
+                if (context.previousStatementLhs === null) {
                     const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
                     const error = new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.');
                     return new DataAndMaybeError(result, error);
                 }
-                const lhsVariable = context.previousStatementLhsVariable;
+                const lhsVariable = context.previousStatementLhs.variable;
                 // Allow chaining of unnamed operators.
-                statementLhsVariable = lhsVariable;
+                statementLhs = context.previousStatementLhs;
 
                 const evaluatedRhsAndMaybeError = evaluateRValue(statement.rhs, context);
                 const evaluatedRhs = evaluatedRhsAndMaybeError.data;
@@ -1060,6 +1082,10 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new DataAndMaybeError(result, maybeOperatorResult.getError());
                 }
                 lhsVariable.value = maybeOperatorResult.getValue();
+
+                // Modify the previous statement's LHS variable evaluation to be the new value.
+                // We could instead capture both the previous value and the new value, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
+                context.previousStatementLhs.evaluatedVariable.value = lhsVariable.value;
             } else if (isParsedStatementScopedStatements(statement)) {
                 let error: Error | null = null;
                 context.scopeStack.withScope(() => {
@@ -1389,7 +1415,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         fileSystem: context.fileSystem,
                         parseDataProvider: context.parseDataProvider,
                         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
-                        previousStatementLhsVariable: context.previousStatementLhsVariable,
+                        previousStatementLhs: context.previousStatementLhs,
                     };
 
                     const evaluatedStatementsAndMaybeError = evaluateStatements(includeParseData.statements, includeContext);
@@ -1425,7 +1451,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
-                statementLhsVariable = context.previousStatementLhsVariable;
+                statementLhs = context.previousStatementLhs;
             } else if (isParsedStatementDefine(statement)) {  // #define
                 const symbol = statement.symbol.value;
                 if (context.defines.has(symbol)) {
@@ -1461,7 +1487,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 return new DataAndMaybeError(result, error);
             }
 
-            context.previousStatementLhsVariable = statementLhsVariable;
+            context.previousStatementLhs = statementLhs;
         }
     } catch (error) {
         if (error instanceof Error) {
@@ -2270,7 +2296,7 @@ function evaluateUserFunctionCall(
             fileSystem: context.fileSystem,
             parseDataProvider: context.parseDataProvider,
             onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
-            previousStatementLhsVariable: null,
+            previousStatementLhs: null,
         };
 
         // Set a variable for each parameter.

@@ -1,3 +1,9 @@
+# v0.3.0
+
+## New Features
+
+* You can now hover over the left-hand side of a variable assignment or modification to see the variable's new value.
+
 # v0.2.2
 
 * Distinguish between targets and variables in the symbol listing.
