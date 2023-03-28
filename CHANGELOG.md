@@ -1,8 +1,14 @@
-# v0.3.0
+# v0.4.0
 
 ## New Features
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+
+# v0.3.0
+
+## New Features
+
+* You can now hover over the left-hand side of a variable assignment or modification to see the variable's new value.
 
 # v0.2.2
 

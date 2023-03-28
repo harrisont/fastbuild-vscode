@@ -145,18 +145,18 @@ describe('evaluator', () => {
         it('should be detected in a string with a variable', () => {
             const input = `
                 .MyVar = 'MyValue'
-                .Evaluated = 'pre-$MyVar$-post'
+                Print('pre-$MyVar$-post')
             `;
-            assertEvaluatedVariablesValueEqual(input, ['MyValue']);
+            assertEvaluatedVariablesValueEqual(input, ['MyValue', 'MyValue']);
         });
 
         it('should be detected in a string with multiple variables', () => {
             const input = `
                 .MyVar1 = 'MyValue1'
                 .MyVar2 = 'MyValue2'
-                .Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
+                Print('pre-$MyVar1$-$MyVar2$-post')
             `;
-            assertEvaluatedVariablesValueEqual(input, ['MyValue1', 'MyValue2']);
+            assertEvaluatedVariablesValueEqual(input, ['MyValue1', 'MyValue2', 'MyValue1', 'MyValue2']);
         });
 
         it('should be detected in the RHS when assigning the value of another variable', () => {
@@ -164,27 +164,27 @@ describe('evaluator', () => {
                 .MyVar = 1
                 .Copy = .MyVar
             `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
         });
 
         it('should be detected in the RHS when assigning the value of another variable in the parent scope', () => {
             const input = `
                 .MyVar = 1
                 { // Start scope
-                    .Copy = ^MyVar
+                    Print(^MyVar)
                 } // End scope
             `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1]);
         });
 
         it('should be able to read a variable in a direct parent scope', () => {
             const input = `
                 .Var1 = 1
                 {// Start scope
-                    .Var2 = .Var1
+                    Print(.Var1)
                 }// End scope
             `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1]);
         });
 
         it('should be able to read a variable in a grandparent scope (current scope reference)', () => {
@@ -192,11 +192,11 @@ describe('evaluator', () => {
                 .Var1 = 1
                 {
                     {
-                        .Var2 = .Var1
+                        Print(.Var1)
                     }
                 }
             `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1]);
         });
 
         it('should be able to read a variable in a grandparent scope (parent scope reference)', () => {
@@ -204,25 +204,25 @@ describe('evaluator', () => {
                 .Var1 = 1
                 {
                     {
-                        .Var2 = ^Var1
+                        Print(^Var1)
                     }
                 }
             `;
-            assertEvaluatedVariablesValueEqual(input, [1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1]);
         });
 
         it('should allow variables with the same name in different scopes', () => {
             const input = `
                 {
                     .Var1 = 1
-                    .Var2 = .Var1
+                    Print(.Var1)
                 }
                 {
                     .Var1 = 2
-                    .Var2 = .Var1
+                    Print(.Var1)
                 }
             `;
-            assertEvaluatedVariablesValueEqual(input, [1, 2]);
+            assertEvaluatedVariablesValueEqual(input, [1, 1, 2, 2]);
         });
 
         it('should allow a variable to shadow a variable with the same name in a parent scope', () => {
@@ -230,11 +230,11 @@ describe('evaluator', () => {
                 .Var = 1
                 {
                     .Var = 2
-                    .Inner = .Var
+                    Print(.Var)
                 }
-                .Outer = .Var
+                Print(.Var)
             `;
-            assertEvaluatedVariablesValueEqual(input, [2, 1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 2, 2, 1]);
         });
 
         it('should not be able to read a variable in a child scope', () => {
@@ -242,10 +242,10 @@ describe('evaluator', () => {
                 {
                     .Var1 = 1
                 }
-                .Var2 = .Var1
+                Print(.Var1)
             `;
             const expectedErrorMessage = 'Referencing variable "Var1" that is not defined in the current scope or any of the parent scopes.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(4, 24, 4, 29));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(4, 22, 4, 27));
         });
 
         it('should be able to write an existing variable in a direct parent scope', () => {
@@ -254,9 +254,9 @@ describe('evaluator', () => {
                 {
                     ^Var1 = 2
                 }
-                .Var2 = .Var1
+                Print(.Var1)
             `;
-            assertEvaluatedVariablesValueEqual(input, [2]);
+            assertEvaluatedVariablesValueEqual(input, [1, 2, 2]);
         });
 
         it('should be able to write an existing variable in a grandparent scope', () => {
@@ -267,20 +267,20 @@ describe('evaluator', () => {
                         ^Var1 = 2
                     }
                 }
-                .Var2 = .Var1
+                Print(.Var1)
             `;
-            assertEvaluatedVariablesValueEqual(input, [2]);
+            assertEvaluatedVariablesValueEqual(input, [1, 2, 2]);
         });
 
         it('should not be able to read a non-existant variable in a parent scope', () => {
             const input = `
                 {
                     .Var1 = 0
-                    .Var2 = ^Var1
+                    Print(^Var1)
                 }
             `;
             const expectedErrorMessage = 'Referencing variable "Var1" in a parent scope that is not defined in any parent scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 28, 3, 33));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 26, 3, 31));
         });
 
         it('should not be able to write a non-existant variable in a parent scope', () => {
@@ -297,10 +297,10 @@ describe('evaluator', () => {
         it('should not be able to read a non-existant variable from the parent of the root scope ', () => {
             const input = `
                 .Var1 = 0
-                .Var2 = ^Var1
+                Print(^Var1)
             `;
             const expectedErrorMessage = 'Cannot access parent scope because there is no parent scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 24, 2, 29));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 22, 2, 27));
         });
 
         it('should not be able to write a non-existant variable from the parent of the root scope ', () => {
@@ -325,24 +325,25 @@ describe('evaluator', () => {
                 }
                 Print( .Var1)
             `;
-            assertEvaluatedVariablesValueEqual(input, [2, 3, 1]);
+            assertEvaluatedVariablesValueEqual(input, [1, 2, 2, 3, 3, 1]);
         });
 
         it('should correctly evaulate an empty string literal', () => {
             const input = `
                 .MyVar = ''
-                .Result = .MyVar
+                Print(.MyVar)
             `;
-            assertEvaluatedVariablesValueEqual(input, ['']);
+            assertEvaluatedVariablesValueEqual(input, ['', '']);
         });
 
         it('should evaluate an empty array', () => {
             const input = `
                 .MyVar = {}
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                []
+                [],
+                [],
             ]);
         });
 
@@ -352,10 +353,11 @@ describe('evaluator', () => {
                     'thing1'
                     'thing2'
                 }
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                ['thing1', 'thing2']
+                ['thing1', 'thing2'],
+                ['thing1', 'thing2'],
             ]);
         });
 
@@ -363,10 +365,12 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = { 'old1', 'old2' }
                 .MyVar = 'new'
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                ['new']
+                ['old1', 'old2'],
+                ['new'],
+                ['new'],
             ]);
         });
 
@@ -376,10 +380,12 @@ describe('evaluator', () => {
                 {
                     ^MyVar = 'new'
                 }
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                ['new']
+                ['old1', 'old2'],
+                ['new'],
+                ['new'],
             ]);
         });
 
@@ -387,10 +393,12 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {}
                 .MyVar = 'new'
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                ['new']
+                [],
+                ['new'],
+                ['new'],
             ]);
         });
 
@@ -398,10 +406,12 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {}
                 .MyVar = { 'new' }
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                ['new']
+                [],
+                ['new'],
+                ['new'],
             ]);
         });
 
@@ -409,10 +419,12 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {}
                 .MyVar = {}
-                .Copy = .MyVar
+                Print(.MyVar)
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                []
+                [],
+                [],
+                [],
             ]);
         });
 
@@ -420,7 +432,6 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {}
                 .MyVar = 1
-                .Copy = .MyVar
             `;
             const expectedErrorMessage = 'Cannot assign an Integer to an Array. Arrays can only contain Strings or Structs.';
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 25, 2, 26));
@@ -431,7 +442,6 @@ describe('evaluator', () => {
                 .MyStruct = []
                 .MyVar = { .MyStruct }
                 .MyVar = 'new'
-                .Copy = .MyVar
             `;
             const expectedErrorMessage = 'Cannot assign a String to an Array of Structs.';
             assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 25, 3, 30));
@@ -444,12 +454,12 @@ describe('evaluator', () => {
                     '$Type$1'
                     '$Type$2'
                 }
-                .Copy = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'thing',
                 'thing',
-                ['thing1', 'thing2']
+                'thing',
+                ['thing1', 'thing2'],
             ]);
         });
 
@@ -461,12 +471,13 @@ describe('evaluator', () => {
                     .Var1
                     .Var2
                 }
-                .Copy = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'thing1',
                 'thing2',
-                ['thing1', 'thing2']
+                'thing1',
+                'thing2',
+                ['thing1', 'thing2'],
             ]);
         });
 
@@ -514,9 +525,11 @@ describe('evaluator', () => {
                     .Parts2
                     .Parts3
                 }
-                .Copy = .Combined
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                ['thing1', 'thing2'],
+                'thing3',
+                ['thing4'],
                 ['thing1', 'thing2'],
                 'thing3',
                 ['thing4'],
@@ -527,10 +540,9 @@ describe('evaluator', () => {
         it('should evaluate an empty struct', () => {
             const input = `
                 .MyVar = []
-                .Copy = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                new Struct()
+                new Struct(),
             ]);
         });
 
@@ -541,12 +553,14 @@ describe('evaluator', () => {
                     .MyInt = 123
                     .MyStr = 'Hello world!'
                 ]
-                .Copy = .MyVar
             `;
             const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27), name: 'MyBool' };
             const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 26), name: 'MyInt' };
             const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyStr' };
             assertEvaluatedVariablesValueEqual(input, [
+                true,
+                123,
+                'Hello world!',
                 Struct.from(Object.entries({
                     MyBool: new StructMember(true, myVarMyBoolDefinition),
                     MyInt: new StructMember(123, myVarMyIntDefinition),
@@ -561,10 +575,11 @@ describe('evaluator', () => {
                 .MyVar = [
                     .A = .B
                 ]
-                .Copy = .MyVar
             `;
             const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'A' };
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                1,
                 1,
                 Struct.from(Object.entries({
                     A: new StructMember(1, myVarADefinition),
@@ -580,12 +595,15 @@ describe('evaluator', () => {
                     .A1 = .B1
                     .A2 = .B2
                 ]
-                .Copy = .MyVar
             `;
             const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 23), name: 'A1' };
             const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 23), name: 'A2' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
+                2,
+                1,
+                1,
+                2,
                 2,
                 Struct.from(Object.entries({
                     A1: new StructMember(1, myVarA1Definition),
@@ -599,10 +617,10 @@ describe('evaluator', () => {
                 .MyVar = [
                     .MyArray = {'a', 'b', 'c'}
                 ]
-                .Copy = .MyVar
             `;
             const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28), name: 'MyArray' };
             assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
                 Struct.from(Object.entries({
                     MyArray: new StructMember(['a', 'b', 'c'], myVarMyArrayDefinition),
                 }))
@@ -616,7 +634,6 @@ describe('evaluator', () => {
                         .MyInt = 1
                     ]
                 ]
-                .Copy = .MyVar
             `;
             const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30), name: 'MyInt' };
             const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29), name: 'MyStruct' };
@@ -624,6 +641,8 @@ describe('evaluator', () => {
                 MyInt: new StructMember(1, myVarMyStructMyIntDefinition),
             }));
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                expectedMyStructValue,
                 Struct.from(Object.entries({
                     MyStruct: new StructMember(expectedMyStructValue, myVarMyStructDefinition),
                 }))
@@ -638,11 +657,18 @@ describe('evaluator', () => {
                     .Struct1
                     .Struct2
                 }
-                .Copy = .MyVar
             `;
             const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 1, 34), name: 'MyInt' };
             const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 2, 34), name: 'MyInt' };
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(1, struct1MyIntDefinition),
+                })),
+                2,
+                Struct.from(Object.entries({
+                    MyInt: new StructMember(2, struct2MyIntDefinition),
+                })),
                 Struct.from(Object.entries({
                     MyInt: new StructMember(1, struct1MyIntDefinition),
                 })),
@@ -675,8 +701,11 @@ describe('evaluator', () => {
                 .MyVar = ."A_$Middle$_C"
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                'foo',
                 'B',
-                'foo'
+                'B',
+                'foo',
+                'foo',
             ]);
         });
 
@@ -689,8 +718,11 @@ describe('evaluator', () => {
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                'foo',
                 'B',
-                'foo'
+                'B',
+                'foo',
+                'foo',
             ]);
         });
 
@@ -698,11 +730,13 @@ describe('evaluator', () => {
             const input = `
                 .Middle = 'B'
                 ."A_$Middle$_C" = 'foo'
-                .Copy = .A_B_C
+                Print(.A_B_C)
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'B',
-                'foo'
+                'B',
+                'foo',
+                'foo',
             ]);
         });
 
@@ -713,11 +747,14 @@ describe('evaluator', () => {
                 {
                     ^"A_$Middle$_C" = 'foo'
                 }
-                .Copy = .A_B_C
+                Print(.A_B_C)
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                '',
                 'B',
-                'foo'
+                'B',
+                'foo',
+                'foo',
             ]);
         });
 
@@ -831,11 +868,10 @@ describe('evaluator', () => {
             const input = `
                 .MySum = 1
                 .MySum + 2
-                .Evaluated = .MySum
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 1,
-                3
+                3,
             ]);
         });
 
@@ -843,7 +879,6 @@ describe('evaluator', () => {
             const input = `
                 .MyMessage = 'hello'
                 .MyMessage + ' world'
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'hello',
@@ -857,11 +892,10 @@ describe('evaluator', () => {
                 {
                     ^MyMessage + ' world'
                 }
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'hello',
-                'hello world'
+                'hello world',
             ]);
         });
 
@@ -870,12 +904,12 @@ describe('evaluator', () => {
                 .MyName = 'Bobo'
                 .MyMessage = 'hello'
                 .MyMessage + .MyName
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Bobo',
                 'hello',
-                'helloBobo'
+                'Bobo',
+                'helloBobo',
             ]);
         });
 
@@ -884,11 +918,11 @@ describe('evaluator', () => {
                 .MyName = 'Bobo'
                 .MyMessage = 'hello'
                 .MyMessage + ' $MyName$'
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Bobo',
                 'hello',
+                'Bobo',
                 'hello Bobo'
             ]);
         });
@@ -897,7 +931,6 @@ describe('evaluator', () => {
             const input = `
                 .MyMessage = 'hello'
                             + ' world'
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
         });
@@ -906,7 +939,6 @@ describe('evaluator', () => {
             const input = `
                 .MyMessage = 'hello' +
                                 ' world'
-                .Evaluated = .MyMessage
             `;
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
         });
@@ -916,9 +948,10 @@ describe('evaluator', () => {
                 .MyMessage = 'hello'
                             + ' world'
                             + '!'
-                .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['hello world!']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'hello world!',
+            ]);
         });
 
         it('adding an evaluated variable should use the last referenced variable if none is specified', () => {
@@ -926,9 +959,12 @@ describe('evaluator', () => {
                 .MyVar = 'world'
                 .MyMessage = 'hello '
                             + .MyVar
-                .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['world', 'hello world']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'world',
+                'hello world',
+                'world',
+            ]);
         });
 
         it('adding mulitple evaluated variables should use the last referenced variable if none is specified', () => {
@@ -938,9 +974,14 @@ describe('evaluator', () => {
                 .MyMessage = 'hello '
                             + .MyVar1
                             + .MyVar2
-                .Evaluated = .MyMessage
             `;
-            assertEvaluatedVariablesValueEqual(input, ['world', '!', 'hello world!']);
+            assertEvaluatedVariablesValueEqual(input, [
+                'world',
+                '!',
+                'hello world!',
+                'world',
+                '!',
+            ]);
         });
 
         it('should work on adding a string literal to a variable in the parent scope', () => {
@@ -948,9 +989,8 @@ describe('evaluator', () => {
                 .MyMessage = 'hello'
                 {
                     ^MyMessage + ' world'
-                    .Evaluated1 = .MyMessage
                 }
-                .Evaluated2 = .MyMessage
+                Print(.MyMessage)
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'hello',
@@ -985,7 +1025,6 @@ describe('evaluator', () => {
                 .MyMessage = 'hello'
                 {
                     .MyMessage + ' world'
-                    Print( .MyMessage )
                 }
                 Print( .MyMessage )
             `;
@@ -1004,14 +1043,15 @@ describe('evaluator', () => {
                 ForEach( .Item in .MyArray )
                 {
                     .MyMessage + '-$Item$'
-                    Print( .MyMessage )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
-                'a', 'Base', 'Base-a',
-                'b', 'Base', 'Base-b',
-                'c', 'Base', 'Base-c',
+                'Base',
+                ['a', 'b', 'c'],
+                'a', 'Base-a',
+                'b', 'Base-b',
+                'c', 'Base-c',
             ]);
         });
 
@@ -1020,13 +1060,16 @@ describe('evaluator', () => {
                 .MyMessage = 'hello'
                 .MyStruct = [
                     .MyMessage + ' world'
-                    Print( .MyMessage )
                 ]
                 Print( .MyMessage )
             `;
+            const myStructMyMessageDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 30), name: 'MyMessage' };
             assertEvaluatedVariablesValueEqual(input, [
                 'hello',
                 'hello world',
+                Struct.from(Object.entries({
+                    MyMessage: new StructMember('hello world', myStructMyMessageDefinition),
+                })),
                 'hello',
             ]);
         });
@@ -1035,18 +1078,18 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {}
                 .MyVar + 'cow'
-                .Result = .MyVar
+                .MyVar + 'moo'
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 [],
-                ['cow']
+                ['cow'],
+                ['cow', 'moo'],
             ]);
         });
 
         it('should work on inline adding an item to an array', () => {
             const input = `
                 .MyVar = {} + 'cow'
-                .Result = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [['cow']]);
         });
@@ -1055,7 +1098,6 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {'a'}
                 .MyVar + {'b'}
-                .Result = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['a'],
@@ -1066,7 +1108,6 @@ describe('evaluator', () => {
         it('should work on inline adding an array to an array', () => {
             const input = `
                 .MyVar = {'a'} + {'b'} + {'c'}
-                .Result = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [['a', 'b', 'c']]);
         });
@@ -1076,11 +1117,11 @@ describe('evaluator', () => {
                 .B = 'b'
                 .MyVar = {'a'}
                 .MyVar + {.B, 'c'}
-                .Result = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'b',
                 ['a'],
+                'b',
                 ['a', 'b', 'c']
             ]);
         });
@@ -1089,9 +1130,9 @@ describe('evaluator', () => {
             const input = `
                 .B = 'b'
                 .MyVar = {'a'} + { .B , 'c'}
-                .Result = .MyVar
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                'b',
                 'b',
                 ['a', 'b', 'c']
             ]);
@@ -1108,21 +1149,28 @@ describe('evaluator', () => {
                     .C=3
                 ]
                 .MyVar = .Struct1 + .Struct2
-                .Result = .MyVar
             `;
             const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
             const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'B' };
+            const struct1 = Struct.from(Object.entries({
+                A: new StructMember(0, struct1ADefinition),
+                B: new StructMember(2, struct1BDefinition),
+            }));
             const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22), name: 'A' };
             const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22), name: 'C' };
+            const struct2 = Struct.from(Object.entries({
+                A: new StructMember(1, struct2ADefinition),
+                C: new StructMember(3, struct2CDefinition),
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    A: new StructMember(0, struct1ADefinition),
-                    B: new StructMember(2, struct1BDefinition),
-                })),
-                Struct.from(Object.entries({
-                    A: new StructMember(1, struct2ADefinition),
-                    C: new StructMember(3, struct2CDefinition),
-                })),
+                0,
+                2,
+                struct1,
+                1,
+                3,
+                struct2,
+                struct1,
+                struct2,
                 Struct.from(Object.entries({
                     A: new StructMember(1, struct2ADefinition),
                     B: new StructMember(2, struct1BDefinition),
@@ -1284,7 +1332,6 @@ describe('evaluator', () => {
             const input = `
                 .Value = 3
                 .Value - 2
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 3,
@@ -1296,7 +1343,6 @@ describe('evaluator', () => {
             const input = `
                 .Value = 3
                        - 2
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 1
@@ -1307,7 +1353,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Good Bad Good'
                 .String - 'Bad'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good Bad Good',
@@ -1319,7 +1364,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Java C++ Python'
                 .String - 'C++'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Java C++ Python',
@@ -1332,11 +1376,11 @@ describe('evaluator', () => {
                 .String = 'Good Bad Good'
                 .Bad = 'Bad'
                 .String - .Bad
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                'Bad',
                 'Good Bad Good',
+                'Bad',
+                'Bad',
                 'Good  Good',
             ]);
         });
@@ -1345,7 +1389,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Good Bad Good Bad Bad Good'
                 .String - 'Bad'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good Bad Good Bad Bad Good',
@@ -1358,11 +1401,11 @@ describe('evaluator', () => {
                 .String = 'Good Bad Good Bad Bad Good'
                 .Bad = 'Bad'
                 .String - .Bad
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                'Bad',
                 'Good Bad Good Bad Bad Good',
+                'Bad',
+                'Bad',
                 'Good  Good   Good',
             ]);
         });
@@ -1371,7 +1414,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Good'
                 .String - 'NotFound'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good',
@@ -1383,7 +1425,6 @@ describe('evaluator', () => {
             const input = `
                 .String = ''
                 .String - 'NotFound'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 '',
@@ -1395,7 +1436,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Good Bad'
                         - 'Bad'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good ',
@@ -1406,7 +1446,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'GoBADod'
                         - 'BAD'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good',
@@ -1417,7 +1456,6 @@ describe('evaluator', () => {
             const input = `
                 .String = 'Good'
                         - 'GOOD'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Good',
@@ -1430,7 +1468,6 @@ describe('evaluator', () => {
                         + ' 3'
                         - ' 2'
                         + ' 4'
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 '1 3 4',
@@ -1443,7 +1480,6 @@ describe('evaluator', () => {
                         - ' 2'
                         + ' 3'
                         - '1 '
-                Print( .String )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 '3',
@@ -1454,7 +1490,6 @@ describe('evaluator', () => {
             const input = `
                 .Strings = { 'Good', 'Bad', 'Good' }
                 .Strings - 'Bad'
-                Print( .Strings )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['Good', 'Bad', 'Good'],
@@ -1466,7 +1501,6 @@ describe('evaluator', () => {
             const input = `
                 .Strings = { 'Good', 'Bad', 'Good' }
                          - 'Bad'
-                Print( .Strings )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 ['Good', 'Good'],
@@ -1478,11 +1512,11 @@ describe('evaluator', () => {
                 .Bad = 'Bad'
                 .Strings = { 'Good', 'Bad', 'Good' }
                 .Strings - .Bad
-                Print( .Strings )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Bad',
                 ['Good', 'Bad', 'Good'],
+                'Bad',
                 ['Good', 'Good'],
             ]);
         });
@@ -1492,11 +1526,11 @@ describe('evaluator', () => {
                 .Bad = 'Bad'
                 .Strings = { 'Good', 'Bad', 'Good' }
                          - .Bad
-                Print( .Strings )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'Bad',
                 ['Good', 'Good'],
+                'Bad',
             ]);
         });
 
@@ -1504,7 +1538,6 @@ describe('evaluator', () => {
             const input = `
                 .Strings = {}
                 .Strings - 'NotFound'
-                Print( .Strings )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 [],
@@ -1685,10 +1718,9 @@ describe('evaluator', () => {
                 .MyStr
                     = '1'
                     + ' 2'
-                Print( .MyStr )
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                '1 2'
+                '1 2',
             ]);
         });
 
@@ -1705,6 +1737,8 @@ describe('evaluator', () => {
                 ['a'],
                 ['a'],
                 ['a', 'b'],
+                ['a'],
+                ['a', 'b'],
             ]);
         });
 
@@ -1719,7 +1753,8 @@ describe('evaluator', () => {
                 Print( .MyStr )
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                '1 2'
+                '1 2',
+                '1 2',
             ]);
         });
 
@@ -1747,7 +1782,6 @@ describe('evaluator', () => {
                 .MyStr
                     = '123'
                     - '2'
-                Print( .MyStr )
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 '13'
@@ -1767,6 +1801,8 @@ describe('evaluator', () => {
                 ['a', 'b'],
                 ['a', 'b'],
                 ['a'],
+                ['a', 'b'],
+                ['a'],
             ]);
         });
 
@@ -1781,7 +1817,8 @@ describe('evaluator', () => {
                 Print( .MyStr )
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                '13'
+                '13',
+                '13',
             ]);
         });
 
@@ -1808,17 +1845,29 @@ describe('evaluator', () => {
             const input = `
                 .MyVar1 = 'MyValue1'
                 .MyVar2 = 'MyValue2'
-                .Evaluated = 'pre-$MyVar1$-$MyVar2$-post'
+                Print( 'pre-$MyVar1$-$MyVar2$-post' )
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
+                // MyValue1 definition
                 {
                     value: 'MyValue1',
-                    range: createRange(3, 34, 3, 42),
+                    range: createRange(1, 16, 1, 23),
                 },
+                // MyValue2 definition
                 {
                     value: 'MyValue2',
-                    range: createRange(3, 43, 3, 51),
+                    range: createRange(2, 16, 2, 23),
+                },
+                // MyValue1 reference
+                {
+                    value: 'MyValue1',
+                    range: createRange(3, 28, 3, 36),
+                },
+                // MyValue2 reference
+                {
+                    value: 'MyValue2',
+                    range: createRange(3, 37, 3, 45),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -1827,13 +1876,19 @@ describe('evaluator', () => {
         it('should be detected when assigning the value of another variable', () => {
             const input = `
                 .MyVar = 'MyValue'
-                .Copy = .MyVar
+                Print( .MyVar )
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
+                // MyValue definition
                 {
                     value: 'MyValue',
-                    range: createRange(2, 24, 2, 30),
+                    range: createRange(1, 16, 1, 22),
+                },
+                // MyValue reference
+                {
+                    value: 'MyValue',
+                    range: createRange(2, 23, 2, 29),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -1985,22 +2040,28 @@ describe('evaluator', () => {
                     .MyString = 'hello'
                 ]
                 Using(.MyStruct)
-                .MyBoolCopy = .MyBool
-                .MyIntCopy = .MyInt
-                .MyStringCopy = .MyString
+                Print( .MyBool )
+                Print( .MyInt )
+                Print( .MyString )
             `;
             const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
             const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
             const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
+            const myStruct = Struct.from(Object.entries({
+                MyBool: new StructMember(true, myStructMyBoolDefinition),
+                MyInt: new StructMember(1, myStructMyIntDefinition),
+                MyString: new StructMember('hello', myStructMyStringDefinition)
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    MyBool: new StructMember(true, myStructMyBoolDefinition),
-                    MyInt: new StructMember(1, myStructMyIntDefinition),
-                    MyString: new StructMember('hello', myStructMyStringDefinition)
-                })),
+                false,
                 true,
                 1,
-                'hello'
+                'hello',
+                myStruct,
+                myStruct,
+                true,
+                1,
+                'hello',
             ]);
         });
 
@@ -2016,7 +2077,6 @@ describe('evaluator', () => {
                 .Other = [
                     Using(.MyStruct)
                 ]
-                .Copy = .Other
             `;
             const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
             const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
@@ -2027,22 +2087,31 @@ describe('evaluator', () => {
             const usingMyStructMyIntDefinition: VariableDefinition = { id: 8, range: usingMyStructRange, name: 'MyInt' };
             const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange, name: 'MyString' };
             const usingMyStructMyEvaluatedVarDefinition: VariableDefinition = { id: 10, range: usingMyStructRange, name: 'MyEvaluatedVar' };
+            const myStruct = Struct.from(Object.entries({
+                MyBool: new StructMember(true, myStructMyBoolDefinition),
+                MyInt: new StructMember(1, myStructMyIntDefinition),
+                MyString: new StructMember('hello', myStructMyStringDefinition),
+                MyEvaluatedVar: new StructMember('fun', myStructMyEvaluatedVarDefinition)
+            }));
+            const other = Struct.from(Object.entries({
+                MyBool: new StructMember(true, usingMyStructMyBoolDefinition),
+                MyInt: new StructMember(1, usingMyStructMyIntDefinition),
+                MyString: new StructMember('hello', usingMyStructMyStringDefinition),
+                MyEvaluatedVar: new StructMember('fun', usingMyStructMyEvaluatedVarDefinition)
+            }));
             assertEvaluatedVariablesValueEqual(input, [
                 'fun',
+                true,
+                1,
+                'hello',
+                'fun',
+                'fun',
+                // .MyStruct = ...
+                myStruct,
                 // Using(.MyStruct)
-                Struct.from(Object.entries({
-                    MyBool: new StructMember(true, myStructMyBoolDefinition),
-                    MyInt: new StructMember(1, myStructMyIntDefinition),
-                    MyString: new StructMember('hello', myStructMyStringDefinition),
-                    MyEvaluatedVar: new StructMember('fun', myStructMyEvaluatedVarDefinition)
-                })),
-                // .Copy = .Other
-                Struct.from(Object.entries({
-                    MyBool: new StructMember(true, usingMyStructMyBoolDefinition),
-                    MyInt: new StructMember(1, usingMyStructMyIntDefinition),
-                    MyString: new StructMember('hello', usingMyStructMyStringDefinition),
-                    MyEvaluatedVar: new StructMember('fun', usingMyStructMyEvaluatedVarDefinition)
-                }))
+                myStruct,
+                // .Other = ...
+                other,
             ]);
         });
 
@@ -2119,21 +2188,27 @@ describe('evaluator', () => {
                 .MyStruct3 = [
                     Using( .MyStruct2 )
                 ]
-                Print( .MyStruct3 )
             `;
             const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 26), name: 'MyInt' };
             const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39), name: 'MyInt' };
             const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39), name: 'MyInt' };
+            const myStruct1 = Struct.from(Object.entries({
+                MyInt: new StructMember(1, myStruct1MyIntDefinition),
+            }));
+            const myStruct2 = Struct.from(Object.entries({
+                MyInt: new StructMember(1, usingMyStruct1MyIntDefinition),
+            }));
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                // .MyStruct1 = ...
+                myStruct1,
                 // Using( .MyStruct1 )
-                Struct.from(Object.entries({
-                    MyInt: new StructMember(1, myStruct1MyIntDefinition),
-                })),
+                myStruct1,
+                // .MyStruct2 = ...
+                myStruct2,
                 // Using( .MyStruct2 )
-                Struct.from(Object.entries({
-                    MyInt: new StructMember(1, usingMyStruct1MyIntDefinition),
-                })),
-                // Print( .MyStruct3 )
+                myStruct2,
+                // .MyStruct3 = ...
                 Struct.from(Object.entries({
                     MyInt: new StructMember(1, usingMyStruct2MyIntDefinition),
                 }))
@@ -2162,10 +2237,14 @@ describe('evaluator', () => {
                 Using( .MyStruct )
             `;
             const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31), name: 'StructVar1' };
+            const myStruct = Struct.from(Object.entries({
+                StructVar1: new StructMember(1, myStructStructVar1Definition)
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    StructVar1: new StructMember(1, myStructStructVar1Definition)
-                })),
+                1,
+                3,
+                myStruct,
+                myStruct,
             ]);
         });
     });
@@ -2176,10 +2255,11 @@ describe('evaluator', () => {
                 .MyArray = {'a', 'b', 'c'}
                 ForEach( .Item in .MyArray )
                 {
-                    .Copy = .Item
+                    Print( .Item )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
                 'a',
                 'b',
@@ -2192,11 +2272,12 @@ describe('evaluator', () => {
                 .MyArray = {}
                 ForEach( .Item in .MyArray )
                 {
-                    .Copy = .Item
+                    Print( .Item )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
-                []
+                [],
+                [],
             ]);
         });
 
@@ -2206,11 +2287,12 @@ describe('evaluator', () => {
                 {
                     ForEach( .Item in .MyArray )
                     {
-                        .Copy = .Item
+                        Print( .Item )
                     }
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
                 'a',
                 'b',
@@ -2228,32 +2310,35 @@ describe('evaluator', () => {
                 }
                 ForEach( .Item in .MyArray )
                 {
-                    .Copy = .Item
+                    Print( .Item )
                 }
             `;
-            const myArray1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value' };
-            const myArray2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value' };
+            const myStruct1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value' };
+            const myStruct2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value' };
+            const myStruct1 = Struct.from(Object.entries({
+                Value: new StructMember(1, myStruct1ValueDefinition)
+            }));
+            const myStruct2 = Struct.from(Object.entries({
+                Value: new StructMember(2, myStruct2ValueDefinition)
+            }));
             assertEvaluatedVariablesValueEqual(input, [
-                Struct.from(Object.entries({
-                    Value: new StructMember(1, myArray1ValueDefinition)
-                })),
-                Struct.from(Object.entries({
-                    Value: new StructMember(2, myArray2ValueDefinition)
-                })),
-                [
-                    Struct.from(Object.entries({
-                        Value: new StructMember(1, myArray1ValueDefinition)
-                    })),
-                    Struct.from(Object.entries({
-                        Value: new StructMember(2, myArray2ValueDefinition)
-                    }))
-                ],
-                Struct.from(Object.entries({
-                    Value: new StructMember(1, myArray1ValueDefinition)
-                })),
-                Struct.from(Object.entries({
-                    Value: new StructMember(2, myArray2ValueDefinition)
-                }))
+                // .Value = 1
+                1,
+                // .MyStruct1 = ...
+                myStruct1,
+                // .Value = 2
+                2,
+                // .MyStruct2 = ...
+                myStruct2,
+                // .MyArray = ...
+                myStruct1,
+                myStruct2,
+                [myStruct1, myStruct2],
+                //ForEach( .Item in .MyArray )
+                [myStruct1, myStruct2],
+                // Print( .Item )
+                myStruct1,
+                myStruct2,
             ]);
         });
 
@@ -2265,13 +2350,21 @@ describe('evaluator', () => {
                 ForEach( .Item1 in .MyArray1,.Item2 in .MyArray2,
                          .Item3 in .MyArray3 )
                 {
-                    .Combined = '$Item1$-$Item2$-$Item3$'
+                    Print( '$Item1$-$Item2$-$Item3$' )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray1 = ...
+                ['a1', 'b1', 'c1'],
+                // .MyArray3 = ...
+                ['a2', 'b2', 'c2'],
+                // .MyArray3 = ...
+                ['a3', 'b3', 'c3'],
+                // ForEach( ... )
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
+                // Print( '$Item1$-$Item2$-$Item3$' )
                 'a1', 'a2', 'a3',
                 'b1', 'b2', 'b3',
                 'c1', 'c2', 'c3',
@@ -2287,13 +2380,21 @@ describe('evaluator', () => {
                          .Item2 in .MyArray2
                          .Item3 in .MyArray3 )
                 {
-                    .Combined = '$Item1$-$Item2$-$Item3$'
+                    Print( '$Item1$-$Item2$-$Item3$' )
                 }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray1 = ...
+                ['a1', 'b1', 'c1'],
+                // .MyArray3 = ...
+                ['a2', 'b2', 'c2'],
+                // .MyArray3 = ...
+                ['a3', 'b3', 'c3'],
+                // ForEach( ... )
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
+                // Print( '$Item1$-$Item2$-$Item3$' )
                 'a1', 'a2', 'a3',
                 'b1', 'b2', 'b3',
                 'c1', 'c2', 'c3',
@@ -2316,10 +2417,14 @@ describe('evaluator', () => {
         it('body is on the same line', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
-                ForEach( .Item in .MyArray ) { .Copy = .Item }
+                ForEach( .Item in .MyArray ) { Print( .Item ) }
             `;
             assertEvaluatedVariablesValueEqual(input, [
+                // .MyArray = ...
                 ['a', 'b', 'c'],
+                // ForEach( ... )
+                ['a', 'b', 'c'],
+                // Print( .Item )
                 'a',
                 'b',
                 'c'
@@ -2380,7 +2485,10 @@ describe('evaluator', () => {
                         {
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['SomeName']);
+                    assertEvaluatedVariablesValueEqual(input, [
+                        'SomeName',
+                        'SomeName',
+                    ]);
                 });
 
                 it('handles a dynamic-variable target name', () => {
@@ -2392,8 +2500,14 @@ describe('evaluator', () => {
                         }
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
+                        // .MyTargetName = ...
+                        'SomeName',
+                        // .TargetNameVariable = ...
                         'MyTargetName',
-                        'SomeName'
+                        // $TargetNameVariable$
+                        'MyTargetName',
+                        // .'$TargetNameVariable$'
+                        'SomeName',
                     ]);
                 });
 
@@ -2497,11 +2611,18 @@ describe('evaluator', () => {
                         .MyVar = 1
                         ${functionName}('MyTargetName')
                         {
-                            .Copy = .MyVar
-                            .Copy = ^MyVar
+                            Print( .MyVar )
+                            Print( ^MyVar )
                         }
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1]);
+                    assertEvaluatedVariablesValueEqual(input, [
+                        // .MyVar = ...
+                        1,
+                        // Print( .MyVar )
+                        1,
+                        // Print( ^MyVar )
+                        1,
+                    ]);
                 });
             });
         }
@@ -2514,7 +2635,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Error( 'Value is $Value$' )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
 
             it('The message being just an evaluated variable', () => {
@@ -2522,7 +2646,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Error( '$Value$' )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
         });
 
@@ -2532,7 +2659,10 @@ describe('evaluator', () => {
                     .Value = 1
                     Print('Value is $Value$')
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    1,
+                    1,
+                ]);
             });
 
             it('Print string variable', () => {
@@ -2540,7 +2670,10 @@ describe('evaluator', () => {
                     .Value = 'hello'
                     Print(.Value)
                 `;
-                assertEvaluatedVariablesValueEqual(input, ['hello']);
+                assertEvaluatedVariablesValueEqual(input, [
+                    'hello',
+                    'hello',
+                ]);
             });
 
             it('Print integer variable', () => {
@@ -2548,7 +2681,10 @@ describe('evaluator', () => {
                     .Value = 123
                     Print(.Value)
                 `;
-                assertEvaluatedVariablesValueEqual(input, [123]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    123,
+                    123,
+                ]);
             });
         });
 
@@ -2558,10 +2694,17 @@ describe('evaluator', () => {
                     .Value = 1
                     Settings
                     {
-                        .Copy = .Value
+                        .MyVar = .Value
                     }
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    1,
+                    // .Value
+                    1,
+                    // .MyVar = ...
+                    1,
+                ]);
             });
         });
     });
@@ -2575,9 +2718,16 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
+                    Print( .Result )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Result = ...
+                    false,
+                    // ^Result = true
+                    true,
+                    // Print( .Result )
+                    true,
+                ]);
             });
 
             it('evaluates a literal false to false', () => {
@@ -2587,9 +2737,14 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
+                    Print( .Result )
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Result = ...
+                    false,
+                    // Print( .Result )
+                    false,
+                ]);
             });
 
             it('evaluates "! literal true" to false', () => {
@@ -2599,7 +2754,6 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [false]);
             });
@@ -2611,9 +2765,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [false, true]);
             });
 
             it('evaluates a true boolean variable to true', () => {
@@ -2624,9 +2777,17 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true, true]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    true,
+                    // .Result = ...
+                    false,
+                    // If( .Value )
+                    true,
+                    // ^Result = ...
+                    true,
+                ]);
             });
 
             it('evaluates a false boolean variable to false', () => {
@@ -2637,9 +2798,15 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false, false]);
+                assertEvaluatedVariablesValueEqual(input, [
+                    // .Value = ...
+                    false,
+                    // .Result = ...
+                    false,
+                    // If( .Value )
+                    false,
+                ]);
             });
 
             it('evaluates the inversion of a true boolean variable to false', () => {
@@ -2650,9 +2817,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true, false]);
+                assertEvaluatedVariablesValueEqual(input, [true, false, true]);
             });
 
             it('evaluates the inversion of a false boolean variable to true', () => {
@@ -2663,9 +2829,8 @@ describe('evaluator', () => {
                     {
                         ^Result = true
                     }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [false, true]);
+                assertEvaluatedVariablesValueEqual(input, [false, false, false, true]);
             });
 
             it('errors on using a non-boolean variable for the condition', () => {
@@ -2683,9 +2848,8 @@ describe('evaluator', () => {
                 const input = `
                     .Result = false
                     If( true ) { ^Result = true }
-                    .Copy = .Result
                 `;
-                assertEvaluatedVariablesValueEqual(input, [true]);
+                assertEvaluatedVariablesValueEqual(input, [false, true]);
             });
         });
 
@@ -2693,164 +2857,140 @@ describe('evaluator', () => {
             describe('boolean', () => {
                 it('"{true-literal} == {true-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( true == true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{true-literal} == {false-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( true == false )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"true == {true-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = true
-                        .Result = false
                         If( .Value1 == true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
                 });
 
                 it('"{true-literal} == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
-                        .Result = false
                         If( true == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
                 });
 
                 it('"true == true" evaluates to true', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = true
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true, true, true]);
                 });
 
                 it('"false == false" evaluates to true', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = false
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false, true]);
                 });
 
                 it('"true == false" evaluates to false', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = false
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, false]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, false]);
                 });
 
                 it('"false == true" evaluates to false', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = true
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, false]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, true]);
                 });
 
                 it('"true != true" evaluates to false', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = true
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, true, false]);
+                    assertEvaluatedVariablesValueEqual(input, [true, true, true, true]);
                 });
 
                 it('"false != false" evaluates to false', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = false
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, false, false]);
+                    assertEvaluatedVariablesValueEqual(input, [false, false, false, false]);
                 });
 
                 it('"true != false" evaluates to true', () => {
                     const input = `
                         .Value1 = true
                         .Value2 = false
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [true, false, true]);
+                    assertEvaluatedVariablesValueEqual(input, [true, false, true, false, true]);
                 });
 
                 it('"false != true" evaluates to true', () => {
                     const input = `
                         .Value1 = false
                         .Value2 = true
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false, true, true]);
+                    assertEvaluatedVariablesValueEqual(input, [false, true, false, true, true]);
                 });
 
                 const illegalComparisonOperators = [
@@ -2877,692 +3017,592 @@ describe('evaluator', () => {
             describe('integer', () => {
                 it('"{1-literal} == {1-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( 1 == 1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{1-literal} == {0-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( 1 == 0 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"1 == {1-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
-                        .Result = false
                         If( .Value1 == 1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
                 });
 
                 it('"{1-literal} == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
-                        .Result = false
                         If( 1 == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
                 });
 
                 it('"1 == 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
 
                 it('"1 == 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 != 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"1 != 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"0 < 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
 
                 it('"1 < 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 < 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"0 <= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
                 });
 
                 it('"1 <= 0" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0]);
                 });
 
                 it('"1 <= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
 
                 it('"0 > 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1]);
                 });
 
                 it('"1 > 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"1 > 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1]);
                 });
 
                 it('"0 >= 1" evaluates to false', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1]);
                 });
 
                 it('"1 >= 0" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 0
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 0, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 0, 1, 0, true]);
                 });
 
                 it('"1 >= 1" evaluates to true', () => {
                     const input = `
                         .Value1 = 1
                         .Value2 = 1
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [1, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [1, 1, 1, 1, true]);
                 });
             });
 
             describe('string', () => {
                 it('"{cat-literal} == {cat-literal}" evaluates to true', () => {
                     const input = `
-                        .Result = false
                         If( 'cat' == 'cat' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [true]);
                 });
 
                 it('"{cat-literal} == {dog-literal}" evaluates to false', () => {
                     const input = `
-                        .Result = false
                         If( 'cat' == 'dog' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [false]);
+                    assertEvaluatedVariablesValueEqual(input, []);
                 });
 
                 it('"cat == {cat-literal}" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
-                        .Result = false
                         If( .Value1 == 'cat' )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
                 });
 
                 it('"{cat-literal} = cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
-                        .Result = false
                         If( 'cat' == .Value1 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
                 });
 
                 it('"cat == cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', 'cat', 'cat', true]);
                 });
 
                 it('"cat == Cat" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'Cat'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', 'cat', 'Cat']);
                 });
 
                 it('"cat == dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 == .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"cat != cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'cat', 'cat', 'cat']);
                 });
 
                 it('"cat != Cat" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'Cat'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'Cat', 'cat', 'Cat', true]);
                 });
 
                 it('"cat != dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 != .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"cat < dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"dog < cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat']);
                 });
 
                 it('"dog < dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog']);
                 });
 
                 it('"Dog < dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog', true]);
                 });
 
                 it('"dog < Dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 < .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog']);
                 });
 
                 it('"cat <= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog', true]);
                 });
 
                 it('"dog <= cat" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat']);
                 });
 
                 it('"dog <= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog', true]);
                 });
 
                 it('"Dog <= dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog', true]);
                 });
 
                 it('"dog <= Dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 <= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog']);
                 });
 
                 it('"cat > dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"dog > cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat', true]);
                 });
 
                 it('"dog > dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog']);
                 });
 
                 it('"Dog > dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog']);
                 });
 
                 it('"dog > Dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 > .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog', true]);
                 });
 
                 it('"cat >= dog" evaluates to false', () => {
                     const input = `
                         .Value1 = 'cat'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['cat', 'dog', 'cat', 'dog']);
                 });
 
                 it('"dog >= cat" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'cat'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'cat', 'dog', 'cat', true]);
                 });
 
                 it('"dog >= dog" evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'dog', 'dog', 'dog', true]);
                 });
 
                 it('"Dog >= dog" (different case) evaluates to false', () => {
                     const input = `
                         .Value1 = 'Dog'
                         .Value2 = 'dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', false]);
+                    assertEvaluatedVariablesValueEqual(input, ['Dog', 'dog', 'Dog', 'dog']);
                 });
 
                 it('"dog >= Dog" (different case) evaluates to true', () => {
                     const input = `
                         .Value1 = 'dog'
                         .Value2 = 'Dog'
-                        .Result = false
                         If( .Value1 >= .Value2 )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', true]);
+                    assertEvaluatedVariablesValueEqual(input, ['dog', 'Dog', 'dog', 'Dog', true]);
                 });
             });
 
@@ -3583,16 +3623,15 @@ describe('evaluator', () => {
             it('present-literal-string "in" array of strings evaluates to true', () => {
                 const input = `
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( 'b' in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['a', 'b', 'c'],
-                    true
+                    ['a', 'b', 'c'],
+                    true,
                 ]);
             });
 
@@ -3600,14 +3639,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    ['a', 'b', 'c'],
                     'b',
                     ['a', 'b', 'c'],
                     true
@@ -3618,17 +3657,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'd'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'd',
                     ['a', 'b', 'c'],
-                    false
+                    'd',
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3636,17 +3674,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'b',
                     [],
-                    false
+                    'b',
+                    [],
                 ]);
             });
 
@@ -3654,17 +3691,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     'b',
                     ['a', 'b', 'c'],
-                    false
+                    'b',
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3672,14 +3708,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'd'
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'd',
+                    ['a', 'b', 'c'],
                     'd',
                     ['a', 'b', 'c'],
                     true
@@ -3690,14 +3726,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = 'b'
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    'b',
+                    [],
                     'b',
                     [],
                     true
@@ -3708,14 +3744,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d', 'b'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
                     ['d', 'b'],
                     ['a', 'b', 'c'],
                     true
@@ -3726,17 +3762,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['d'],
                     ['a', 'b', 'c'],
-                    false
+                    ['d'],
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3744,17 +3779,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'b'}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['b'],
                     [],
-                    false
+                    ['b'],
+                    [],
                 ]);
             });
 
@@ -3762,17 +3796,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     [],
                     [],
-                    false
+                    [],
+                    [],
                 ]);
             });
 
@@ -3780,17 +3813,16 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d', 'b'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
                     ['d', 'b'],
                     ['a', 'b', 'c'],
-                    false
+                    ['d', 'b'],
+                    ['a', 'b', 'c'],
                 ]);
             });
 
@@ -3798,14 +3830,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'d'}
                     .Haystack = {'a', 'b', 'c'}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['d'],
+                    ['a', 'b', 'c'],
                     ['d'],
                     ['a', 'b', 'c'],
                     true
@@ -3816,14 +3848,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {'b'}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    ['b'],
+                    [],
                     ['b'],
                     [],
                     true
@@ -3834,14 +3866,14 @@ describe('evaluator', () => {
                 const input = `
                     .Needle = {}
                     .Haystack = {}
-                    .Result = false
                     If( .Needle not in .Haystack )
                     {
-                        ^Result = true
+                        .Result = true
                     }
-                    .Copy = .Result
                 `;
                 assertEvaluatedVariablesValueEqual(input, [
+                    [],
+                    [],
                     [],
                     [],
                     true
@@ -3950,14 +3982,23 @@ describe('evaluator', () => {
                                 const input = `
                                     .Value1 = ${value1}
                                     .Value2 = ${value2}
-                                    .Result = false
                                     If( ${comparison.condition} )
                                     {
-                                        ^Result = ${result}
+                                        .Result = ${result}
                                     }
-                                    .Copy = .Result
                                 `;
-                                assertEvaluatedVariablesValueEqual(input, [value1, value2, result]);
+
+                                const expectedEvaluatedVariables = [
+                                    value1,
+                                    value2,
+                                    value1,
+                                    value2,
+                                ];
+                                if (result) {
+                                    expectedEvaluatedVariables.push(result);
+                                }
+
+                                assertEvaluatedVariablesValueEqual(input, expectedEvaluatedVariables);
                             });
                         }
                     }
@@ -3983,14 +4024,25 @@ describe('evaluator', () => {
                                         .Value1 = ${value1}
                                         .Value2 = ${value2}
                                         .Value3 = ${value3}
-                                        .Result = false
                                         If( ${comparison.condition} )
                                         {
-                                            ^Result = ${result}
+                                            .Result = ${result}
                                         }
-                                        .Copy = .Result
                                     `;
-                                    assertEvaluatedVariablesValueEqual(input, [value1, value2, value3, result]);
+
+                                    const expectedEvaluatedVariables = [
+                                        value1,
+                                        value2,
+                                        value3,
+                                        value1,
+                                        value2,
+                                        value3,
+                                    ];
+                                    if (result) {
+                                        expectedEvaluatedVariables.push(result);
+                                    }
+
+                                    assertEvaluatedVariablesValueEqual(input, expectedEvaluatedVariables);
                                 });
                             }
                         }
@@ -4003,42 +4055,36 @@ describe('evaluator', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 < .Value2) && (.Value1 > .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, false]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1]);
                 });
 
                 it('"(0 < 1) || (0 > 1)" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 < .Value2) || (.Value1 > .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1, true]);
                 });
 
                 it('"(0 > 1) || (0 < 1)" evaluates to true', () => {
                     const input = `
                         .Value1 = 0
                         .Value2 = 1
-                        .Result = false
                         If( (.Value1 > .Value2) || (.Value1 < .Value2) )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
-                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, true]);
+                    assertEvaluatedVariablesValueEqual(input, [0, 1, 0, 1, 0, 1, true]);
                 });
             });
 
@@ -4047,14 +4093,14 @@ describe('evaluator', () => {
                     const input = `
                         .Needle = 'b'
                         .Haystack = {'a', 'b', 'c'}
-                        .Result = false
                         If( (.Needle in .Haystack) && true )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
+                        'b',
+                        ['a', 'b', 'c'],
                         'b',
                         ['a', 'b', 'c'],
                         true
@@ -4065,17 +4111,16 @@ describe('evaluator', () => {
                     const input = `
                         .Needle = 'b'
                         .Haystack = {'a', 'b', 'c'}
-                        .Result = false
                         If( (.Needle in .Haystack) && false )
                         {
-                            ^Result = true
+                            .Result = true
                         }
-                        .Copy = .Result
                     `;
                     assertEvaluatedVariablesValueEqual(input, [
                         'b',
                         ['a', 'b', 'c'],
-                        false
+                        'b',
+                        ['a', 'b', 'c'],
                     ]);
                 });
             });
@@ -4271,7 +4316,7 @@ Expecting to see one of the following:
                     }
                     Func()
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1]);
+                assertEvaluatedVariablesValueEqual(input, [1, 1]);
             });
 
             it('Body on the same line', () => {
@@ -4323,7 +4368,7 @@ Expecting to see the following:
                     }
                     Func(.MyVar)
                 `;
-                assertEvaluatedVariablesValueEqual(input, [1, 1]);
+                assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
             });
 
             it('Body on the same line', () => {
@@ -4440,7 +4485,6 @@ Expecting to see the following:
                 const input = `
                     function FuncA() {
                         .MyVar = 1
-                        Print( .MyVar )
                     }
 
                     function FuncB() {
@@ -4474,14 +4518,13 @@ Expecting to see the following:
                     'file:///fbuild.bff',
                     `
                         #include 'helper.bff'
-                        .Copy = .FromHelper
+                        Print( .FromHelper )
                     `
                 ],
                 [
                     'file:///helper.bff',
                     `
                         .FromHelper = 1
-                        .Copy = .FromHelper
                     `
                 ]
             ]), true /*enableDiagnostics*/);
@@ -4489,11 +4532,11 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 1,
-                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
+                    range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 },
                 {
                     value: 1,
-                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
+                    range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 }
             ]);
 
@@ -4503,15 +4546,8 @@ Expecting to see the following:
                 name: 'FromHelper',
             };
 
-            const definitionCopy: VariableDefinition = {
-                id: 2,
-                range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
-                name: 'Copy',
-            };
-
             assert.deepStrictEqual(result.variableDefinitions, [
                 definitionFromHelper,  // FromHelper
-                definitionCopy,  // Copy
             ]);
 
             assert.deepStrictEqual(result.variableReferences, [
@@ -4520,25 +4556,10 @@ Expecting to see the following:
                     definition: definitionFromHelper,
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 },
-                // helper.bff ".Copy = .FromHelper" RHS
+                // fbuild.bff "Print( .FromHelper )"
                 {
                     definition: definitionFromHelper,
-                    range: createFileRange('file:///helper.bff', 2, 32, 2, 43),
-                },
-                // helper.bff ".Copy = .FromHelper" LHS
-                {
-                    definition: definitionCopy,
-                    range: createFileRange('file:///helper.bff', 2, 24, 2, 29),
-                },
-                // fbuild.bff ".Copy = .FromHelper" RHS
-                {
-                    definition: definitionFromHelper,
-                    range: createFileRange('file:///fbuild.bff', 2, 32, 2, 43),
-                },
-                // fbuild.bff ".Copy = .FromHelper" LHS
-                {
-                    definition: definitionCopy,
-                    range: createFileRange('file:///fbuild.bff', 2, 24, 2, 29),
+                    range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 },
             ]);
         });
@@ -4562,6 +4583,10 @@ Expecting to see the following:
             ]), true /*enableDiagnostics*/);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
+                {
+                    value: 'Bobo',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 24, 1, 29),
+                },
                 {
                     value: 'Bobo',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 38, 1, 44),
@@ -4609,7 +4634,15 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
+                    range: createFileRange('file:///some/path/animals/dog.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'dog',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 24, 1, 32),
                 },
                 {
                     value: 'Hello dog',
@@ -4617,7 +4650,15 @@ Expecting to see the following:
                 },
                 {
                     value: 'cat',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'cat',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 42, 1, 48),
+                },
+                {
+                    value: 'Hello cat',
+                    range: createFileRange('file:///some/path/greetings.bff', 1, 24, 1, 32),
                 },
                 {
                     value: 'Hello cat',
@@ -4650,6 +4691,10 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'Bobo',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'Bobo',
                     range: createFileRange('file:///some/path/greetings.bff', 2, 38, 2, 44),
                 },
             ]);
@@ -4668,7 +4713,7 @@ Expecting to see the following:
                     'file:///some/path/greetings.bff',
                     `
                         #once
-                        .Message = 'Hello $Name$'
+                        Print( 'Hello $Name$' )
                     `
                 ],
                 [
@@ -4690,7 +4735,15 @@ Expecting to see the following:
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
                     value: 'dog',
-                    range: createFileRange('file:///some/path/greetings.bff', 2, 42, 2, 48),
+                    range: createFileRange('file:///some/path/animals/dog.bff', 1, 24, 1, 29),
+                },
+                {
+                    value: 'dog',
+                    range: createFileRange('file:///some/path/greetings.bff', 2, 38, 2, 44),
+                },
+                {
+                    value: 'cat',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 1, 24, 1, 29),
                 },
             ]);
         });
@@ -4702,156 +4755,128 @@ Expecting to see the following:
 
         it('A platform-specific symbol is defined', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"!DEFINE" on a defined symbol evaluates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"!DEFINE" on an undefined symbol evaluates to true', () => {
             const input = `
-                .Value = false
                 #if ! NON_EXISTENT_SYMBOL
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true && true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true && false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && true evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('true || true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true || false evaulates to true', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('false || true evaulates to true', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('false || false evaulates to false', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} || !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('false && false || true evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
-                .Value = false
                 #if !${builtInDefine} && !${builtInDefine} || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('true || false && false evaulates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} || !${builtInDefine} && !${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('#else body is evaluated when the #if condition is false', () => {
             const input = `
-                .Value = ''
                 #if !${builtInDefine}
                     .Value = 'if'
                 #else
                     .Value = 'else'
                 #endif
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['else']);
@@ -4865,7 +4890,6 @@ Expecting to see the following:
                     + 'B'
                 #endif
                     + 'C'
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['ABC']);
@@ -4881,7 +4905,6 @@ Expecting to see the following:
                     + 'b'
                 #endif
                     + 'C'
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, ['AbC']);
@@ -4898,7 +4921,6 @@ Expecting to see the following:
                     #endif
                     'C'
                 }
-                Print( .Value )
             `;
 
             assertEvaluatedVariablesValueEqual(input, [['A', 'B', 'C']]);
@@ -4915,13 +4937,15 @@ Expecting to see the following:
                     #endif
                     .C = 3
                 ]
-                Print( .Value )
             `;
 
             const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
             const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26), name: 'B' };
             const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22), name: 'C' };
             assertEvaluatedVariablesValueEqual(input, [
+                1,
+                2,
+                3,
                 Struct.from(Object.entries({
                     A: new StructMember(1, myVarADefinition),
                     B: new StructMember(2, myVarBDefinition),
@@ -4936,44 +4960,36 @@ Expecting to see the following:
 
         it('"#if exists(...)" always evaluates to false', () => {
             const input = `
-                .Value = false
                 #if exists(MY_ENV_VAR)
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"#if !exists(...)" always evaluates to true', () => {
             const input = `
-                .Value = false
                 #if !exists( MY_ENV_VAR )
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"exists" can be combined with ||', () => {
             const input = `
-                .Value = false
                 #if exists(MY_ENV_VAR) || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"exists" can be combined with &&', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && !exists(MY_ENV_VAR)
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
@@ -4987,11 +5003,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5008,11 +5022,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('../uncle.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5029,11 +5041,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if file_exists('/base/sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5047,13 +5057,11 @@ Expecting to see the following:
 
         it('"#if file_exists(...)" evaluates to false for a path that does not exist', () => {
             const input = `
-                .Value = false
                 #if file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('"#if !file_exists(...)" evaluates to false for a path that exists', () => {
@@ -5061,11 +5069,9 @@ Expecting to see the following:
                 [
                     'file:///base/fbuild.bff',
                     `
-                        .Value = false
                         #if !file_exists('sibling.txt')
                             .Value = true
                         #endif
-                        Print( .Value )
                     `
                 ],
                 [
@@ -5074,40 +5080,34 @@ Expecting to see the following:
                 ],
             ]), true /*enableDiagnostics*/);
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
-            assert.deepStrictEqual(actualValues, [false]);
+            assert.deepStrictEqual(actualValues, []);
         });
 
         it('"#if !file_exists(...)" evaluates to true for a path that does not exist', () => {
             const input = `
-                .Value = false
                 #if !file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"file_exists" can be combined with ||', () => {
             const input = `
-                .Value = false
                 #if file_exists('path/that/does/not/exist.txt') || ${builtInDefine}
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
         it('"file_exists" can be combined with &&', () => {
             const input = `
-                .Value = false
                 #if ${builtInDefine} && file_exists('path/that/does/not/exist.txt')
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
     });
 
@@ -5115,11 +5115,9 @@ Expecting to see the following:
         it('basic', () => {
             const input = `
                 #define MY_DEFINE
-                .Value = false
                 #if MY_DEFINE
                     .Value = true
                 #endif
-                Print( .Value )
             `;
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
@@ -5139,13 +5137,11 @@ Expecting to see the following:
             const input = `
                 #define MY_DEFINE
                 #undef MY_DEFINE
-                .Value = false
                 #if MY_DEFINE
                     .Value = true
                 #endif
-                Print( .Value )
             `;
-            assertEvaluatedVariablesValueEqual(input, [false]);
+            assertEvaluatedVariablesValueEqual(input, []);
         });
 
         it('undefining an undefined symbol is an error', () => {
