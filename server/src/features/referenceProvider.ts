@@ -6,8 +6,8 @@ import {
 
 import {
     DocumentSymbol,
-    DocumentUri,
     Location,
+    Position,
     SymbolInformation,
     SymbolKind,
 } from 'vscode-languageserver-types';
@@ -17,40 +17,69 @@ import {
 } from '../parser';
 
 import {
-    DefinitionKind,
     EvaluatedData,
 } from '../evaluator';
 
 import * as fuzzy from 'fuzzy';
 
 export class ReferenceProvider {
-    private evaluatedData = new Map<DocumentUri, EvaluatedData>();
-
-    getReferences(params: ReferenceParams, evaluatedData: EvaluatedData): Location[] | null {
+    getReferences(params: ReferenceParams, evaluatedData: EvaluatedData): Location[] {
         const uri = params.textDocument.uri;
         const position = params.position;
-        if (evaluatedData === undefined) {
-            return null;
-        }
-        const variableReferences = evaluatedData.variableReferences;
 
-        const variableReferenceAtPosition = variableReferences.find(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)));
-        if (variableReferenceAtPosition === undefined) {
-            return null;
+        const references = this.getTargetReferences(uri, position, evaluatedData);
+        references.push(...this.getVariableReferences(uri, position, evaluatedData));
+        return references;
+    }
+
+    getTargetReferences(uri: string, position: Position, evaluatedData: EvaluatedData): Location[] {
+        const references = evaluatedData.targetReferences;
+
+        const referenceAtPosition = references.find(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)));
+        if (referenceAtPosition === undefined) {
+            return [];
         }
 
-        // Search algorithm: for each variable references, check if the variable definition is the same as this one.
+        // Search algorithm: for each references, check if the definition is the same as this one.
         // This is not very optimized.
 
         // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
         const locations = new Map<string, Location>();
 
-        for (const variableReference of variableReferences)
+        for (const reference of references)
         {
-            if (variableReference.definition.id === variableReferenceAtPosition.definition.id) {
+            if (reference.definition.id === referenceAtPosition.definition.id) {
                 const location: Location = {
-                    uri: variableReference.range.uri,
-                    range: variableReference.range
+                    uri: reference.range.uri,
+                    range: reference.range
+                };
+                locations.set(JSON.stringify(location), location);
+            }
+        }
+
+        return [...locations.values()];
+    }
+
+    getVariableReferences(uri: string, position: Position, evaluatedData: EvaluatedData): Location[] {
+        const references = evaluatedData.variableReferences;
+
+        const referenceAtPosition = references.find(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)));
+        if (referenceAtPosition === undefined) {
+            return [];
+        }
+
+        // Search algorithm: for each references, check if the definition is the same as this one.
+        // This is not very optimized.
+
+        // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+        const locations = new Map<string, Location>();
+
+        for (const reference of references)
+        {
+            if (reference.definition.id === referenceAtPosition.definition.id) {
+                const location: Location = {
+                    uri: reference.range.uri,
+                    range: reference.range
                 };
                 locations.set(JSON.stringify(location), location);
             }
@@ -61,40 +90,73 @@ export class ReferenceProvider {
 
     getDocumentSymbols(params: DocumentSymbolParams, evaluatedData: EvaluatedData): DocumentSymbol[] | null {
         const uri = params.textDocument.uri;
-        if (evaluatedData === undefined) {
-            return null;
-        }
         const symbols: DocumentSymbol[] = [];
-        for (const variableDefinition of evaluatedData.variableDefinitions) {
-            if (variableDefinition.range.uri !== uri) {
+
+        // Add targets
+        for (const definition of evaluatedData.targetDefinitions) {
+            if (definition.range.uri !== uri) {
                 continue;
             }
 
             const symbol: DocumentSymbol = {
-                name: variableDefinition.name,
-                kind: variableDefinition.kind == DefinitionKind.Target ? SymbolKind.Function : SymbolKind.Variable,
-                range: variableDefinition.range,
-                selectionRange: variableDefinition.range,
+                name: definition.name,
+                kind: SymbolKind.Function,
+                range: definition.range,
+                selectionRange: definition.range,
             };
             symbols.push(symbol);
         }
+
+        // Add variables
+        for (const definition of evaluatedData.variableDefinitions) {
+            if (definition.range.uri !== uri) {
+                continue;
+            }
+
+            const symbol: DocumentSymbol = {
+                name: definition.name,
+                kind: SymbolKind.Variable,
+                range: definition.range,
+                selectionRange: definition.range,
+            };
+            symbols.push(symbol);
+        }
+
         return symbols;
     }
 
     getWorkspaceSymbols(params: WorkspaceSymbolParams, evaluatedDatas: IterableIterator<EvaluatedData>): SymbolInformation[] | null {
         const symbols: SymbolInformation[] = [];
         for (const evaluatedData of evaluatedDatas) {
-            for (const variableDefinition of evaluatedData.variableDefinitions) {
-                if (!fuzzy.test(params.query, variableDefinition.name)) {
+            // Add targets
+            for (const definition of evaluatedData.targetDefinitions) {
+                if (!fuzzy.test(params.query, definition.name)) {
                     continue;
                 }
 
                 const symbol: SymbolInformation = {
-                    name: variableDefinition.name,
-                    kind: variableDefinition.kind == DefinitionKind.Target ? SymbolKind.Function : SymbolKind.Variable,
+                    name: definition.name,
+                    kind: SymbolKind.Function,
                     location: {
-                        uri: variableDefinition.range.uri,
-                        range: variableDefinition.range,
+                        uri: definition.range.uri,
+                        range: definition.range,
+                    },
+                };
+                symbols.push(symbol);
+            }
+
+            // Add variables
+            for (const definition of evaluatedData.variableDefinitions) {
+                if (!fuzzy.test(params.query, definition.name)) {
+                    continue;
+                }
+
+                const symbol: SymbolInformation = {
+                    name: definition.name,
+                    kind: SymbolKind.Variable,
+                    location: {
+                        uri: definition.range.uri,
+                        range: definition.range,
                     },
                 };
                 symbols.push(symbol);

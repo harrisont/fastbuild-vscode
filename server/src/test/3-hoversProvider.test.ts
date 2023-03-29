@@ -1,7 +1,6 @@
 import * as assert from 'assert';
 
 import {
-    DefinitionKind,
     SourceRange,
     Struct,
     StructMember,
@@ -107,7 +106,7 @@ describe('hoversProvider', () => {
         });
 
         it('works for a struct', () => {
-            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '', kind: DefinitionKind.Variable };
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
                 A: new StructMember(1, dummyDefinition),
                 B: new StructMember(2, dummyDefinition)
@@ -122,7 +121,7 @@ describe('hoversProvider', () => {
         });
 
         it('works for a struct of structs', () => {
-            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '', kind: DefinitionKind.Variable };
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
                 A: new StructMember(Struct.from(Object.entries({
                     A1: new StructMember(1, dummyDefinition),
