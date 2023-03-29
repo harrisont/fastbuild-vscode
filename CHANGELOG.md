@@ -4,6 +4,12 @@
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
 
+# v0.3.1
+
+## Bug fixes
+
+* Fix bug where the partial evaluated data was discarded if there was an error. This prevented being able to access things like hover information on the successfully evaluated data prior to the error, which was previously working.
+
 # v0.3.0
 
 ## New Features
