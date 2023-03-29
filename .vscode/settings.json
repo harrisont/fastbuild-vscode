@@ -1,6 +1,5 @@
 {
 	"editor.insertSpaces": false,
-	"tslint.enable": true,
 	"typescript.tsc.autoDetect": "off",
 	"typescript.preferences.quoteStyle": "single",
 	"editor.codeActionsOnSave": {
@@ -8,5 +7,6 @@
 	},
 	"search.exclude": {
 		"**/out": true
-	}
+	},
+	"files.insertFinalNewline": true
 }
