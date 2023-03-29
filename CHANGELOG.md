@@ -1,3 +1,11 @@
+# v0.4.0
+
+## New Features
+
+* Support environment variables.
+    * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) now checks the actual environment variable instead of always evaluating to false.
+    * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) now reads the actual environment variable instead of using a placeholder value.
+
 # v0.3.1
 
 ## Bug fixes
