@@ -1387,14 +1387,23 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
-                // We cannot know what environment variables will exist when FASTBuild is run,
-                // since they might be different than the environment variables that exist now.
-                // So use a placeholder value instead of reading the actual environement variable value.
-                const symbol = statement.symbol.value;
-                const value = `placeholder-${symbol}-value`;
+                // Read an environment variable and store the value in a variable with the same name as the environment variable.
+                const symbolName = statement.symbol.value;
+                const environmentVariableValue = process.env[symbolName];
+                if (environmentVariableValue === undefined) {
+                    const symbolRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
+                    return new EvaluationError(symbolRange, `Cannot import environment variable "${symbolName}" because it does not exist.`);
+                }
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
-                context.scopeStack.setVariableInCurrentScope(symbol, value, definition);
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
+                context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, definition);
+
+                const reference: VariableReference = {
+                    definition,
+                    range: statementRange,
+                };
+                context.evaluatedData.variableReferences.push(reference);
+                context.evaluatedData.variableDefinitions.push(definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                 return new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
