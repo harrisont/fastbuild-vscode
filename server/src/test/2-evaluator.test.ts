@@ -4921,18 +4921,18 @@ Expecting to see the following:
     describe('#if exists', () => {
         const builtInDefine = getPlatformSpecificDefineSymbol();
 
-        it('"#if exists(...)" always evaluates to false', () => {
+        it('"#if exists(UNSET_ENV_VAR)" always evaluates to false', () => {
             const input = `
-                #if exists(MY_ENV_VAR)
+                #if exists(UNSET_ENV_VAR)
                     .Value = true
                 #endif
             `;
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('"#if !exists(...)" always evaluates to true', () => {
+        it('"#if !exists(UNSET_ENV_VAR)" always evaluates to true', () => {
             const input = `
-                #if !exists( MY_ENV_VAR )
+                #if !exists( UNSET_ENV_VAR )
                     .Value = true
                 #endif
             `;
@@ -4941,7 +4941,7 @@ Expecting to see the following:
 
         it('"exists" can be combined with ||', () => {
             const input = `
-                #if exists(MY_ENV_VAR) || ${builtInDefine}
+                #if exists(UNSET_ENV_VAR) || ${builtInDefine}
                     .Value = true
                 #endif
             `;
@@ -4950,7 +4950,7 @@ Expecting to see the following:
 
         it('"exists" can be combined with &&', () => {
             const input = `
-                #if ${builtInDefine} && !exists(MY_ENV_VAR)
+                #if ${builtInDefine} && !exists(UNSET_ENV_VAR)
                     .Value = true
                 #endif
             `;
@@ -5126,15 +5126,46 @@ Expecting to see the following:
     });
 
     describe('#import', () => {
-        // The language server cannot know what environment variables will exist when FASTBuild is run,
-        // since they might be different than the environment variables that exist when the language server runs.
-        // So '#import' uses a placeholder value instead of reading the actual environement variable value.
-        it('#import uses a placeholder value', () => {
+        it('#import of an environment variable that exists', () => {
+            const builtInEnvVar = getPlatformSpecificEnvironmentVariable();
             const input = `
-                #import MY_ENV_VAR
-                Print( .MY_ENV_VAR )
+                #import ${builtInEnvVar}
+                Print( .${builtInEnvVar} )
             `;
-            assertEvaluatedVariablesValueEqual(input, ['placeholder-MY_ENV_VAR-value']);
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+
+            const expectedDefinition: VariableDefinition =
+            {
+                id: 1,
+                range: createRange(1, 16, 1, 24 + builtInEnvVar.length),
+                name: builtInEnvVar
+            };
+            assert.deepStrictEqual(result.variableDefinitions, [expectedDefinition]);
+
+            const expectedReferences: VariableReference[] = [
+                // #import ${builtInEnvVar}
+                {
+                    definition: expectedDefinition,
+                    range: createRange(1, 16, 1, 24 + builtInEnvVar.length),
+                },
+                // Print( .${builtInEnvVar} )
+                {
+                    definition: expectedDefinition,
+                    range: createRange(2, 23, 2, 24 + builtInEnvVar.length),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
+
+            assert.strictEqual(result.evaluatedVariables.length, 1);
+            assert.strictEqual(typeof result.evaluatedVariables[0].value, 'string');
+        });
+
+        it('#import of a non-existent environment variable', () => {
+            const input = `
+                #import UNSET_ENV_VAR
+            `;
+            const expectedErrorMessage = `Cannot import environment variable "UNSET_ENV_VAR" because it does not exist.`;
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 24, 1, 37));
         });
     });
 });
@@ -5148,6 +5179,21 @@ function getPlatformSpecificDefineSymbol(): string {
             return '__OSX__';
         case 'win32':
             return '__WINDOWS__';
+        default:
+            throw new Error(`Unsupported platform '${platform}`);
+    }
+}
+
+// Returns an environment variable that is defined for the current platform.
+function getPlatformSpecificEnvironmentVariable(): string {
+    const platform = os.platform();
+    switch(platform) {
+        case 'linux':
+            return 'HOME';
+        case 'darwin':
+            return 'HOME';
+        case 'win32':
+            return 'TMP';
         default:
             throw new Error(`Unsupported platform '${platform}`);
     }

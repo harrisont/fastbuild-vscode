@@ -21,9 +21,6 @@ It does not yet provide syntax highlighting. For that in the meantime, I recomme
 
 ## Limitations
 
-* The language server cannot know what environment variables will exist when FASTBuild is run, since they might be different than the environment variables that exist when the language server runs, so:
-    * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) always evaluates to false.
-    * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) uses a placeholder value instead of reading the actual environement variable value.
 * Only evaluates user functions if they are called at least once. This means that you cannot jump to the definition of a variable defined inside a user function if that user function is never called, for example.
 
 ## Compatibility
