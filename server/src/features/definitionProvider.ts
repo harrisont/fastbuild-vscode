@@ -19,17 +19,35 @@ export class DefinitionProvider {
     getDefinition(params: DefinitionParams, evaluatedData: EvaluatedData): DefinitionLink[] | null {
         const uri = params.textDocument.uri;
         const position = params.position;
-        const variableReferences = evaluatedData.variableReferences;
 
-        for (let i = 0; i < variableReferences.length; i++) {
-            const variableReference = variableReferences[i];
-            if (uri == variableReference.range.uri
-                && isPositionInRange(position, variableReference.range))
+        // Check for a matching target definition.
+        for (let i = 0; i < evaluatedData.targetReferences.length; i++) {
+            const reference = evaluatedData.targetReferences[i];
+            if (uri == reference.range.uri
+                && isPositionInRange(position, reference.range))
             {
-                const definition = variableReference.definition;
+                const definition = reference.definition;
 
                 const definitionLink: DefinitionLink = {
-                    originSelectionRange: variableReference.range,
+                    originSelectionRange: reference.range,
+                    targetUri: definition.range.uri,
+                    targetRange: definition.range,
+                    targetSelectionRange: definition.range,
+                };
+                return [definitionLink];
+            }
+        }
+
+        // Check for a matching variable definition.
+        for (let i = 0; i < evaluatedData.variableReferences.length; i++) {
+            const reference = evaluatedData.variableReferences[i];
+            if (uri == reference.range.uri
+                && isPositionInRange(position, reference.range))
+            {
+                const definition = reference.definition;
+
+                const definitionLink: DefinitionLink = {
+                    originSelectionRange: reference.range,
                     targetUri: definition.range.uri,
                     targetRange: definition.range,
                     targetSelectionRange: definition.range,
