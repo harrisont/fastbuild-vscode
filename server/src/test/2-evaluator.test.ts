@@ -5184,13 +5184,14 @@ function getPlatformSpecificDefineSymbol(): string {
     }
 }
 
+// Returns an environment variable that is defined for the current platform.
 function getPlatformSpecificEnvironmentVariable(): string {
     const platform = os.platform();
     switch(platform) {
         case 'linux':
-            return 'TMPDIR';
+            return 'HOME';
         case 'darwin':
-            return 'TMPDIR';
+            return 'HOME';
         case 'win32':
             return 'TMP';
         default:
