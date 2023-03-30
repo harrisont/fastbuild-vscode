@@ -1,8 +1,16 @@
-# v0.4.0
+# v0.5.0
 
 ## New Features
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+
+# v0.4.0
+
+## New Features
+
+* Support environment variables.
+    * `#if exists(...)` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#if)) now checks the actual environment variable instead of always evaluating to false.
+    * `#import` ([docs](https://www.fastbuild.org/docs/syntaxguide.html#import)) now reads the actual environment variable instead of using a placeholder value.
 
 # v0.3.1
 
