@@ -1258,19 +1258,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             }
 
                             // TODO: use the actual range of the refererence (the array item) instead of variable definition.
-                            const targetRange = targetsVariable.definition.range;
+                            const targetReferenceRange = targetsVariable.definition.range;
 
                             // TODO: support looking up a target by the target's output-file.
                             // TODO: change targetDefinitions to a map for faster lookups.
                             const targetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == target);
                             if (targetDefinition === undefined) {
                                 // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
-                                //error = new EvaluationError(targetRange, `Target "${target}" does not exist.`);
+                                //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
                                 return;
                             }
                             const targetReference: TargetReference = {
                                 definition: targetDefinition,
-                                range: targetRange,
+                                range: targetReferenceRange,
                             };
                             context.evaluatedData.targetReferences.push(targetReference);
                         }
