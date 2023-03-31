@@ -912,7 +912,11 @@ directiveIfConditionTerm ->
   | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
   | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
 
-directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, context]]) => [{ type: 'define',   symbol }, context] %}
+directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, varNameContext]]) => {
+    const [range, statementContext] = createRangeStart(define);
+    const context = createCombinedContext([statementContext, varNameContext]);
+    return [{ type: 'define', symbol, range }, context]
+} %}
 
 directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine', symbol }, context] %}
 

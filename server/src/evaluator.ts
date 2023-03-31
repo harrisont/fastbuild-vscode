@@ -551,6 +551,7 @@ interface ParsedStatementDefine {
         value: string;
         range: ParseSourceRange;
     };
+    range: ParseSourceRange;
 }
 
 function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStatementDefine {
@@ -1371,11 +1372,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 statementLhs = context.previousStatementLhs;
             } else if (isParsedStatementDefine(statement)) {  // #define
                 const symbol = statement.symbol.value;
+                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
                 if (context.defines.has(symbol)) {
-                    const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
-                    return new EvaluationError(sourceRange, `Cannot #define already defined symbol "${symbol}".`);
+                    return new EvaluationError(statementRange, `Cannot #define already defined symbol "${symbol}".`);
                 }
                 context.defines.add(symbol);
+
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
+                const reference: VariableReference = {
+                    definition,
+                    range: statementRange,
+                };
+                context.evaluatedData.variableReferences.push(reference);
+                context.evaluatedData.variableDefinitions.push(definition);
             } else if (isParsedStatementUndefine(statement)) {  // #undef
                 const symbol = statement.symbol.value;
                 const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
@@ -1961,6 +1970,11 @@ function evaluateDirectiveIfCondition(
             let evaulatedTerm = false;
             if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
                 evaulatedTerm = context.defines.has(term.symbol);
+                const reference: VariableReference = {
+                    definition: TODO,
+                    range: TODO,
+                };
+                context.evaluatedData.variableReferences.push(reference);
             } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
                 // The language server cannot know what environment variables will exist when FASTBuild is run,
                 // so always assume "exists(...)" evaluates to false.
