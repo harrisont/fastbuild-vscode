@@ -5079,10 +5079,51 @@ Expecting to see the following:
             const input = `
                 #define MY_DEFINE
                 #if MY_DEFINE
-                    .Value = true
+                    .Result = true
                 #endif
             `;
-            assertEvaluatedVariablesValueEqual(input, [true]);
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.Result);
+            assert.deepStrictEqual(actualEvaluatedValues, [true]);
+
+            // #define MY_DEFINE
+            const expectedDefinitionMyDefine: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 33),
+                name: 'MY_DEFINE'
+            };
+
+            // .Result = true
+            const expectedDefinitionResult: VariableDefinition = {
+                id: 2,
+                range: createRange(3, 20, 3, 34),
+                name: 'Result'
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyDefine,
+                expectedDefinitionResult,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // #define MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: createRange(1, 16, 1, 33),
+                },
+                // #if MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: createRange(2, 20, 2, 29),
+                },
+                // .Result = true
+                {
+                    definition: expectedDefinitionResult,
+                    range: createRange(3, 20, 3, 34),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
 
         it('defining an already defined symbol is an error', () => {
@@ -5101,10 +5142,39 @@ Expecting to see the following:
                 #define MY_DEFINE
                 #undef MY_DEFINE
                 #if MY_DEFINE
-                    .Value = true
+                    .Result = true
                 #endif
             `;
             assertEvaluatedVariablesValueEqual(input, []);
+
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualEvaluatedValues, [true]);
+
+            //
+            // The `#if MY_DEFINE` does not reference `MY_DEFINE` because it's already undefined
+            //
+
+            // #define MY_DEFINE
+            const expectedDefinitionMyDefine: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 33),
+                name: 'MY_DEFINE'
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyDefine,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // #define MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: createRange(1, 16, 1, 33),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
 
         it('undefining an undefined symbol is an error', () => {

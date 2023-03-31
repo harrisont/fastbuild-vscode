@@ -25,12 +25,14 @@
 
 ## About the code
 
-* Parses using the [Nearley](https://nearley.js.org/) parser generator, which lexes using [moo](https://github.com/no-context/moo).
-    * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
-    * Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
+* [parser.ts](server/src/parser.ts) parses FASTBuild files.
+    * It uses the [Nearley](https://nearley.js.org/) parser generator, which lexes using [moo](https://github.com/no-context/moo).
+        * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
+        * Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
+    * It uses the FASTBuild grammaer defined in [fbuild-grammar.ne](server/src/fbuild-grammar.ne).
+* [evaluator.ts](server/src/evaluator.ts) evaluates the parsed input.
+* The lanaguage server ([server.ts](server/src/server.ts)) uses [feature providers](server/src//features/) to implement the server's capabilities.
 * VS Code language server extension resources:
     * [VS Code Language Server Extension Guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
     * [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
     * [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
-* Other resources:
-    * [RegEx101](https://regex101.com/): regex playgound

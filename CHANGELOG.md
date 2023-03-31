@@ -1,3 +1,11 @@
+# v0.5.0
+
+## New Features
+
+* Support "go to definition" and "find references" for `#define`s:
+    * [`#define` / `#undef` FASTBuild docs](https://www.fastbuild.org/docs/syntaxguide.html#define)
+    * [`#if` / `#else` / `#endif` FASTBuild docs](https://www.fastbuild.org/docs/syntaxguide.html#if)
+
 # v0.4.0
 
 ## New Features
