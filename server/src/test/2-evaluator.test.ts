@@ -5084,7 +5084,7 @@ Expecting to see the following:
             `;
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
-            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.Result);
+            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualEvaluatedValues, [true]);
 
             // #define MY_DEFINE
@@ -5097,7 +5097,7 @@ Expecting to see the following:
             // .Result = true
             const expectedDefinitionResult: VariableDefinition = {
                 id: 2,
-                range: createRange(3, 20, 3, 34),
+                range: createRange(3, 20, 3, 27),
                 name: 'Result'
             };
 
