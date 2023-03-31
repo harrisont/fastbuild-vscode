@@ -497,6 +497,7 @@ function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatement
 interface ParsedDirectiveIfConditionTermIsSymbolDefined {
     type: 'isSymbolDefined';
     symbol: string;
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermIsSymbolDefined {
@@ -505,6 +506,7 @@ function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any
 
 interface ParsedDirectiveIfConditionTermEnvVarExists {
     type: 'envVarExists';
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermEnvVarExists {
@@ -514,6 +516,7 @@ function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>):
 interface ParsedDirectiveIfConditionTermFileExists {
     type: 'fileExists';
     filePath: ParsedString;
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermFileExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermFileExists {
@@ -622,7 +625,7 @@ class Scope {
 
 class ScopeStack {
     private stack: Scope[] = [];
-    private nextVariableDefinitionId = 1;
+    private nextVariableDefinitionId = 0;
 
     constructor() {
         this.push(true /*canAccessParentScopes*/);
@@ -795,7 +798,7 @@ interface VariableAndEvaluatedVariable {
 interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
-    defines: Set<string>,
+    defines: Map<string, VariableDefinition>,
     userFunctions: Map<string, UserFunction>,
     rootFbuildDirUri: vscodeUri.URI,
     thisFbuildUri: UriStr,
@@ -837,18 +840,22 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     return scopeStack;
 }
 
-function createDefaultDefines(): Set<string> {
-    const defines = new Set<string>();
-    defines.add(getPlatformSpecificDefineSymbol());
+function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Map<string, VariableDefinition> {
+    const defines = new Map<string, VariableDefinition>();
+    const platformSpecificSymbol = getPlatformSpecificDefineSymbol();
+    const dummyRange = SourceRange.create(rootFbuildUri, 0, 0, 0, 0);
+    const platformSpecificSymbolDefinition = scopeStack.createVariableDefinition(dummyRange, platformSpecificSymbol);
+    defines.set(platformSpecificSymbol, platformSpecificSymbolDefinition);
     return defines;
 }
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
 export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+    const scopeStack = createDefaultScopeStack(rootFbuildDirUri);
     const context: EvaluationContext = {
         evaluatedData: new EvaluatedData(),
-        scopeStack: createDefaultScopeStack(rootFbuildDirUri),
-        defines: createDefaultDefines(),
+        scopeStack,
+        defines: createDefaultDefines(rootFbuildDirUri.toString(), scopeStack),
         userFunctions: new Map<string, UserFunction>(),
         rootFbuildDirUri,
         thisFbuildUri,
@@ -1376,9 +1383,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 if (context.defines.has(symbol)) {
                     return new EvaluationError(statementRange, `Cannot #define already defined symbol "${symbol}".`);
                 }
-                context.defines.add(symbol);
-
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
+                context.defines.set(symbol, definition);
                 const reference: VariableReference = {
                     definition,
                     range: statementRange,
@@ -1967,14 +1973,18 @@ function evaluateDirectiveIfCondition(
         for (const conditionTermOrNot of andExpressions) {
             const term = conditionTermOrNot.term;
             const invert = conditionTermOrNot.invert;
+            const termRange = new SourceRange(context.thisFbuildUri, term.range);
             let evaulatedTerm = false;
             if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
-                evaulatedTerm = context.defines.has(term.symbol);
-                const reference: VariableReference = {
-                    definition: TODO,
-                    range: TODO,
-                };
-                context.evaluatedData.variableReferences.push(reference);
+                const symbolDefinition = context.defines.get(term.symbol);
+                evaulatedTerm = (symbolDefinition !== undefined);
+                if (symbolDefinition !== undefined) {
+                    const reference: VariableReference = {
+                        definition: symbolDefinition,
+                        range: termRange,
+                    };
+                    context.evaluatedData.variableReferences.push(reference);
+                }
             } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
                 // The language server cannot know what environment variables will exist when FASTBuild is run,
                 // so always assume "exists(...)" evaluates to false.
@@ -1983,9 +1993,7 @@ function evaluateDirectiveIfCondition(
                 const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
                 evaulatedTerm = context.fileSystem.fileExists(fileUri);
             } else {
-                const rangeStart = statement.rangeStart;
-                const range = SourceRange.create(context.thisFbuildUri, rangeStart.line, rangeStart.character, rangeStart.line, Number.MAX_VALUE);
-                return Maybe.error(new InternalEvaluationError(range, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`));
+                return Maybe.error(new InternalEvaluationError(termRange, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`));
             }
 
             if (invert) {
@@ -2118,7 +2126,7 @@ function evaluateUserFunctionCall(
             evaluatedData: context.evaluatedData,
             scopeStack: context.scopeStack,
             // User functions do not share defines.
-            defines: createDefaultDefines(),
+            defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
             // User functions can call other user functions.
             userFunctions: context.userFunctions,
             rootFbuildDirUri: context.rootFbuildDirUri,
