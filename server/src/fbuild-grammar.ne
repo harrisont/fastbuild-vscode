@@ -944,27 +944,28 @@ directiveIfConditionTerm ->
         const [range, context] = createRangeStart(symbol);
         return [{ type: 'isSymbolDefined', symbol: symbol.value, range }, context];
     } %}
-  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => {
-        const range = 'TODO';
-        return [{ type: 'envVarExists', envVar, range }, context];
+  | %exists     optionalWhitespace %parametersStart optionalWhitespace %variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, envVar,   space3, closeBrace]) => {
+        const range = createRangeEndInclusive(exists, closeBrace);
+        return [{ type: 'envVarExists', envVar: envVar.value, range }, new ParseContext()];
     } %}
-  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => {
-        const range = 'TODO';
+  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath, space3, closeBrace]) => {
+        const range = createRangeEndInclusive(exists, closeBrace);
         return [{ type: 'fileExists', filePath, range }, new ParseContext()];
     } %}
 
-directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, varNameContext]]) => {
-    const [range, statementContext] = createRangeStart(define);
-    const context = createCombinedContext([statementContext, varNameContext]);
-    return [{ type: 'define', symbol, range }, context]
+directiveDefine   -> %directiveDefine   %whitespace %variableName  {% ([define, space, symbol]) => {
+    const [range, context] = createRangeStart(define);
+    return [{ type: 'define', symbol: symbol.value, range }, context]
 } %}
 
-directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine', symbol }, context] %}
+directiveUndefine -> %directiveUndefine %whitespace %variableName  {% ([undefine, space, symbol]) => {
+    const [range, context] = createRangeStart(undefine);
+    return [{ type: 'undefine', symbol: symbol.value, range }, context];
+} %}
 
-directiveImport   -> %directiveImport   %whitespace variableName  {% ([directiveImport, space, [symbol, varNameContext]]) => {
-    const [range, statementContext] = createRangeStart(directiveImport);
-    const context = createCombinedContext([statementContext, varNameContext]);
-    return [{ type: 'importEnvVar', symbol, range }, context];
+directiveImport   -> %directiveImport   %whitespace %variableName  {% ([directiveImport, space, symbol]) => {
+    const [range, context] = createRangeStart(directiveImport);
+    return [{ type: 'importEnvVar', symbol: symbol.value, range }, context];
 } %}
 
 whitespaceOrNewline ->
