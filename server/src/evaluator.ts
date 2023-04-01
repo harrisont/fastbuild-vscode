@@ -798,7 +798,7 @@ interface VariableAndEvaluatedVariable {
 interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
-    defines: Map<string, VariableDefinition>,
+    defines: Map<string, DefineInfo>,
     userFunctions: Map<string, UserFunction>,
     rootFbuildDirUri: vscodeUri.URI,
     thisFbuildUri: UriStr,
@@ -840,12 +840,21 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     return scopeStack;
 }
 
-function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Map<string, VariableDefinition> {
-    const defines = new Map<string, VariableDefinition>();
+interface DefineInfo {
+    isPredefined: boolean;
+    definition: VariableDefinition;
+}
+
+// Returns a map of defines to variable definitions for the defines.
+function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Map<string, DefineInfo> {
+    const defines = new Map<string, DefineInfo>();
     const platformSpecificSymbol = getPlatformSpecificDefineSymbol();
     const dummyRange = SourceRange.create(rootFbuildUri, 0, 0, 0, 0);
-    const platformSpecificSymbolDefinition = scopeStack.createVariableDefinition(dummyRange, platformSpecificSymbol);
-    defines.set(platformSpecificSymbol, platformSpecificSymbolDefinition);
+    const info: DefineInfo = {
+        isPredefined: true,
+        definition: scopeStack.createVariableDefinition(dummyRange, platformSpecificSymbol),
+    };
+    defines.set(platformSpecificSymbol, info);
     return defines;
 }
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
@@ -1384,7 +1393,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new EvaluationError(statementRange, `Cannot #define already defined symbol "${symbol}".`);
                 }
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
-                context.defines.set(symbol, definition);
+                const info: DefineInfo = {
+                    isPredefined: false,
+                    definition,
+                };
+                context.defines.set(symbol, info);
                 const reference: VariableReference = {
                     definition,
                     range: statementRange,
@@ -1976,11 +1989,11 @@ function evaluateDirectiveIfCondition(
             const termRange = new SourceRange(context.thisFbuildUri, term.range);
             let evaulatedTerm = false;
             if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
-                const symbolDefinition = context.defines.get(term.symbol);
-                evaulatedTerm = (symbolDefinition !== undefined);
-                if (symbolDefinition !== undefined) {
+                const info = context.defines.get(term.symbol);
+                evaulatedTerm = (info !== undefined);
+                if (info !== undefined && !info.isPredefined) {
                     const reference: VariableReference = {
-                        definition: symbolDefinition,
+                        definition: info.definition,
                         range: termRange,
                     };
                     context.evaluatedData.variableReferences.push(reference);
