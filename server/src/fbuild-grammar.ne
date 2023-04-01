@@ -902,7 +902,11 @@ directiveIfConditionOrExpression ->
         return [[value], context];
     } %}
     # Multiple items ||'d together
-  | directiveIfConditionAndExpression optionalWhitespace %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([[lhsValue, lhsContext], space1, or, space2, [rhsValues, rhsContext]]) => {
+  | directiveIfConditionAndExpression             %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([[lhsValue, lhsContext],         or, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, or);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
+  | directiveIfConditionAndExpression %whitespace %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([[lhsValue, lhsContext], space1, or, space2, [rhsValues, rhsContext]]) => {
         callOnNextToken(lhsContext, space1);
         return [[lhsValue, ...rhsValues], rhsContext];
     } %}
@@ -914,7 +918,11 @@ directiveIfConditionAndExpression ->
         return [[value], context];
     } %}
     # Multiple items &&'d together
-  | directiveIfConditionTermOrNot optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([[lhsValue, lhsContext], space1, and, space2, [rhsValues, rhsContext]]) => {
+  | directiveIfConditionTermOrNot             %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([[lhsValue, lhsContext],         and, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, and);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
+  | directiveIfConditionTermOrNot %whitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([[lhsValue, lhsContext], space1, and, space2, [rhsValues, rhsContext]]) => {
         callOnNextToken(lhsContext, space1);
         return [[lhsValue, ...rhsValues], rhsContext];
     } %}

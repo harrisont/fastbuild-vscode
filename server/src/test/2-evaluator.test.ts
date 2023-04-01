@@ -5110,7 +5110,7 @@ Expecting to see the following:
                 // #define MY_DEFINE
                 {
                     definition: expectedDefinitionMyDefine,
-                    range: createRange(1, 16, 1, 33),
+                    range: expectedDefinitionMyDefine.range,
                 },
                 // #if MY_DEFINE
                 {
@@ -5120,7 +5120,7 @@ Expecting to see the following:
                 // .Result = true
                 {
                     definition: expectedDefinitionResult,
-                    range: createRange(3, 20, 3, 34),
+                    range: expectedDefinitionResult.range,
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -5132,7 +5132,7 @@ Expecting to see the following:
                 #define MY_DEFINE
             `;
             const expectedErrorMessage = `Cannot #define already defined symbol "MY_DEFINE".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 24, 2, 33));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 33));
         });
     });
 
@@ -5147,10 +5147,9 @@ Expecting to see the following:
             `;
             assertEvaluatedVariablesValueEqual(input, []);
 
-
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
-            assert.deepStrictEqual(actualEvaluatedValues, [true]);
+            assert.deepStrictEqual(actualEvaluatedValues, []);
 
             //
             // The `#if MY_DEFINE` does not reference `MY_DEFINE` because it's already undefined
