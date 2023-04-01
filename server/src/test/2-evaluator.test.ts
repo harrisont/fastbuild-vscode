@@ -4920,8 +4920,18 @@ Expecting to see the following:
 
     describe('#if exists', () => {
         const builtInDefine = getPlatformSpecificDefineSymbol();
+        const builtInEnvVar = getPlatformSpecificEnvironmentVariable();
 
-        it('"#if exists(UNSET_ENV_VAR)" always evaluates to false', () => {
+        it('"exists" evaluates to true if the environment variable exists', () => {
+            const input = `
+                #if exists(${builtInEnvVar})
+                    .Value = true
+                #endif
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"exists" evaluates to false if the environment variable does not exist', () => {
             const input = `
                 #if exists(UNSET_ENV_VAR)
                     .Value = true
@@ -4930,7 +4940,16 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('"#if !exists(UNSET_ENV_VAR)" always evaluates to true', () => {
+        it('Negating an existent result evaluates to false', () => {
+            const input = `
+                #if !exists( ${builtInEnvVar} )
+                    .Value = true
+                #endif
+            `;
+            assertEvaluatedVariablesValueEqual(input, []);
+        });
+
+        it('Negating a non-existent result evaluates to true', () => {
             const input = `
                 #if !exists( UNSET_ENV_VAR )
                     .Value = true
@@ -5181,7 +5200,7 @@ Expecting to see the following:
                 #undef MY_UNDEFINED_DEFINE
             `;
             const expectedErrorMessage = `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 23, 1, 42));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 42));
         });
 
         it('undefining a built-in symbol is an error', () => {
@@ -5190,7 +5209,7 @@ Expecting to see the following:
                 #undef ${builtInDefine}
             `;
             const expectedErrorMessage = `Cannot #undef built-in symbol "${builtInDefine}".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 23, 1, 23 + builtInDefine.length));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 23 + builtInDefine.length));
         });
     });
 
@@ -5234,7 +5253,7 @@ Expecting to see the following:
                 #import UNSET_ENV_VAR
             `;
             const expectedErrorMessage = `Cannot import environment variable "UNSET_ENV_VAR" because it does not exist.`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 24, 1, 37));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 37));
         });
     });
 });

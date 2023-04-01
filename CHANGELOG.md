@@ -1,3 +1,9 @@
+# v0.5.1
+
+## Bug Fixes
+
+* `#if exists(...)` now correctly evaluates if the environment variable exists instead of always being false (#23).
+
 # v0.5.0
 
 ## New Features
