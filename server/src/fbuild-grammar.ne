@@ -881,38 +881,83 @@ directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral 
 directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
 
 directiveIf ->
-    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements,                                        directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf) }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, condition, space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => { return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf) }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements,                                        directiveEndIf]) => {
+        callOnNextToken(context, space2);
+        return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf)};
+    } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => {
+        callOnNextToken(context, space2);
+        return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf)};
+    } %}
 
 # Like `directIf` but the contents can only be `arrayContents`.
 directiveIfContainingArrayContents ->
-    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, condition, space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, condition, space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
 
+# Returns [or-expression, context]
 directiveIfConditionOrExpression ->
     # Single item
-    directiveIfConditionAndExpression  {% ([value]) => [value] %}
+    directiveIfConditionAndExpression  {% ([[value, context]]) => {
+        return [[value], context];
+    } %}
     # Multiple items ||'d together
-  | directiveIfConditionAndExpression optionalWhitespace %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([lhsValue, space1, or, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+  | directiveIfConditionAndExpression             %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([[lhsValue, lhsContext],         or, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, or);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
+  | directiveIfConditionAndExpression %whitespace %operatorOr optionalWhitespace directiveIfConditionOrExpression  {% ([[lhsValue, lhsContext], space1, or, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, space1);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
 
+# Returns [and-expression, context]
 directiveIfConditionAndExpression ->
     # Single item
-    directiveIfConditionTermOrNot  {% ([value]) => [value] %}
+    directiveIfConditionTermOrNot  {% ([[value, context]]) => {
+        return [[value], context];
+    } %}
     # Multiple items &&'d together
-  | directiveIfConditionTermOrNot optionalWhitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([lhsValue, space1, and, space2, rhsValues]) => [lhsValue, ...rhsValues] %}
+  | directiveIfConditionTermOrNot             %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([[lhsValue, lhsContext],         and, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, and);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
+  | directiveIfConditionTermOrNot %whitespace %operatorAnd optionalWhitespace directiveIfConditionAndExpression  {% ([[lhsValue, lhsContext], space1, and, space2, [rhsValues, rhsContext]]) => {
+        callOnNextToken(lhsContext, space1);
+        return [[lhsValue, ...rhsValues], rhsContext];
+    } %}
 
+# Returns [term-or-not, context]
 directiveIfConditionTermOrNot ->
     # SYMBOL
-                                    directiveIfConditionTerm  {% ([            term]) => { return { term, invert: false }; } %}
+                                    directiveIfConditionTerm  {% ([            [term, context]]) => {
+        return [{ term, invert: false }, context];
+    } %}
     # ! SYMBOL
-  | %operatorNot optionalWhitespace directiveIfConditionTerm  {% ([not, space, term]) => { return { term, invert: true  }; } %}
+  | %operatorNot optionalWhitespace directiveIfConditionTerm  {% ([not, space, [term, context]]) => {
+        return [{ term, invert: true },  context];
+    } %}
 
+# Returns [term, context]
 directiveIfConditionTerm ->
-    variableName  {% ([[symbol, context]]) => { return { type: 'isSymbolDefined', symbol: symbol.value }; } %}
-  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => { return { type: 'envVarExists'         }; } %}
-  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => { return { type: 'fileExists', filePath }; } %}
+    %variableName  {% ([symbol]) => {
+        const [range, context] = createRangeStart(symbol);
+        return [{ type: 'isSymbolDefined', symbol: symbol.value, range }, context];
+    } %}
+  | %exists     optionalWhitespace %parametersStart optionalWhitespace variableName  optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, [envVar, context], space3, closeBrace]) => {
+        const range = 'TODO';
+        return [{ type: 'envVarExists', envVar, range }, context];
+    } %}
+  | %fileExists optionalWhitespace %parametersStart optionalWhitespace stringLiteral optionalWhitespace %parametersEnd {% ([exists, space1, openBrace, space2, filePath,          space3, closeBrace]) => {
+        const range = 'TODO';
+        return [{ type: 'fileExists', filePath, range }, new ParseContext()];
+    } %}
 
-directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, context]]) => [{ type: 'define',   symbol }, context] %}
+directiveDefine   -> %directiveDefine   %whitespace variableName  {% ([define,   space, [symbol, varNameContext]]) => {
+    const [range, statementContext] = createRangeStart(define);
+    const context = createCombinedContext([statementContext, varNameContext]);
+    return [{ type: 'define', symbol, range }, context]
+} %}
 
 directiveUndefine -> %directiveUndefine %whitespace variableName  {% ([undefine, space, [symbol, context]]) => [{ type: 'undefine', symbol }, context] %}
 

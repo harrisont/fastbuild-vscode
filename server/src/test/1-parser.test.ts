@@ -2958,8 +2958,9 @@ Expecting to see one of the following:
                                         invert: false,
                                         term: {
                                             type: 'isSymbolDefined',
-                                            symbol: '__WINDOWS__'
-                                        }
+                                            symbol: '__WINDOWS__',
+                                            range: createRange(3, 28, 3, 39),
+                                        },
                                     }
                                 ]
                             ],

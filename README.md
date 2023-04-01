@@ -11,17 +11,19 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 ## Functionality
 
 This provides the following functionality:
-* Go to definition of a variable.
-* Find references to a variable.
-* Hover over an evaluated variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`).
-* Show diagnostics for errors.
+* "Go to definition" and "Find references" for:
+    * Variables
+    * `#import`s
+    * `#define`s
+* Hover over a variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`).
+* See errors on the fly as you write the code, before running FASTBuild.
 * Go to symbol in editor or workspace.
 
 It does not yet provide syntax highlighting. For that in the meantime, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 
 ## Limitations
 
-* Only evaluates user functions if they are called at least once. This means that you cannot jump to the definition of a variable defined inside a user function if that user function is never called, for example.
+* Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.
 
 ## Compatibility
 
@@ -35,4 +37,4 @@ Install the extension from the [Visual Studio Marketplace](https://marketplace.v
 
 ## Contributing
 
-Contributions are always welcome. Please see our [contributing guide](CONTRIBUTING.md) for more details.
+Contributions welcome! See the [contribution guide](CONTRIBUTING.md) for details.
