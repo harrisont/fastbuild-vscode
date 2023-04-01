@@ -497,6 +497,7 @@ function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatement
 interface ParsedDirectiveIfConditionTermIsSymbolDefined {
     type: 'isSymbolDefined';
     symbol: string;
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermIsSymbolDefined {
@@ -505,6 +506,8 @@ function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any
 
 interface ParsedDirectiveIfConditionTermEnvVarExists {
     type: 'envVarExists';
+    envVar: string;
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermEnvVarExists {
@@ -514,6 +517,7 @@ function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>):
 interface ParsedDirectiveIfConditionTermFileExists {
     type: 'fileExists';
     filePath: ParsedString;
+    range: ParseSourceRange;
 }
 
 function isParsedDirectiveIfConditionTermFileExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermFileExists {
@@ -547,10 +551,8 @@ function isParsedStatementDirectiveIf(obj: Record<string, any>): obj is ParsedSt
 // #define
 interface ParsedStatementDefine {
     type: 'define';
-    symbol: {
-        value: string;
-        range: ParseSourceRange;
-    };
+    symbol: string;
+    range: ParseSourceRange;
 }
 
 function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStatementDefine {
@@ -560,10 +562,8 @@ function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStateme
 // #undefine
 interface ParsedStatementUndefine {
     type: 'undefine';
-    symbol: {
-        value: string;
-        range: ParseSourceRange;
-    };
+    symbol: string;
+    range: ParseSourceRange;
 }
 
 function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedStatementUndefine {
@@ -573,10 +573,7 @@ function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedState
 // #import
 interface ParsedStatementImportEnvVar {
     type: 'importEnvVar';
-    symbol: {
-        value: string;
-        range: ParseSourceRange;
-    };
+    symbol: string;
     range: ParseSourceRange;
 }
 
@@ -621,7 +618,7 @@ class Scope {
 
 class ScopeStack {
     private stack: Scope[] = [];
-    private nextVariableDefinitionId = 1;
+    private nextVariableDefinitionId = 0;
 
     constructor() {
         this.push(true /*canAccessParentScopes*/);
@@ -794,7 +791,7 @@ interface VariableAndEvaluatedVariable {
 interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
-    defines: Set<string>,
+    defines: Map<string, DefineInfo>,
     userFunctions: Map<string, UserFunction>,
     rootFbuildDirUri: vscodeUri.URI,
     thisFbuildUri: UriStr,
@@ -836,18 +833,31 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     return scopeStack;
 }
 
-function createDefaultDefines(): Set<string> {
-    const defines = new Set<string>();
-    defines.add(getPlatformSpecificDefineSymbol());
+interface DefineInfo {
+    isPredefined: boolean;
+    definition: VariableDefinition;
+}
+
+// Returns a map of defines to variable definitions for the defines.
+function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Map<string, DefineInfo> {
+    const defines = new Map<string, DefineInfo>();
+    const platformSpecificSymbol = getPlatformSpecificDefineSymbol();
+    const dummyRange = SourceRange.create(rootFbuildUri, 0, 0, 0, 0);
+    const info: DefineInfo = {
+        isPredefined: true,
+        definition: scopeStack.createVariableDefinition(dummyRange, platformSpecificSymbol),
+    };
+    defines.set(platformSpecificSymbol, info);
     return defines;
 }
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
 export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
+    const scopeStack = createDefaultScopeStack(rootFbuildDirUri);
     const context: EvaluationContext = {
         evaluatedData: new EvaluatedData(),
-        scopeStack: createDefaultScopeStack(rootFbuildDirUri),
-        defines: createDefaultDefines(),
+        scopeStack,
+        defines: createDefaultDefines(rootFbuildDirUri.toString(), scopeStack),
         userFunctions: new Map<string, UserFunction>(),
         rootFbuildDirUri,
         thisFbuildUri,
@@ -1410,15 +1420,26 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
                 statementLhs = context.previousStatementLhs;
             } else if (isParsedStatementDefine(statement)) {  // #define
-                const symbol = statement.symbol.value;
+                const symbol = statement.symbol;
+                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
                 if (context.defines.has(symbol)) {
-                    const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
-                    return new EvaluationError(sourceRange, `Cannot #define already defined symbol "${symbol}".`);
+                    return new EvaluationError(statementRange, `Cannot #define already defined symbol "${symbol}".`);
                 }
-                context.defines.add(symbol);
+                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
+                const info: DefineInfo = {
+                    isPredefined: false,
+                    definition,
+                };
+                context.defines.set(symbol, info);
+                const reference: VariableReference = {
+                    definition,
+                    range: statementRange,
+                };
+                context.evaluatedData.variableReferences.push(reference);
+                context.evaluatedData.variableDefinitions.push(definition);
             } else if (isParsedStatementUndefine(statement)) {  // #undef
-                const symbol = statement.symbol.value;
-                const sourceRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
+                const symbol = statement.symbol;
+                const sourceRange = new SourceRange(context.thisFbuildUri, statement.range);
                 if (symbol === getPlatformSpecificDefineSymbol()) {
                     return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`);
                 }
@@ -1428,13 +1449,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
                 // Read an environment variable and store the value in a variable with the same name as the environment variable.
-                const symbolName = statement.symbol.value;
+                const symbolName = statement.symbol;
+                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
                 const environmentVariableValue = process.env[symbolName];
                 if (environmentVariableValue === undefined) {
-                    const symbolRange = new SourceRange(context.thisFbuildUri, statement.symbol.range);
-                    return new EvaluationError(symbolRange, `Cannot import environment variable "${symbolName}" because it does not exist.`);
+                    return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`);
                 }
-                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
                 context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, definition);
 
@@ -1998,20 +2018,27 @@ function evaluateDirectiveIfCondition(
         for (const conditionTermOrNot of andExpressions) {
             const term = conditionTermOrNot.term;
             const invert = conditionTermOrNot.invert;
+            const termRange = new SourceRange(context.thisFbuildUri, term.range);
             let evaulatedTerm = false;
             if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
-                evaulatedTerm = context.defines.has(term.symbol);
+                const info = context.defines.get(term.symbol);
+                evaulatedTerm = (info !== undefined);
+                if (info !== undefined && !info.isPredefined) {
+                    const reference: VariableReference = {
+                        definition: info.definition,
+                        range: termRange,
+                    };
+                    context.evaluatedData.variableReferences.push(reference);
+                }
             } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
-                // The language server cannot know what environment variables will exist when FASTBuild is run,
-                // so always assume "exists(...)" evaluates to false.
-                evaulatedTerm = false;
+                const envVarValue = process.env[term.envVar];
+                const hasEnvVar = (envVarValue !== undefined);
+                evaulatedTerm = hasEnvVar;
             } else if (isParsedDirectiveIfConditionTermFileExists(term)) {
                 const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
                 evaulatedTerm = context.fileSystem.fileExists(fileUri);
             } else {
-                const rangeStart = statement.rangeStart;
-                const range = SourceRange.create(context.thisFbuildUri, rangeStart.line, rangeStart.character, rangeStart.line, Number.MAX_VALUE);
-                return Maybe.error(new InternalEvaluationError(range, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`));
+                return Maybe.error(new InternalEvaluationError(termRange, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`));
             }
 
             if (invert) {
@@ -2144,7 +2171,7 @@ function evaluateUserFunctionCall(
             evaluatedData: context.evaluatedData,
             scopeStack: context.scopeStack,
             // User functions do not share defines.
-            defines: createDefaultDefines(),
+            defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
             // User functions can call other user functions.
             userFunctions: context.userFunctions,
             rootFbuildDirUri: context.rootFbuildDirUri,

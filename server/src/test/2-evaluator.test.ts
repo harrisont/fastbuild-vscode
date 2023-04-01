@@ -4957,8 +4957,18 @@ Expecting to see the following:
 
     describe('#if exists', () => {
         const builtInDefine = getPlatformSpecificDefineSymbol();
+        const builtInEnvVar = getPlatformSpecificEnvironmentVariable();
 
-        it('"#if exists(UNSET_ENV_VAR)" always evaluates to false', () => {
+        it('"exists" evaluates to true if the environment variable exists', () => {
+            const input = `
+                #if exists(${builtInEnvVar})
+                    .Value = true
+                #endif
+            `;
+            assertEvaluatedVariablesValueEqual(input, [true]);
+        });
+
+        it('"exists" evaluates to false if the environment variable does not exist', () => {
             const input = `
                 #if exists(UNSET_ENV_VAR)
                     .Value = true
@@ -4967,7 +4977,16 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('"#if !exists(UNSET_ENV_VAR)" always evaluates to true', () => {
+        it('Negating an existent result evaluates to false', () => {
+            const input = `
+                #if !exists( ${builtInEnvVar} )
+                    .Value = true
+                #endif
+            `;
+            assertEvaluatedVariablesValueEqual(input, []);
+        });
+
+        it('Negating a non-existent result evaluates to true', () => {
             const input = `
                 #if !exists( UNSET_ENV_VAR )
                     .Value = true
@@ -5116,10 +5135,51 @@ Expecting to see the following:
             const input = `
                 #define MY_DEFINE
                 #if MY_DEFINE
-                    .Value = true
+                    .Result = true
                 #endif
             `;
-            assertEvaluatedVariablesValueEqual(input, [true]);
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualEvaluatedValues, [true]);
+
+            // #define MY_DEFINE
+            const expectedDefinitionMyDefine: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 33),
+                name: 'MY_DEFINE'
+            };
+
+            // .Result = true
+            const expectedDefinitionResult: VariableDefinition = {
+                id: 2,
+                range: createRange(3, 20, 3, 27),
+                name: 'Result'
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyDefine,
+                expectedDefinitionResult,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // #define MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: expectedDefinitionMyDefine.range,
+                },
+                // #if MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: createRange(2, 20, 2, 29),
+                },
+                // .Result = true
+                {
+                    definition: expectedDefinitionResult,
+                    range: expectedDefinitionResult.range,
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
 
         it('defining an already defined symbol is an error', () => {
@@ -5128,7 +5188,7 @@ Expecting to see the following:
                 #define MY_DEFINE
             `;
             const expectedErrorMessage = `Cannot #define already defined symbol "MY_DEFINE".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 24, 2, 33));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 33));
         });
     });
 
@@ -5138,10 +5198,38 @@ Expecting to see the following:
                 #define MY_DEFINE
                 #undef MY_DEFINE
                 #if MY_DEFINE
-                    .Value = true
+                    .Result = true
                 #endif
             `;
             assertEvaluatedVariablesValueEqual(input, []);
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+            const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+            assert.deepStrictEqual(actualEvaluatedValues, []);
+
+            //
+            // The `#if MY_DEFINE` does not reference `MY_DEFINE` because it's already undefined
+            //
+
+            // #define MY_DEFINE
+            const expectedDefinitionMyDefine: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 33),
+                name: 'MY_DEFINE'
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyDefine,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // #define MY_DEFINE
+                {
+                    definition: expectedDefinitionMyDefine,
+                    range: createRange(1, 16, 1, 33),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
 
         it('undefining an undefined symbol is an error', () => {
@@ -5149,7 +5237,7 @@ Expecting to see the following:
                 #undef MY_UNDEFINED_DEFINE
             `;
             const expectedErrorMessage = `Cannot #undef undefined symbol "MY_UNDEFINED_DEFINE".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 23, 1, 42));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 42));
         });
 
         it('undefining a built-in symbol is an error', () => {
@@ -5158,7 +5246,7 @@ Expecting to see the following:
                 #undef ${builtInDefine}
             `;
             const expectedErrorMessage = `Cannot #undef built-in symbol "${builtInDefine}".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 23, 1, 23 + builtInDefine.length));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 23 + builtInDefine.length));
         });
     });
 
@@ -5202,7 +5290,7 @@ Expecting to see the following:
                 #import UNSET_ENV_VAR
             `;
             const expectedErrorMessage = `Cannot import environment variable "UNSET_ENV_VAR" because it does not exist.`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 24, 1, 37));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 37));
         });
     });
 });
