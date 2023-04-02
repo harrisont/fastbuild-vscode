@@ -33,7 +33,7 @@ https://user-images.githubusercontent.com/144260/229337022-08e2274c-76aa-49c0-a6
 
 ### Go to symbol in editor or workspace
 
-TODO: video
+https://user-images.githubusercontent.com/144260/229337749-1a87b1bc-5857-4338-9eb1-7b995a3d9509.mov
 
 ## Limitations
 
