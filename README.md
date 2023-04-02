@@ -10,19 +10,34 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 
 ## Functionality
 
-This provides the following functionality:
-* "Go to definition" and "Find references" for:
-    * Variables
-    * `#import`s
-    * `#define`s
-* Hover over a variable to show a tooltip with its evaulated value (e.g. the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`).
-* See errors on the fly as you write the code, before running FASTBuild.
-* Go to symbol in editor or workspace.
+### "Go to Definition" and "Go to References"
 
-It does not yet provide syntax highlighting. For that in the meantime, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
+"Go to Definition" and "Go to References" supports:
+* Variables
+* `#import`s
+* `#define`s
+
+https://user-images.githubusercontent.com/144260/229334359-cfbb1eec-2291-4b4e-9a7f-d7f77be325ce.mov
+
+### Hover to see variable value
+
+Hover over a variable to show a tooltip with its evaulated value. For example, the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`.
+
+TODO: video
+
+### Show errors
+
+See errors on the fly as you write the code, before running FASTBuild.
+
+TODO: video
+
+### Go to symbol in editor or workspace
+
+TODO: video
 
 ## Limitations
 
+* The extension does not yet provide syntax highlighting. For that in the meantime, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 * Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.
 
 ## Compatibility
