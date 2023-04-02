@@ -21,7 +21,7 @@ https://user-images.githubusercontent.com/144260/229334359-cfbb1eec-2291-4b4e-9a
 
 ### Hover to see variable value
 
-Hover over a variable to show a tooltip with its evaulated value. For example, the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`.
+Hover over a variable to show a tooltip with its evaulated value. For example, the `Message` or `Location` variables in `.Message = 'Hello $Location$'`. If a variable is evaluated multiple times, like from a `ForEach` loop, it will show all the values.
 
 https://user-images.githubusercontent.com/144260/229334958-47a074b0-9649-4c1e-bfbb-73a44cfd3333.mov
 
