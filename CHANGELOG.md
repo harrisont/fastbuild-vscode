@@ -1,3 +1,9 @@
+# v0.5.2
+
+## Changes
+
+* Added demo videos to the README
+
 # v0.5.1
 
 ## Bug Fixes
