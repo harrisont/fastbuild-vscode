@@ -29,7 +29,7 @@ https://user-images.githubusercontent.com/144260/229336491-30efa831-0a2c-4208-89
 
 See errors on the fly as you write the code, before running FASTBuild.
 
-TODO: video
+https://user-images.githubusercontent.com/144260/229337022-08e2274c-76aa-49c0-a66f-d2543aa6348c.mov
 
 ### Go to symbol in editor or workspace
 
