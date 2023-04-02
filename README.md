@@ -23,7 +23,7 @@ https://user-images.githubusercontent.com/144260/229334359-cfbb1eec-2291-4b4e-9a
 
 Hover over a variable to show a tooltip with its evaulated value. For example, the evaluated `Location` variable in `.Message = 'Hello $Location$'` or `.Message = .Location`.
 
-TODO: video
+https://user-images.githubusercontent.com/144260/229334958-47a074b0-9649-4c1e-bfbb-73a44cfd3333.mov
 
 ### Show errors
 
