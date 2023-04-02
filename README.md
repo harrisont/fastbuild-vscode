@@ -17,23 +17,23 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 * `#import`s
 * `#define`s
 
-https://user-images.githubusercontent.com/144260/229334359-cfbb1eec-2291-4b4e-9a7f-d7f77be325ce.mov
+![Demo - go to definition and references](https://user-images.githubusercontent.com/144260/229382457-e15236ef-a0d6-4815-9f5c-6763d346399f.gif)
 
 ### Hover to see variable value
 
 Hover over a variable to show a tooltip with its evaulated value. For example, the `Message` or `Location` variables in `.Message = 'Hello $Location$'`. If a variable is evaluated multiple times, like from a `ForEach` loop, it will show all the values.
 
-https://user-images.githubusercontent.com/144260/229336491-30efa831-0a2c-4208-8916-fc6a30ddc4b9.mov
+![Demo - hover variables](https://user-images.githubusercontent.com/144260/229382487-fedbe466-5e2f-449c-b184-8b38f97fec48.gif)
 
 ### Show errors
 
 See errors on the fly as you write the code, before running FASTBuild.
 
-https://user-images.githubusercontent.com/144260/229337022-08e2274c-76aa-49c0-a66f-d2543aa6348c.mov
+![Demo - show errors](https://user-images.githubusercontent.com/144260/229382494-3a876079-c905-4db0-babb-2b5a19f1195b.gif)
 
 ### Go to symbol in editor or workspace
 
-https://user-images.githubusercontent.com/144260/229337749-1a87b1bc-5857-4338-9eb1-7b995a3d9509.mov
+![Demo - go to symbol in editor and workspace](https://user-images.githubusercontent.com/144260/229382499-005885f7-5834-4796-bc27-3ff577d88a7e.gif)
 
 ## Limitations
 

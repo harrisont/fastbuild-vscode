@@ -1,3 +1,9 @@
+# v0.5.3
+
+## Changes
+
+* Convert the demo videos from `.mov` to `.gif` so that they can show in the Visual Studio Code Externsion Marketplace.
+
 # v0.5.2
 
 ## Changes
