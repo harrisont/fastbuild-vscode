@@ -93,13 +93,13 @@ export class ReferenceProvider {
         const symbols: DocumentSymbol[] = [];
 
         // Add targets
-        for (const definition of evaluatedData.targetDefinitions) {
+        for (const [name, definition] of evaluatedData.targetDefinitions) {
             if (definition.range.uri !== uri) {
                 continue;
             }
 
             const symbol: DocumentSymbol = {
-                name: definition.name,
+                name,
                 kind: SymbolKind.Function,
                 range: definition.range,
                 selectionRange: definition.range,
@@ -129,13 +129,13 @@ export class ReferenceProvider {
         const symbols: SymbolInformation[] = [];
         for (const evaluatedData of evaluatedDatas) {
             // Add targets
-            for (const definition of evaluatedData.targetDefinitions) {
-                if (!fuzzy.test(params.query, definition.name)) {
+            for (const [name, definition] of evaluatedData.targetDefinitions) {
+                if (!fuzzy.test(params.query, name)) {
                     continue;
                 }
 
                 const symbol: SymbolInformation = {
-                    name: definition.name,
+                    name: name,
                     kind: SymbolKind.Function,
                     location: {
                         uri: definition.range.uri,

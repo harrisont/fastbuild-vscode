@@ -2535,11 +2535,9 @@ describe('evaluator', () => {
                     const expectedDefinitionMyTarget1: TargetDefinition = {
                         id: 1,
                         range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
-                        name: 'MyTargetName',
                     };
-                    assert.deepStrictEqual(result.targetDefinitions, [
-                        expectedDefinitionMyTarget1,
-                    ]);
+                    assert.deepStrictEqual(Array.from(result.targetDefinitions.keys()), ['MyTargetName']);
+                    assert.deepStrictEqual(result.targetDefinitions.get('MyTargetName'), expectedDefinitionMyTarget1);
 
                     const expectedReferences: TargetReference[] = [
                         // MyTarget1's definition's reference

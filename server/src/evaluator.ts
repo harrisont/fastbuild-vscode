@@ -121,7 +121,6 @@ export interface VariableReference {
 export interface TargetDefinition {
     id: number;
     range: SourceRange;
-    name: string;
 }
 
 export interface TargetReference {
@@ -131,10 +130,15 @@ export interface TargetReference {
 
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
+
     variableReferences: VariableReference[] = [];
+
     variableDefinitions: VariableDefinition[] = [];
+
     targetReferences: TargetReference[] = [];
-    targetDefinitions: TargetDefinition[] = [];
+
+    // Maps a target name to its definition
+    targetDefinitions = new Map<string, TargetDefinition>();
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -758,13 +762,12 @@ class ScopeStack {
         };
     }
 
-    createTargetDefinition(range: SourceRange, name: string): TargetDefinition {
+    createTargetDefinition(range: SourceRange): TargetDefinition {
         const id = this.nextVariableDefinitionId;
         this.nextVariableDefinitionId += 1;
         return {
             id,
             range,
-            name,
         };
     }
 }
@@ -1224,18 +1227,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 // Ensure that this doesn't resuse an existing target name.
-                const existingTargetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == evaluatedTargetName.value);
+                const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
                     return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${existingTargetDefinition.range}.`);
                 }
 
                 // Create a definition and reference for the target name.
-                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
+                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange);
                 const targetNameReference: TargetReference = {
                     definition: targetNameDefinition,
                     range: evaluatedTargetNameRange,
                 };
-                context.evaluatedData.targetDefinitions.push(targetNameDefinition);
+                context.evaluatedData.targetDefinitions.set(evaluatedTargetName.value, targetNameDefinition);
                 context.evaluatedData.targetReferences.push(targetNameReference);
 
                 // Evaluate the function body.
