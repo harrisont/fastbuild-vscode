@@ -1,3 +1,13 @@
+# v0.5.4
+
+## New Features
+
+* Add a new `inputDebounceDelay` setting to control the delay after changing a document before re-evaluating it.
+
+## Other Changes
+
+* Add logging to measure performance. This is controlled by the new `logPerformanceMetrics` setting, which is disabled by default.
+
 # v0.5.3
 
 ## Changes

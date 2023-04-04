@@ -1,6 +1,8 @@
 import {
     createConnection,
     DefinitionParams,
+    DidChangeConfigurationNotification,
+    DidChangeConfigurationParams,
     DocumentSymbolParams,
     HoverParams,
     InitializeParams,
@@ -38,7 +40,6 @@ import { ParseDataProvider } from './parseDataProvider';
 import * as fs from 'fs';
 
 const ROOT_FBUILD_FILE = 'fbuild.bff';
-const UPDATE_DOCUMENT_DELAY_MS = 500;
 
 type UriStr = string;
 
@@ -61,12 +62,20 @@ function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
     return null;
 }
 
+interface Settings {
+    logPerformanceMetrics: boolean;
+    inputDebounceDelay: number;
+}
+
 class State {
     // Create a connection for the server, using Node's IPC as a transport.
     // Also include all preview / proposed LSP features.
     readonly connection = createConnection(ProposedFeatures.all);
 
     readonly documents = new TextDocuments(TextDocument);
+
+    // Settings cache
+    settings: Thenable<Settings> | null = null;
 
     fileSystem = new DiskFileSystem(this.documents);
 
@@ -123,6 +132,15 @@ class State {
         }
         return evaluatedData;
     }
+
+    getSettings(): Thenable<Settings> {
+        if (this.settings === null) {
+            this.settings = this.connection.workspace.getConfiguration({
+                section: 'fastbuild',
+            });
+        }
+        return this.settings;
+    }
 }
 
 const state = new State();
@@ -151,6 +169,17 @@ state.connection.onInitialize((params: InitializeParams) => {
     };
 
     return result;
+});
+
+state.connection.onInitialized(() => {
+    // Register for configuration changes.
+    state.connection.client.register(DidChangeConfigurationNotification.type, undefined);
+});
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+state.connection.onDidChangeConfiguration((_params: DidChangeConfigurationParams) => {
+    // Reset all cached settings
+    state.settings = null;
 });
 
 state.connection.onHover((params: HoverParams) => {
@@ -195,7 +224,9 @@ state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document
 // Wait for a period of time before updating.
 // This improves the performance when the user is rapidly modifying the document (e.g. typing),
 // at the cost of introducing a small amount of latency.
-function queueDocumentUpdate(documentUriStr: UriStr): void {
+async function queueDocumentUpdate(documentUriStr: UriStr): Promise<void> {
+    const settings = await state.getSettings();
+
     // Cancel any existing queued update.
     const request = state.queuedDocumentUpdates.get(documentUriStr);
     if (request !== undefined) {
@@ -207,17 +238,17 @@ function queueDocumentUpdate(documentUriStr: UriStr): void {
     // This is necesasry in order to do initially populate the data.
     const evaluatedData = state.getRootFbuildEvaluatedData(documentUriStr);
     if (evaluatedData === null) {
-        updateDocument(documentUriStr);
+        updateDocument(documentUriStr, settings);
     } else {
         // Queue the new update.
         state.queuedDocumentUpdates.set(documentUriStr, setTimeout(() => {
             state.queuedDocumentUpdates.delete(documentUriStr);
-            updateDocument(documentUriStr);
-        }, UPDATE_DOCUMENT_DELAY_MS));
+            updateDocument(documentUriStr, settings);
+        }, settings.inputDebounceDelay));
     }
 }
 
-function updateDocument(changedDocumentUriStr: UriStr): void {
+function updateDocument(changedDocumentUriStr: UriStr, settings: Settings): void {
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
 
     let evaluatedData = new EvaluatedData();
@@ -233,20 +264,37 @@ function updateDocument(changedDocumentUriStr: UriStr): void {
         }
         rootFbuildUriStr = rootFbuildUri.toString();
 
+        const parseDurationLabel = 'parse-duration';
+        if (settings.logPerformanceMetrics) {
+            console.time(parseDurationLabel);
+        }
         const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
         if (maybeChangedDocumentParseData.hasError) {
+            if (settings.logPerformanceMetrics) {
+                console.timeEnd(parseDurationLabel);
+            }
             throw maybeChangedDocumentParseData.getError();
         }
 
         const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        if (settings.logPerformanceMetrics) {
+            console.timeEnd(parseDurationLabel);
+        }
         if (maybeRootFbuildParseData.hasError) {
             throw maybeRootFbuildParseData.getError();
         }
         const rootFbuildParseData = maybeRootFbuildParseData.getValue();
 
+        const evaluationDurationLabel = 'evaluation-duration';
+        if (settings.logPerformanceMetrics) {
+            console.time(evaluationDurationLabel);
+        }
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
         evaluatedData = evaluatedDataAndMaybeError.data;
         state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
+        if (settings.logPerformanceMetrics) {
+            console.timeEnd(evaluationDurationLabel);
+        }
         if (evaluatedDataAndMaybeError.error !== null) {
             throw evaluatedDataAndMaybeError.error;
         }
