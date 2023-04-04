@@ -2,7 +2,7 @@
 
 ## Changes
 
-* Optimizations to speed up evaluation. From a small amount of experiementing, this cuts evaluation time to a third of what it was before.
+* Optimizations to speed up evaluation. From a small amount of experimenting, this cuts evaluation time to a third of what it was before.
 
 # v0.5.4
 
