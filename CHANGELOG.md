@@ -1,3 +1,9 @@
+# v0.5.7
+
+## Changes
+
+* [#32] Stop returning duplicates for "get document/workspace symbols". This makes the results more usable. Additionally, in experiments on a large code base, this makes "get workspace symbols" twice as fast.
+
 # v0.5.6
 
 ## Bug fixes
