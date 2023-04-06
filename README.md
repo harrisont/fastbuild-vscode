@@ -2,11 +2,15 @@
 
 Contains a language server and Visual Studio Code client for the [FASTBuild](https://www.fastbuild.org/) language.
 
-  * [Functionality](#functionality)
-  * [Limitations](#limitations)
-  * [Compatibility](#compatibility)
-  * [Installing](#installing)
-  * [Contributing](#contributing)
+* [Functionality](#functionality)
+  * ["Go to Definition" and "Go to References"](#go-to-definition-and-go-to-references)
+  * [Hover to see variable value](#hover-to-see-variable-value)
+  * [Show errors](#show-errors)
+  * [Go to symbol in editor or workspace](#go-to-symbol-in-editor-or-workspace)
+* [Limitations](#limitations)
+* [Compatibility](#compatibility)
+* [Installing](#installing)
+* [Contributing](#contributing)
 
 ## Functionality
 
