@@ -1,3 +1,9 @@
+# v0.5.6
+
+## Bug fixes
+
+* [#27] Fix bug where the document symbols are missing data from the last change.
+
 # v0.5.5
 
 ## Changes
