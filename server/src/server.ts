@@ -67,6 +67,11 @@ interface Settings {
     inputDebounceDelay: number;
 }
 
+interface QueuedDocumentUpdate {
+    timer: NodeJS.Timer;
+    updateFunction: () => void;
+}
+
 class State {
     // Create a connection for the server, using Node's IPC as a transport.
     // Also include all preview / proposed LSP features.
@@ -102,7 +107,7 @@ class State {
     // Map of root FASTBuild files to their evaluated data
     readonly rootToEvaluatedDataMap = new Map<UriStr, EvaluatedData>();
 
-    readonly queuedDocumentUpdates = new Map<UriStr, NodeJS.Timer>();
+    readonly queuedDocumentUpdates = new Map<UriStr, QueuedDocumentUpdate>();
 
     // Same API as the non-member getRootFbuildFile.
     getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
@@ -183,6 +188,9 @@ state.connection.onDidChangeConfiguration((_params: DidChangeConfigurationParams
 });
 
 state.connection.onHover((params: HoverParams) => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
     const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
@@ -191,6 +199,9 @@ state.connection.onHover((params: HoverParams) => {
 });
 
 state.connection.onDefinition((params: DefinitionParams) => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
     const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
@@ -199,6 +210,9 @@ state.connection.onDefinition((params: DefinitionParams) => {
 });
 
 state.connection.onReferences((params: ReferenceParams) => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
     const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
@@ -207,6 +221,9 @@ state.connection.onReferences((params: ReferenceParams) => {
 });
 
 state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
     const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
@@ -215,6 +232,9 @@ state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
 });
 
 state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
     return state.referenceProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
 });
 
@@ -228,24 +248,41 @@ async function queueDocumentUpdate(documentUriStr: UriStr): Promise<void> {
     const settings = await state.getSettings();
 
     // Cancel any existing queued update.
-    const request = state.queuedDocumentUpdates.get(documentUriStr);
-    if (request !== undefined) {
-        clearTimeout(request);
+    const queuedUpdate = state.queuedDocumentUpdates.get(documentUriStr);
+    if (queuedUpdate !== undefined) {
+        clearTimeout(queuedUpdate.timer);
         state.queuedDocumentUpdates.delete(documentUriStr);
     }
+
+    const updateFunction = () => updateDocument(documentUriStr, settings);
 
     // Skip the delay and immediately update if the document has no evaulated data.
     // This is necesasry in order to do initially populate the data.
     const evaluatedData = state.getRootFbuildEvaluatedData(documentUriStr);
     if (evaluatedData === null) {
-        updateDocument(documentUriStr, settings);
+        updateFunction();
     } else {
         // Queue the new update.
-        state.queuedDocumentUpdates.set(documentUriStr, setTimeout(() => {
+
+        const timer = setTimeout(() => {
             state.queuedDocumentUpdates.delete(documentUriStr);
-            updateDocument(documentUriStr, settings);
-        }, settings.inputDebounceDelay));
+            updateFunction();
+        }, settings.inputDebounceDelay);
+
+        const queuedUpdate: QueuedDocumentUpdate = {
+            timer,
+            updateFunction,
+        };
+        state.queuedDocumentUpdates.set(documentUriStr, queuedUpdate);
     }
+}
+
+function flushQueuedDocumentUpdates() {
+    for (const queuedUpdate of state.queuedDocumentUpdates.values()) {
+        queuedUpdate.updateFunction();
+        clearTimeout(queuedUpdate.timer);
+    }
+    state.queuedDocumentUpdates.clear();
 }
 
 function updateDocument(changedDocumentUriStr: UriStr, settings: Settings): void {
