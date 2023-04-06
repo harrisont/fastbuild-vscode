@@ -76,7 +76,7 @@ flowchart TB
 6. ... which parses it using the compiled `fbuild-grammar.ts` from step 0.
 7. [ParseDataProvider](server/src/parseDataProvider.ts) caches the parse data, to avoid re-parsing files that have not changed.
 8. The [server](server/src/server.ts) evaluates the parsed data using [evaluator.ts](server/src/evaluator.ts).
-9. Evaluating the parsed data can involves parsing and evaluating any `#import`ed files.
+9. Evaluating the parsed data parses and evaluates any `#import`ed files.
 10. The [server](server/src/server.ts) caches the evaluated data, so that it can use it for future operations.
 11. The [server](server/src/server.ts) updates the diagnostics (e.g. errors) based on the evaluation.
 12. The [client](client/src/extension.ts) asks the [server](server/src/server.ts) for additional information (e.g. definitions, hover data, etc.), which the server provides using its [feature providers](server/src/features/).
