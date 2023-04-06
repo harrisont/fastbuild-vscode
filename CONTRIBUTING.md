@@ -25,6 +25,40 @@
 
 ## About the code
 
+```mermaid
+flowchart TB
+    RawGrammar["Raw grammar (fbuild-grammar.ne)"] -->|0. Nearley compiler produces| CompiledGrammar[fbuild-grammar.ts]
+    subgraph Extension
+        LanguageClient["Language client (extension.ts)"] <-->|"1. Document changed (Language Server Protocol)"| FileUpdate[[updateDocument]]
+        subgraph LanguageServer["Language server (server.ts)"]
+            FileUpdate -->|2. parse| ParseDataProvider[parseDataProvider.ts]
+            ParseDataProvider -->|3. read file| FileContentProvider["fileContentProvider (fileSystem.ts)"]
+            FileContentProvider -->|4. cache| FileCache[(File cache)]
+            ParseDataProvider -->|5. parse| Parser[parser.ts]
+            Parser -->|6. parse| CompiledGrammar
+            ParseDataProvider -->|7. cache| ParseCache[(Parse cache)]
+            FileUpdate -->|8. evaluate| Evaluator[evaluator.ts]
+            Evaluator -->|"9. parse (for #include)"| ParseDataProvider
+            FileUpdate -->|10. cache| EvaluatedDataCache[(Evaluated data cache)]
+
+            subgraph FeatureProviders[Feature providers]
+                HoverProvider
+                DefinitionProvider
+                ReferenceProvider
+                DiagnosticProvider
+            end
+            FeatureProviders --> EvaluatedDataCache
+
+            FileUpdate -->|11. Update diagnostics| DiagnosticProvider
+        end
+        LanguageClient <-->|12. Other Language Server Protocol messages| FeatureProviders
+    end
+
+    style Extension fill:#555
+    style LanguageServer fill:#444
+    style FeatureProviders fill:#333
+```
+
 * [parser.ts](server/src/parser.ts) parses FASTBuild files.
     * It uses the [Nearley](https://nearley.js.org/) parser generator, which lexes using [moo](https://github.com/no-context/moo).
         * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
