@@ -31,15 +31,15 @@ flowchart TB
     subgraph Extension
         LanguageClient["Language client (extension.ts)"] <-->|"1. Document changed (Language Server Protocol)"| FileUpdate[[updateDocument]]
         subgraph LanguageServer["Language server (server.ts)"]
-            FileUpdate -->|2. parse| ParseDataProvider[parseDataProvider.ts]
-            ParseDataProvider -->|3. read file| FileContentProvider["fileContentProvider (fileSystem.ts)"]
-            FileContentProvider -->|4. cache| FileCache[(File cache)]
-            ParseDataProvider -->|5. parse| Parser[parser.ts]
-            Parser -->|6. parse| CompiledGrammar
-            ParseDataProvider -->|7. cache| ParseCache[(Parse cache)]
-            FileUpdate -->|8. evaluate| Evaluator[evaluator.ts]
-            Evaluator -->|"9. parse (for #include)"| ParseDataProvider
-            FileUpdate -->|10. cache| EvaluatedDataCache[(Evaluated data cache)]
+            FileUpdate -->|2. Parse| ParseDataProvider[parseDataProvider.ts]
+            ParseDataProvider -->|3. Read file| FileContentProvider["fileContentProvider (fileSystem.ts)"]
+            FileContentProvider -->|4. Cache| FileCache[(File cache)]
+            ParseDataProvider -->|5. Parse| Parser[parser.ts]
+            Parser -->|6. Parse| CompiledGrammar
+            ParseDataProvider -->|7. Cache| ParseCache[(Parse cache)]
+            FileUpdate -->|8. Evaluate parsed data| Evaluator[evaluator.ts]
+            Evaluator -->|"9. Parse and evaluate (for #include)"| ParseDataProvider
+            FileUpdate -->|10. Cache| EvaluatedDataCache[(Evaluated data cache)]
 
             subgraph FeatureProviders[Feature providers]
                 HoverProvider
