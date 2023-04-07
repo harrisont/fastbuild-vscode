@@ -1,14 +1,20 @@
+# v0.5.8
+
+## Bug Fixes
+
+* ([#31](https://github.com/harrisont/fastbuild-vscode/issues/4)) Fix a bug where the `ForEach` loop variable did not appear on hover or on "go to document symbols".
+
 # v0.5.7
 
 ## Changes
 
-* [#32] Stop returning duplicates for "get document/workspace symbols". This makes the results more usable. Additionally, in experiments on a large code base, this makes "get workspace symbols" twice as fast.
+* ([#28](https://github.com/harrisont/fastbuild-vscode/issues/28)) Stop returning duplicates for "get document/workspace symbols". This makes the results more usable. Additionally, in experiments on a large code base, this makes "get workspace symbols" twice as fast.
 
 # v0.5.6
 
 ## Bug fixes
 
-* [#27] Fix bug where the document symbols are missing data from the last change.
+* ([#27](https://github.com/harrisont/fastbuild-vscode/issues/27)) Fix bug where the document symbols are missing data from the last change.
 
 # v0.5.5
 
@@ -42,7 +48,7 @@
 
 ## Bug Fixes
 
-* `#if exists(...)` now correctly evaluates if the environment variable exists instead of always being false (#23).
+* ([#23](https://github.com/harrisont/fastbuild-vscode/issues/23)) `#if exists(...)` now correctly evaluates if the environment variable exists instead of always being false.
 
 # v0.5.0
 
@@ -82,11 +88,11 @@
 
 # v0.2.0
 
-* [#4](https://github.com/harrisont/fastbuild-vscode/issues/4) Support listing document and workspace symbols.
+* ([#4](https://github.com/harrisont/fastbuild-vscode/issues/4)) Support listing document and workspace symbols.
 
 # v0.1.9
 
-* [#6](https://github.com/harrisont/fastbuild-vscode/issues/6) Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported). This completes support for the full FASTBuild language.
+* ([#6](https://github.com/harrisont/fastbuild-vscode/issues/6)) Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported). This completes support for the full FASTBuild language.
 
 # v0.1.8
 
@@ -99,7 +105,7 @@
 
 # v0.1.6
 
-* [#7](https://github.com/harrisont/fastbuild-vscode/issues/7) Wait for a delay before updating (debounce), to improve performance.
+* ([#7](https://github.com/harrisont/fastbuild-vscode/issues/7)) Wait for a delay before updating (debounce), to improve performance.
 
 # v0.1.5
 

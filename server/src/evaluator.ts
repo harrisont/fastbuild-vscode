@@ -1136,10 +1136,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementForEach(statement)) {
                 // Evaluate the iterators (array to loop over plus the loop-variable)
                 interface ForEachIterator {
+                    loopVariable: ScopeVariable;
                     arrayItems: Value[];
-                    evaluatedLoopVarNameValue: string;
-                    loopVarRange: SourceRange;
-                    loopVarDefinition: VariableDefinition;
                 }
                 const iterators: ForEachIterator[] = [];
                 for (const iterator of statement.iterators) {
@@ -1179,11 +1177,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
+                    // The loop variable is a definition and a reference.
+                    context.evaluatedData.variableDefinitions.push(loopVarDefinition);
+                    context.evaluatedData.variableReferences.push({
+                        definition: loopVarDefinition,
+                        range: loopVarRange,
+                    });
+
+                    // Set a variable in the current scope for each iterator's loop variable.
+                    const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, loopVarDefinition);
                     iterators.push({
+                        loopVariable,
                         arrayItems,
-                        evaluatedLoopVarNameValue,
-                        loopVarRange,
-                        loopVarDefinition,
                     });
                 }
 
@@ -1193,15 +1198,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const arrayItemsLength = iterators[0].arrayItems.length;
                 for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
                     context.scopeStack.withScope(() => {
-                        // Set a variable in the current scope for each iterator's loop variable.
+                        // Update the loop variables' values and add evaluated-variables for them.
                         for (const iterator of iterators) {
                             const arrayItem = iterator.arrayItems[arrayItemIndex];
-                            const loopVariable = context.scopeStack.setVariableInCurrentScope(iterator.evaluatedLoopVarNameValue, arrayItem, iterator.loopVarDefinition);
+                            iterator.loopVariable.value = arrayItem;
 
-                            // The loop variable is a variable reference.
-                            context.evaluatedData.variableReferences.push({
-                                definition: loopVariable.definition,
-                                range: iterator.loopVarRange,
+                            context.evaluatedData.evaluatedVariables.push({
+                                value: arrayItem,
+                                range: iterator.loopVariable.definition.range,
                             });
                         }
 
