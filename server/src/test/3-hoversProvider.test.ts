@@ -9,6 +9,7 @@ import {
 } from '../evaluator';
 
 import {
+    getHoverText,
     valueToString,
 } from '../features/hoversProvider';
 
@@ -145,6 +146,79 @@ describe('hoversProvider', () => {
     ]
 ]`,
                 str);
+        });
+    });
+
+    describe('getHoverText', () => {
+        it('works for a single value', () => {
+            const actualHoverText = getHoverText(new Set<Value>([
+                'a',
+            ]));
+            const expectedHoverText = `\`\`\`fastbuild
+"a"
+\`\`\``;
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
+        it('works for multiple values', () => {
+            const actualHoverText = getHoverText(new Set<Value>([
+                'a',
+                'b',
+            ]));
+            const expectedHoverText = `\`\`\`fastbuild
+Values:
+"a"
+"b"
+\`\`\``;
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
+        it('deduplicates identical values', () => {
+            const actualHoverText = getHoverText(new Set<Value>([
+                'a',
+                'a',
+            ]));
+            const expectedHoverText = `\`\`\`fastbuild
+"a"
+\`\`\``;
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
+        it('works for a single value that is longer than VS Code supports (>100,000 characters), by truncating the result', () => {
+            const strWithLengthOverLimit = 'a'.repeat(200000);
+            const actualHoverText = getHoverText(new Set<Value>([
+                strWithLengthOverLimit,
+            ]));
+
+            // Need extra characters for the prefix, ellipsis, and the suffix.
+            const expectedHoverTextWithoutValue = `\`\`\`fastbuild
+"…
+\`\`\``;
+            const expectedValueStrLenth = 100000 - expectedHoverTextWithoutValue.length;
+            const expectedTruncatedStr = 'a'.repeat(expectedValueStrLenth);
+            const expectedHoverText = `\`\`\`fastbuild
+"${expectedTruncatedStr}…
+\`\`\``;
+            assert.strictEqual(actualHoverText.length <= 100000, true);
+            assert.strictEqual(actualHoverText.length, expectedHoverText.length);
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
+        it('works for multiple values that combined are longer than VS Code supports (>100,000 characters), by skipping the possible value that would push over the limit', () => {
+            const strWithLengthHalfOfLimit1 = 'a'.repeat(50000);
+            const strWithLengthHalfOfLimit2 = 'b'.repeat(50000);
+            const actualHoverText = getHoverText(new Set<Value>([
+                strWithLengthHalfOfLimit1,
+                strWithLengthHalfOfLimit2,
+            ]));
+            const expectedHoverText = `\`\`\`fastbuild
+Values:
+"${strWithLengthHalfOfLimit1}"
+…
+\`\`\``;
+            assert.strictEqual(actualHoverText.length <= 100000, true);
+            assert.strictEqual(actualHoverText.length, expectedHoverText.length);
+            assert.strictEqual(actualHoverText, expectedHoverText);
         });
     });
 });
