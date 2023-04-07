@@ -1049,9 +1049,9 @@ describe('evaluator', () => {
                 ['a', 'b', 'c'],
                 'Base',
                 ['a', 'b', 'c'],
-                'a', 'Base-a',
-                'b', 'Base-b',
-                'c', 'Base-c',
+                'a', 'a', 'Base-a',
+                'b', 'b', 'Base-b',
+                'c', 'c', 'Base-c',
             ]);
         });
 
@@ -2261,9 +2261,9 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
@@ -2294,9 +2294,9 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
@@ -2334,10 +2334,15 @@ describe('evaluator', () => {
                 myStruct1,
                 myStruct2,
                 [myStruct1, myStruct2],
-                //ForEach( .Item in .MyArray )
+                // in .MyArray )
                 [myStruct1, myStruct2],
-                // Print( .Item )
+                // `ForEach( .Item...` iteration 1
                 myStruct1,
+                // `Print( .Item )` iteration 1
+                myStruct1,
+                // `ForEach( .Item...` iteration 2
+                myStruct2,
+                // `Print( .Item )` iteration 2
                 myStruct2,
             ]);
         });
@@ -2364,9 +2369,17 @@ describe('evaluator', () => {
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
-                // Print( '$Item1$-$Item2$-$Item3$' )
+                // Loop variables iteration 1
                 'a1', 'a2', 'a3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 1
+                'a1', 'a2', 'a3',
+                // Loop variables iteration 2
                 'b1', 'b2', 'b3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 2
+                'b1', 'b2', 'b3',
+                // Loop variables iteration 3
+                'c1', 'c2', 'c3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 3
                 'c1', 'c2', 'c3',
             ]);
         });
@@ -2394,9 +2407,17 @@ describe('evaluator', () => {
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
-                // Print( '$Item1$-$Item2$-$Item3$' )
+                // Loop variables iteration 1
                 'a1', 'a2', 'a3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 1
+                'a1', 'a2', 'a3',
+                // Loop variables iteration 2
                 'b1', 'b2', 'b3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 2
+                'b1', 'b2', 'b3',
+                // Loop variables iteration 3
+                'c1', 'c2', 'c3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 3
                 'c1', 'c2', 'c3',
             ]);
         });
@@ -2425,9 +2446,9 @@ describe('evaluator', () => {
                 // ForEach( ... )
                 ['a', 'b', 'c'],
                 // Print( .Item )
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
@@ -2440,6 +2461,66 @@ describe('evaluator', () => {
             `;
             const expectedErrorMessage = `'ForEach' variable to loop over must be an Array, but instead is an Integer`;
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 34, 2, 42));
+        });
+
+        it('has the expected variable definitions and references', () => {
+            const input = `
+                .MyArray = {'a', 'b'}
+                ForEach( .Item in .MyArray )
+                {
+                    Print( .Item )
+                }
+            `;
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+
+            // `.MyArray = {'a', 'b'}`
+            const expectedDefinitionMyArray: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 24),
+                name: 'MyArray',
+            };
+
+            // `ForEach( .Item...`
+            const expectedDefinitionItem: VariableDefinition = {
+                id: 2,
+                range: createRange(2, 25, 2, 30),
+                name: 'Item',
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyArray,
+                expectedDefinitionItem,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // `.MyArray = {'a', 'b'}`
+                {
+                    definition: expectedDefinitionMyArray,
+                    range: expectedDefinitionMyArray.range,
+                },
+                // `...in .MyArray`
+                {
+                    definition: expectedDefinitionMyArray,
+                    range: createRange(2, 34, 2, 42),
+                },
+                // // `ForEach( .Item...`
+                {
+                    definition: expectedDefinitionItem,
+                    range: expectedDefinitionItem.range,
+                },
+                // `Print( .Item )` for the 1st loop iteration
+                {
+                    definition: expectedDefinitionItem,
+                    range: createRange(4, 27, 4, 32),
+                },
+                // `Print( .Item )` for the 2nd loop iteration
+                {
+                    definition: expectedDefinitionItem,
+                    range: createRange(4, 27, 4, 32),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
     });
 
@@ -2538,24 +2619,21 @@ describe('evaluator', () => {
                     const expectedDefinitionMyTarget1: TargetDefinition = {
                         id: 1,
                         range: createRange(2, 29 + functionName.length, 2, 40 + functionName.length),
-                        name: 'MyTarget1',
                     };
                     const expectedDefinitionMyTarget2: TargetDefinition = {
                         id: 2,
                         range: createRange(6, 34, 6, 45),
-                        name: 'MyTarget2',
                     };
                     const expectedDefinitionMyTarget3: TargetDefinition = {
                         id: 4,
                         range: createRange(14, 34, 14, 45),
-                        name: 'MyTarget3',
                     };
 
-                    const expectedTargetDefinitions: TargetDefinition[] = [
-                        expectedDefinitionMyTarget1,
-                        expectedDefinitionMyTarget2,
-                        expectedDefinitionMyTarget3,
-                    ];
+                    const expectedTargetDefinitions = new Map<string, TargetDefinition>([
+                        ['MyTarget1', expectedDefinitionMyTarget1],
+                        ['MyTarget2', expectedDefinitionMyTarget2],
+                        ['MyTarget3', expectedDefinitionMyTarget3],
+                    ]);
                     assert.deepStrictEqual(result.targetDefinitions, expectedTargetDefinitions);
 
                     const expectedReferences: TargetReference[] = [
