@@ -2441,6 +2441,66 @@ describe('evaluator', () => {
             const expectedErrorMessage = `'ForEach' variable to loop over must be an Array, but instead is an Integer`;
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 34, 2, 42));
         });
+
+        it('has the expected variable definitions and references', () => {
+            const input = `
+                .MyArray = {'a', 'b'}
+                ForEach( .Item in .MyArray )
+                {
+                    Print( .Item )
+                }
+            `;
+
+            const result = evaluateInput(input, true /*enableDiagnostics*/);
+
+            // `.MyArray = {'a', 'b'}`
+            const expectedDefinitionMyArray: VariableDefinition = {
+                id: 1,
+                range: createRange(1, 16, 1, 24),
+                name: 'MyArray',
+            };
+
+            // `ForEach( .Item...`
+            const expectedDefinitionItem: VariableDefinition = {
+                id: 2,
+                range: createRange(2, 25, 2, 30),
+                name: 'Item',
+            };
+
+            assert.deepStrictEqual(result.variableDefinitions, [
+                expectedDefinitionMyArray,
+                expectedDefinitionItem,
+            ]);
+
+            const expectedReferences: VariableReference[] = [
+                // `.MyArray = {'a', 'b'}`
+                {
+                    definition: expectedDefinitionMyArray,
+                    range: expectedDefinitionMyArray.range,
+                },
+                // `...in .MyArray`
+                {
+                    definition: expectedDefinitionMyArray,
+                    range: createRange(2, 34, 2, 42),
+                },
+                // // `ForEach( .Item...`
+                {
+                    definition: expectedDefinitionItem,
+                    range: expectedDefinitionItem.range,
+                },
+                // `Print( .Item )` for the 1st loop iteration
+                {
+                    definition: expectedDefinitionItem,
+                    range: createRange(4, 27, 4, 32),
+                },
+                // `Print( .Item )` for the 2nd loop iteration
+                {
+                    definition: expectedDefinitionItem,
+                    range: createRange(4, 27, 4, 32),
+                },
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedReferences);
+        });
     });
 
     // Functions that all we handle are registering their target and evaluating their statements.

@@ -1179,6 +1179,13 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
+                    // The loop variable is a variable definition and reference.
+                    context.evaluatedData.variableDefinitions.push(loopVarDefinition);
+                    context.evaluatedData.variableReferences.push({
+                        definition: loopVarDefinition,
+                        range: loopVarRange,
+                    });
+
                     iterators.push({
                         arrayItems,
                         evaluatedLoopVarNameValue,
@@ -1196,13 +1203,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         // Set a variable in the current scope for each iterator's loop variable.
                         for (const iterator of iterators) {
                             const arrayItem = iterator.arrayItems[arrayItemIndex];
-                            const loopVariable = context.scopeStack.setVariableInCurrentScope(iterator.evaluatedLoopVarNameValue, arrayItem, iterator.loopVarDefinition);
-
-                            // The loop variable is a variable reference.
-                            context.evaluatedData.variableReferences.push({
-                                definition: loopVariable.definition,
-                                range: iterator.loopVarRange,
-                            });
+                            context.scopeStack.setVariableInCurrentScope(iterator.evaluatedLoopVarNameValue, arrayItem, iterator.loopVarDefinition);
                         }
 
                         error = evaluateStatements(statement.statements, context);
