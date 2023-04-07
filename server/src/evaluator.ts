@@ -1179,7 +1179,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
-                    // The loop variable is a variable definition and reference.
+                    // The loop variable is an evaluated variable, a definition, and a reference.
+                    context.evaluatedData.evaluatedVariables.push({
+                        value: arrayItems,
+                        range: loopVarRange,
+                    });
                     context.evaluatedData.variableDefinitions.push(loopVarDefinition);
                     context.evaluatedData.variableReferences.push({
                         definition: loopVarDefinition,
