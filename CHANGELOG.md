@@ -1,8 +1,14 @@
+# v0.5.9
+
+## Bug Fixes
+
+* ([#38](https://github.com/harrisont/fastbuild-vscode/issues/38)) Fix a bug where very long (>100,000 characters) evaluated variable hover values don't render correctly, because VS Code truncates them. Now the extension truncates them before hitting the limit, so it still renders correctly.
+
 # v0.5.8
 
 ## Bug Fixes
 
-* ([#31](https://github.com/harrisont/fastbuild-vscode/issues/4)) Fix a bug where the `ForEach` loop variable did not appear on hover or on "go to document symbols".
+* ([#31](https://github.com/harrisont/fastbuild-vscode/issues/31)) Fix a bug where the `ForEach` loop variable did not appear on hover or on "go to document symbols".
 
 # v0.5.7
 

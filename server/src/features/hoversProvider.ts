@@ -18,6 +18,13 @@ import {
 const FASTBUILD_LANGUAGE_ID = 'fastbuild';
 const INDENTATION = ' '.repeat(4);
 
+const HOVER_TEXT_PREFIX = '```' + FASTBUILD_LANGUAGE_ID + '\n';
+const HOVER_TEXT_SUFFIX = '\n```';
+
+// Visual Studio Code truncates hover texts longer than 100,000 characters.
+const MAX_HOVER_TEXT_LENGTH = 100000;
+const MAX_HOVER_TEXT_VALUE_LENGTH = MAX_HOVER_TEXT_LENGTH - HOVER_TEXT_PREFIX.length - HOVER_TEXT_SUFFIX.length - '…'.length;
+
 export function valueToString(value: Value, indentation = ''): string {
     if (value instanceof Struct) {
         if (value.members.size === 0) {
@@ -55,12 +62,37 @@ export function valueToString(value: Value, indentation = ''): string {
     }
 }
 
+export function getHoverText(possibleValues: Set<Value>): string {
+    let valueStr = '';
+    if (possibleValues.size === 1) {
+        const value = possibleValues.values().next().value;
+        valueStr = valueToString(value);
+        if (valueStr.length > MAX_HOVER_TEXT_VALUE_LENGTH) {
+            valueStr = valueStr.substring(0, MAX_HOVER_TEXT_VALUE_LENGTH) + '…';
+        }
+    } else {
+        valueStr = 'Values:';
+        for (const value of possibleValues) {
+            const additionalValueStr = '\n' + valueToString(value);
+            if (valueStr.length + additionalValueStr.length > MAX_HOVER_TEXT_VALUE_LENGTH) {
+                valueStr += '\n…';
+                break;
+            } else {
+                valueStr += additionalValueStr;
+            }
+        }
+    }
+
+    const hoverText = HOVER_TEXT_PREFIX + valueStr + HOVER_TEXT_SUFFIX;
+    return hoverText;
+}
+
 export class HoverProvider {
     getHover(params: HoverParams, evaluatedData: EvaluatedData): Hover | null {
         const uri = params.textDocument.uri;
         const position = params.position;
 
-        const possibleValues: Set<Value> = new Set();
+        const possibleValues = new Set<Value>();
         let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
         // Potential optmization: use a different data structure to allow for a more efficient search.
@@ -75,22 +107,10 @@ export class HoverProvider {
             }
         }
 
-        let valueStr = '';
         if (possibleValues.size === 0) {
             return null;
         } else {
-            if (possibleValues.size === 1) {
-                const value = possibleValues.values().next().value;
-                valueStr = valueToString(value);
-            } else {
-                valueStr = 'Values:';
-                for (const value of possibleValues) {
-                    valueStr += '\n' + valueToString(value);
-                }
-            }
-
-            const hoverText = '```' + FASTBUILD_LANGUAGE_ID + '\n' + valueStr + '\n```';
-
+            const hoverText = getHoverText(possibleValues);
             const hover: Hover = {
                 contents: {
                     kind: MarkupKind.Markdown,
