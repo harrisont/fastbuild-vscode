@@ -1049,9 +1049,9 @@ describe('evaluator', () => {
                 ['a', 'b', 'c'],
                 'Base',
                 ['a', 'b', 'c'],
-                'a', 'Base-a',
-                'b', 'Base-b',
-                'c', 'Base-c',
+                'a', 'a', 'Base-a',
+                'b', 'b', 'Base-b',
+                'c', 'c', 'Base-c',
             ]);
         });
 
@@ -2261,9 +2261,9 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
@@ -2294,9 +2294,9 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 ['a', 'b', 'c'],
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
@@ -2334,10 +2334,15 @@ describe('evaluator', () => {
                 myStruct1,
                 myStruct2,
                 [myStruct1, myStruct2],
-                //ForEach( .Item in .MyArray )
+                // in .MyArray )
                 [myStruct1, myStruct2],
-                // Print( .Item )
+                // `ForEach( .Item...` iteration 1
                 myStruct1,
+                // `Print( .Item )` iteration 1
+                myStruct1,
+                // `ForEach( .Item...` iteration 2
+                myStruct2,
+                // `Print( .Item )` iteration 2
                 myStruct2,
             ]);
         });
@@ -2364,9 +2369,17 @@ describe('evaluator', () => {
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
-                // Print( '$Item1$-$Item2$-$Item3$' )
+                // Loop variables iteration 1
                 'a1', 'a2', 'a3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 1
+                'a1', 'a2', 'a3',
+                // Loop variables iteration 2
                 'b1', 'b2', 'b3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 2
+                'b1', 'b2', 'b3',
+                // Loop variables iteration 3
+                'c1', 'c2', 'c3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 3
                 'c1', 'c2', 'c3',
             ]);
         });
@@ -2394,9 +2407,17 @@ describe('evaluator', () => {
                 ['a1', 'b1', 'c1'],
                 ['a2', 'b2', 'c2'],
                 ['a3', 'b3', 'c3'],
-                // Print( '$Item1$-$Item2$-$Item3$' )
+                // Loop variables iteration 1
                 'a1', 'a2', 'a3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 1
+                'a1', 'a2', 'a3',
+                // Loop variables iteration 2
                 'b1', 'b2', 'b3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 2
+                'b1', 'b2', 'b3',
+                // Loop variables iteration 3
+                'c1', 'c2', 'c3',
+                // `Print( '$Item1$-$Item2$-$Item3$' )` iteration 3
                 'c1', 'c2', 'c3',
             ]);
         });
@@ -2425,9 +2446,9 @@ describe('evaluator', () => {
                 // ForEach( ... )
                 ['a', 'b', 'c'],
                 // Print( .Item )
-                'a',
-                'b',
-                'c'
+                'a', 'a',
+                'b', 'b',
+                'c', 'c',
             ]);
         });
 
