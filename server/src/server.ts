@@ -34,6 +34,7 @@ import { HoverProvider } from './features/hoversProvider';
 import { DefinitionProvider } from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
 import { ReferenceProvider } from './features/referenceProvider';
+import { SymbolProvider } from './features/symbolProvider';
 import { DiskFileSystem } from './fileSystem';
 import { ParseDataProvider } from './parseDataProvider';
 
@@ -100,6 +101,7 @@ class State {
     readonly definitionProvider = new DefinitionProvider();
     readonly referenceProvider = new ReferenceProvider();
     readonly diagnosticProvider = new DiagnosticProvider();
+    readonly symbolProvider = new SymbolProvider();
 
     // Map of open documents to their root FASTBuild file
     readonly openDocumentToRootMap = new Map<UriStr, UriStr>();
@@ -228,14 +230,14 @@ state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
     if (evaluatedData === null) {
         return null;
     }
-    return state.referenceProvider.getDocumentSymbols(params, evaluatedData);
+    return state.symbolProvider.getDocumentSymbols(params, evaluatedData);
 });
 
 state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
     // Wait for any queued updates, so that we don't return stale data.
     flushQueuedDocumentUpdates();
 
-    return state.referenceProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
+    return state.symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
