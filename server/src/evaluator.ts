@@ -64,6 +64,17 @@ export class Struct {
     static from(iterable: Iterable<readonly [VariableName, StructMember]>): Struct {
         return new Struct(new Map<VariableName, StructMember>(iterable));
     }
+
+    toJSON(): string {
+        if (this.members.size === 0) {
+            return '[]';
+        } else {
+            const items = Array.from(this.members,
+                ([structMemberName, structMember]) => `${structMemberName}=${JSON.stringify(structMember.value)}`
+            );
+            return `{${items.join(',')}}`;
+        }
+    }
 }
 
 export class SourceRange {

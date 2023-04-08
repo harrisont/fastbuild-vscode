@@ -62,9 +62,14 @@ export function valueToString(value: Value, indentation = ''): string {
     }
 }
 
-export function getHoverText(possibleValues: Set<Value>): string {
+export function getHoverText(possibleValues: Value[]): string {
+    // Deduplicate values.
+    const possibleValuesMap = new Map<string, Value>(
+        possibleValues.map(value => [JSON.stringify(value), value])
+    );
+
     let valueStr = '';
-    if (possibleValues.size === 1) {
+    if (possibleValuesMap.size === 1) {
         const value = possibleValues.values().next().value;
         valueStr = valueToString(value);
         if (valueStr.length > MAX_HOVER_TEXT_VALUE_LENGTH) {
@@ -72,7 +77,7 @@ export function getHoverText(possibleValues: Set<Value>): string {
         }
     } else {
         valueStr = 'Values:';
-        for (const value of possibleValues) {
+        for (const value of possibleValuesMap.values()) {
             const additionalValueStr = '\n' + valueToString(value);
             if (valueStr.length + additionalValueStr.length > MAX_HOVER_TEXT_VALUE_LENGTH) {
                 valueStr += '\n…';
@@ -92,7 +97,7 @@ export class HoverProvider {
         const uri = params.textDocument.uri;
         const position = params.position;
 
-        const possibleValues = new Set<Value>();
+        const possibleValues: Value[] = [];
         let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
         // Potential optmization: use a different data structure to allow for a more efficient search.
@@ -103,11 +108,11 @@ export class HoverProvider {
                 if (firstEvaluatedVariable === null) {
                     firstEvaluatedVariable = evaluatedVariable;
                 }
-                possibleValues.add(evaluatedVariable.value);
+                possibleValues.push(evaluatedVariable.value);
             }
         }
 
-        if (possibleValues.size === 0) {
+        if (possibleValues.length === 0) {
             return null;
         } else {
             const hoverText = getHoverText(possibleValues);

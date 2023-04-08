@@ -1,3 +1,9 @@
+# v0.5.10
+
+## Bug Fixes
+
+* Fix bug where hover values did not deduplicate complex values. It deduplicated boolean/number/string values, but not arrays or structs.
+
 # v0.5.9
 
 ## Bug Fixes

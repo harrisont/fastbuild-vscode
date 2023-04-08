@@ -151,9 +151,9 @@ describe('hoversProvider', () => {
 
     describe('getHoverText', () => {
         it('works for a single value', () => {
-            const actualHoverText = getHoverText(new Set<Value>([
+            const actualHoverText = getHoverText([
                 'a',
-            ]));
+            ]);
             const expectedHoverText = `\`\`\`fastbuild
 "a"
 \`\`\``;
@@ -161,10 +161,10 @@ describe('hoversProvider', () => {
         });
 
         it('works for multiple values', () => {
-            const actualHoverText = getHoverText(new Set<Value>([
+            const actualHoverText = getHoverText([
                 'a',
                 'b',
-            ]));
+            ]);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
 "a"
@@ -173,22 +173,54 @@ Values:
             assert.strictEqual(actualHoverText, expectedHoverText);
         });
 
-        it('deduplicates identical values', () => {
-            const actualHoverText = getHoverText(new Set<Value>([
+        it('deduplicates identical basic values', () => {
+            const actualHoverText = getHoverText([
                 'a',
                 'a',
-            ]));
+            ]);
             const expectedHoverText = `\`\`\`fastbuild
 "a"
 \`\`\``;
             assert.strictEqual(actualHoverText, expectedHoverText);
         });
 
+        it('deduplicates identical array values', () => {
+            const actualHoverText = getHoverText([
+                ['a', 'b'],
+                ['a', 'b'],
+            ]);
+            const expectedHoverText = `\`\`\`fastbuild
+{
+    "a"
+    "b"
+}
+\`\`\``;
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
+        it('deduplicates identical struct values', () => {
+            const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
+            const value = Struct.from(Object.entries({
+                A: new StructMember(1, dummyDefinition),
+            }));
+
+            const actualHoverText = getHoverText([
+                value,
+                value,
+            ]);
+            const expectedHoverText = `\`\`\`fastbuild
+[
+    .A = 1
+]
+\`\`\``;
+            assert.strictEqual(actualHoverText, expectedHoverText);
+        });
+
         it('works for a single value that is longer than VS Code supports (>100,000 characters), by truncating the result', () => {
             const strWithLengthOverLimit = 'a'.repeat(200000);
-            const actualHoverText = getHoverText(new Set<Value>([
+            const actualHoverText = getHoverText([
                 strWithLengthOverLimit,
-            ]));
+            ]);
 
             // Need extra characters for the prefix, ellipsis, and the suffix.
             const expectedHoverTextWithoutValue = `\`\`\`fastbuild
@@ -207,10 +239,10 @@ Values:
         it('works for multiple values that combined are longer than VS Code supports (>100,000 characters), by skipping the possible value that would push over the limit', () => {
             const strWithLengthHalfOfLimit1 = 'a'.repeat(50000);
             const strWithLengthHalfOfLimit2 = 'b'.repeat(50000);
-            const actualHoverText = getHoverText(new Set<Value>([
+            const actualHoverText = getHoverText([
                 strWithLengthHalfOfLimit1,
                 strWithLengthHalfOfLimit2,
-            ]));
+            ]);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
 "${strWithLengthHalfOfLimit1}"
