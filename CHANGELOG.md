@@ -1,3 +1,9 @@
+# v0.5.11
+
+## Changes
+
+* Update README to clarify that the evaluated variable values shown on hover are deduplicated.
+
 # v0.5.10
 
 ## Bug Fixes
