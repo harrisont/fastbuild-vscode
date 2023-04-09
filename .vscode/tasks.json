@@ -11,14 +11,36 @@
 			},
 			"presentation": {
 				"panel": "dedicated",
-				"reveal": "never"
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"clear": true
 			},
 			"problemMatcher": [
 				"$tsc"
 			],
 			"dependsOn": [
+				"lint",
 				"build grammar"
 			]
+		},
+		{
+			"label": "lint",
+			"type": "npm",
+			"script": "lint",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"clear": true
+			},
+			"problemMatcher": [
+				"$tsc"
+			],
+			"dependsOn": []
 		},
 		{
 			"label": "watch-build",
@@ -28,12 +50,15 @@
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",
-				"reveal": "never"
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"clear": true
 			},
 			"problemMatcher": [
 				"$tsc-watch"
 			],
 			"dependsOn": [
+				"lint",
 				"build grammar"
 			]
 		},
@@ -52,6 +77,8 @@
 				"isDefault": true
 			},
 			"presentation": {
+				"reveal": "always",
+				"revealProblems": "onProblem",
 				"clear": true
 			},
 			"dependsOn": "build"
@@ -64,7 +91,9 @@
 			"isBackground": true,
 			"presentation": {
 				"panel": "dedicated",
-				"reveal": "silent"
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"clear": true
 			},
 			"dependsOn": "watch-build"
 		},

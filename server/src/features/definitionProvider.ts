@@ -4,10 +4,6 @@ import {
 } from 'vscode-languageserver-protocol';
 
 import {
-    DocumentUri,
-} from 'vscode-languageserver-types';
-
-import {
     isPositionInRange,
 } from '../parser';
 
