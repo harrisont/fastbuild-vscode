@@ -19,6 +19,7 @@ import {
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
+    IncludeReference,
     SourceRange,
     Struct,
     StructMember,
@@ -4571,7 +4572,7 @@ Expecting to see the following:
                 ]
             ]), true /*enableDiagnostics*/);
 
-            assert.deepStrictEqual(result.evaluatedVariables, [
+            const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 1,
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
@@ -4580,7 +4581,8 @@ Expecting to see the following:
                     value: 1,
                     range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 }
-            ]);
+            ];
+            assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
 
             const definitionFromHelper: VariableDefinition = {
                 id: 1,
@@ -4592,7 +4594,7 @@ Expecting to see the following:
                 definitionFromHelper,  // FromHelper
             ]);
 
-            assert.deepStrictEqual(result.variableReferences, [
+            const expectedVariableReferences: VariableReference[] = [
                 // helper.bff ".FromHelper = 1" LHS
                 {
                     definition: definitionFromHelper,
@@ -4603,7 +4605,20 @@ Expecting to see the following:
                     definition: definitionFromHelper,
                     range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 },
-            ]);
+            ];
+            assert.deepStrictEqual(result.variableReferences, expectedVariableReferences);
+
+            assert.deepStrictEqual(result.includeDefinitions, new Set<UriStr>([
+                'file:///helper.bff',
+            ]));
+
+            const expectedIncludeReferences: IncludeReference[] = [
+                {
+                    includeUri: 'file:///helper.bff',
+                    range: createFileRange('file:///fbuild.bff', 1, 33, 1, 45),
+                },
+            ];
+            assert.deepStrictEqual(result.includeReferences, expectedIncludeReferences);
         });
 
         it('include the same file multiple times in a row', () => {
@@ -4624,7 +4639,7 @@ Expecting to see the following:
                 ],
             ]), true /*enableDiagnostics*/);
 
-            assert.deepStrictEqual(result.evaluatedVariables, [
+            const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'Bobo',
                     range: createFileRange('file:///some/path/fbuild.bff', 1, 24, 1, 29),
@@ -4637,7 +4652,24 @@ Expecting to see the following:
                     value: 'Bobo',
                     range: createFileRange('file:///some/path/greetings.bff', 1, 38, 1, 44),
                 },
-            ]);
+            ];
+            assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
+
+            assert.deepStrictEqual(result.includeDefinitions, new Set<UriStr>([
+                'file:///some/path/greetings.bff',
+            ]));
+
+            const expectedIncludeReferences: IncludeReference[] = [
+                {
+                    includeUri: 'file:///some/path/greetings.bff',
+                    range: createFileRange('file:///some/path/fbuild.bff', 2, 33, 2, 48),
+                },
+                {
+                    includeUri: 'file:///some/path/greetings.bff',
+                    range: createFileRange('file:///some/path/fbuild.bff', 3, 33, 3, 48),
+                },
+            ];
+            assert.deepStrictEqual(result.includeReferences, expectedIncludeReferences);
         });
 
         it('include with ".."', () => {
@@ -4673,7 +4705,7 @@ Expecting to see the following:
                 ]
             ]), true /*enableDiagnostics*/);
 
-            assert.deepStrictEqual(result.evaluatedVariables, [
+            const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
                     value: 'dog',
                     range: createFileRange('file:///some/path/animals/dog.bff', 1, 24, 1, 29),
@@ -4706,7 +4738,34 @@ Expecting to see the following:
                     value: 'Hello cat',
                     range: createFileRange('file:///some/path/animals/cat.bff', 3, 31, 3, 39),
                 },
-            ]);
+            ];
+            assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
+
+            assert.deepStrictEqual(result.includeDefinitions, new Set<UriStr>([
+                'file:///some/path/animals/dog.bff',
+                'file:///some/path/greetings.bff',
+                'file:///some/path/animals/cat.bff',
+            ]));
+
+            const expectedIncludeReferences: IncludeReference[] = [
+                {
+                    includeUri: 'file:///some/path/animals/dog.bff',
+                    range: createFileRange('file:///some/path/fbuild.bff', 1, 33, 1, 50),
+                },
+                {
+                    includeUri: 'file:///some/path/greetings.bff',
+                    range: createFileRange('file:///some/path/animals/dog.bff', 2, 33, 2, 51),
+                },
+                {
+                    includeUri: 'file:///some/path/animals/cat.bff',
+                    range: createFileRange('file:///some/path/fbuild.bff', 2, 33, 2, 50),
+                },
+                {
+                    includeUri: 'file:///some/path/greetings.bff',
+                    range: createFileRange('file:///some/path/animals/cat.bff', 2, 33, 2, 51),
+                },
+            ];
+            assert.deepStrictEqual(result.includeReferences, expectedIncludeReferences);
         });
     });
 
