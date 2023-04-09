@@ -4,10 +4,7 @@ import {
 } from 'vscode-languageserver-protocol';
 
 import {
-    DocumentUri,
-} from 'vscode-languageserver-types';
-
-import {
+    createRange,
     isPositionInRange,
 } from '../parser';
 
@@ -33,6 +30,23 @@ export class DefinitionProvider {
                     targetUri: definition.range.uri,
                     targetRange: definition.range,
                     targetSelectionRange: definition.range,
+                };
+                return [definitionLink];
+            }
+        }
+
+        // Check for a matching #include definition.
+        for (let i = 0; i < evaluatedData.includeReferences.length; i++) {
+            const reference = evaluatedData.includeReferences[i];
+            if (uri == reference.range.uri
+                && isPositionInRange(position, reference.range))
+            {
+                const includeRange = createRange(0, 0, 0, 0);
+                const definitionLink: DefinitionLink = {
+                    originSelectionRange: reference.range,
+                    targetUri: reference.includeUri,
+                    targetRange: includeRange,
+                    targetSelectionRange: includeRange,
                 };
                 return [definitionLink];
             }

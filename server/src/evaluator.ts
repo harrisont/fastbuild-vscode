@@ -64,6 +64,17 @@ export class Struct {
     static from(iterable: Iterable<readonly [VariableName, StructMember]>): Struct {
         return new Struct(new Map<VariableName, StructMember>(iterable));
     }
+
+    toJSON(): string {
+        if (this.members.size === 0) {
+            return '[]';
+        } else {
+            const items = Array.from(this.members,
+                ([structMemberName, structMember]) => `${structMemberName}=${JSON.stringify(structMember.value)}`
+            );
+            return `{${items.join(',')}}`;
+        }
+    }
 }
 
 export class SourceRange {
@@ -121,7 +132,6 @@ export interface VariableReference {
 export interface TargetDefinition {
     id: number;
     range: SourceRange;
-    name: string;
 }
 
 export interface TargetReference {
@@ -129,12 +139,26 @@ export interface TargetReference {
     range: SourceRange;
 }
 
+export interface IncludeReference {
+    includeUri: UriStr;
+    range: SourceRange;
+}
+
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
-    variableReferences: VariableReference[] = [];
+
     variableDefinitions: VariableDefinition[] = [];
+
+    variableReferences: VariableReference[] = [];
+
+    // Maps a target name to its definition
+    targetDefinitions = new Map<string, TargetDefinition>();
+
     targetReferences: TargetReference[] = [];
-    targetDefinitions: TargetDefinition[] = [];
+
+    includeDefinitions = new Set<UriStr>();
+
+    includeReferences: IncludeReference[] = [];
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -758,13 +782,12 @@ class ScopeStack {
         };
     }
 
-    createTargetDefinition(range: SourceRange, name: string): TargetDefinition {
+    createTargetDefinition(range: SourceRange): TargetDefinition {
         const id = this.nextVariableDefinitionId;
         this.nextVariableDefinitionId += 1;
         return {
             id,
             range,
-            name,
         };
     }
 }
@@ -1133,10 +1156,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementForEach(statement)) {
                 // Evaluate the iterators (array to loop over plus the loop-variable)
                 interface ForEachIterator {
+                    loopVariable: ScopeVariable;
                     arrayItems: Value[];
-                    evaluatedLoopVarNameValue: string;
-                    loopVarRange: SourceRange;
-                    loopVarDefinition: VariableDefinition;
                 }
                 const iterators: ForEachIterator[] = [];
                 for (const iterator of statement.iterators) {
@@ -1176,11 +1197,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
 
+                    // The loop variable is a definition and a reference.
+                    context.evaluatedData.variableDefinitions.push(loopVarDefinition);
+                    context.evaluatedData.variableReferences.push({
+                        definition: loopVarDefinition,
+                        range: loopVarRange,
+                    });
+
+                    // Set a variable in the current scope for each iterator's loop variable.
+                    const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, loopVarDefinition);
                     iterators.push({
+                        loopVariable,
                         arrayItems,
-                        evaluatedLoopVarNameValue,
-                        loopVarRange,
-                        loopVarDefinition,
                     });
                 }
 
@@ -1190,15 +1218,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const arrayItemsLength = iterators[0].arrayItems.length;
                 for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
                     context.scopeStack.withScope(() => {
-                        // Set a variable in the current scope for each iterator's loop variable.
+                        // Update the loop variables' values and add evaluated-variables for them.
                         for (const iterator of iterators) {
                             const arrayItem = iterator.arrayItems[arrayItemIndex];
-                            const loopVariable = context.scopeStack.setVariableInCurrentScope(iterator.evaluatedLoopVarNameValue, arrayItem, iterator.loopVarDefinition);
+                            iterator.loopVariable.value = arrayItem;
 
-                            // The loop variable is a variable reference.
-                            context.evaluatedData.variableReferences.push({
-                                definition: loopVariable.definition,
-                                range: iterator.loopVarRange,
+                            context.evaluatedData.evaluatedVariables.push({
+                                value: arrayItem,
+                                range: iterator.loopVariable.definition.range,
                             });
                         }
 
@@ -1224,18 +1251,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
 
                 // Ensure that this doesn't resuse an existing target name.
-                const existingTargetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == evaluatedTargetName.value);
+                const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
                     return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${existingTargetDefinition.range}.`);
                 }
 
                 // Create a definition and reference for the target name.
-                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange, evaluatedTargetName.value);
+                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange);
                 const targetNameReference: TargetReference = {
                     definition: targetNameDefinition,
                     range: evaluatedTargetNameRange,
                 };
-                context.evaluatedData.targetDefinitions.push(targetNameDefinition);
+                context.evaluatedData.targetDefinitions.set(evaluatedTargetName.value, targetNameDefinition);
                 context.evaluatedData.targetReferences.push(targetNameReference);
 
                 // Evaluate the function body.
@@ -1272,7 +1299,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                             // TODO: support looking up a target by the target's output-file.
                             // TODO: change targetDefinitions to a map for faster lookups.
-                            const targetDefinition = context.evaluatedData.targetDefinitions.find(definition => definition.name == target);
+                            const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
                             if (targetDefinition === undefined) {
                                 // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
                                 //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
@@ -1352,7 +1379,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementInclude(statement)) {  // #include
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
-                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
+                const includeUriStr = includeUri.toString();
+                const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
+
+                context.evaluatedData.includeDefinitions.add(includeUriStr);
+                const includeReference: IncludeReference = {
+                    includeUri: includeUriStr,
+                    range: includeRange,
+                };
+                context.evaluatedData.includeReferences.push(includeReference);
+
+                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUriStr)) {
                     const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
                     if (maybeIncludeParseData.hasError) {
                         const includeError = maybeIncludeParseData.getError();
@@ -1360,7 +1397,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         if (includeError instanceof ParseError) {
                             error = includeError;
                         } else {
-                            const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
                             error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`);
                         }
                         return error;
@@ -1386,7 +1422,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         defines: context.defines,
                         userFunctions: context.userFunctions,
                         rootFbuildDirUri: context.rootFbuildDirUri,
-                        thisFbuildUri: includeUri.toString(),
+                        thisFbuildUri: includeUriStr,
                         fileSystem: context.fileSystem,
                         parseDataProvider: context.parseDataProvider,
                         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,

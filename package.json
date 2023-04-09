@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.6.0",
+	"version": "0.7.0",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -34,7 +34,7 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "FASTBuild language server configuration",
+			"title": "FASTBuild",
 			"properties": {
 				"fastbuild.trace.server": {
 					"scope": "window",
@@ -44,14 +44,33 @@
 						"messages",
 						"verbose"
 					],
+					"enumDescriptions": [
+						"No extra logging",
+						"Log what messages are sent and received, but not the message contents",
+						"Log what messages are sent and received, including the message contents"
+					],
 					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
+					"description": "[Extension debugging] Traces the communication between the extension and the language server."
+				},
+				"fastbuild.logPerformanceMetrics": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "[Extension debugging] Log performance metrics."
+				},
+				"fastbuild.inputDebounceDelay": {
+					"scope": "window",
+					"type": "number",
+					"minimum": 0,
+					"default": 500,
+					"description": "Delay, in milliseconds, after changing a document before re-evaluating it. A lower value can result in faster feedback, but too low of a value will result in high resource usage when typing quickly."
 				}
 			}
 		}
 	},
 	"scripts": {
 		"build-grammar": "node server/node_modules/nearley/bin/nearleyc.js server/src/fbuild-grammar.ne --out server/src/fbuild-grammar.ts",
+		"lint": "node ./node_modules/eslint/bin/eslint.js . --max-warnings 0",
 		"build": "tsc --build",
 		"watch-build": "tsc --build --watch",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",

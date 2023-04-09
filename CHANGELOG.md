@@ -1,14 +1,84 @@
-# v0.6.0
+# v0.7.0
 
 ## New Features
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
 
+# v0.6.0
+
+## New Features
+
+* ([#36](https://github.com/harrisont/fastbuild-vscode/issues/36)) Support "Go To Definition" and "Go to References" for `#include`s.
+
+# v0.5.11
+
+## Changes
+
+* Update README to clarify that the evaluated variable values shown on hover are deduplicated.
+
+# v0.5.10
+
+## Bug Fixes
+
+* Fix bug where hover values did not deduplicate complex values. It deduplicated boolean/number/string values, but not arrays or structs.
+
+# v0.5.9
+
+## Bug Fixes
+
+* ([#38](https://github.com/harrisont/fastbuild-vscode/issues/38)) Fix a bug where very long (>100,000 characters) evaluated variable hover values don't render correctly, because VS Code truncates them. Now the extension truncates them before hitting the limit, so it still renders correctly.
+
+# v0.5.8
+
+## Bug Fixes
+
+* ([#31](https://github.com/harrisont/fastbuild-vscode/issues/31)) Fix a bug where the `ForEach` loop variable did not appear on hover or on "go to document symbols".
+
+# v0.5.7
+
+## Changes
+
+* ([#28](https://github.com/harrisont/fastbuild-vscode/issues/28)) Stop returning duplicates for "get document/workspace symbols". This makes the results more usable. Additionally, in experiments on a large code base, this makes "get workspace symbols" twice as fast.
+
+# v0.5.6
+
+## Bug fixes
+
+* ([#27](https://github.com/harrisont/fastbuild-vscode/issues/27)) Fix bug where the document symbols are missing data from the last change.
+
+# v0.5.5
+
+## Changes
+
+* Optimizations to speed up evaluation. From a small amount of experimenting, this cuts evaluation time to a third of what it was before.
+
+# v0.5.4
+
+## New Features
+
+* Add a new `inputDebounceDelay` setting to control the delay after changing a document before re-evaluating it.
+
+## Other Changes
+
+* Add logging to measure performance. This is controlled by the new `logPerformanceMetrics` setting, which is disabled by default.
+
+# v0.5.3
+
+## Changes
+
+* Convert the demo videos from `.mov` to `.gif` so that they can show in the Visual Studio Code Externsion Marketplace.
+
+# v0.5.2
+
+## Changes
+
+* Added demo videos to the README
+
 # v0.5.1
 
 ## Bug Fixes
 
-* `#if exists(...)` now correctly evaluates if the environment variable exists instead of always being false (#23).
+* ([#23](https://github.com/harrisont/fastbuild-vscode/issues/23)) `#if exists(...)` now correctly evaluates if the environment variable exists instead of always being false.
 
 # v0.5.0
 
@@ -48,11 +118,11 @@
 
 # v0.2.0
 
-* [#4](https://github.com/harrisont/fastbuild-vscode/issues/4) Support listing document and workspace symbols.
+* ([#4](https://github.com/harrisont/fastbuild-vscode/issues/4)) Support listing document and workspace symbols.
 
 # v0.1.9
 
-* [#6](https://github.com/harrisont/fastbuild-vscode/issues/6) Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported). This completes support for the full FASTBuild language.
+* ([#6](https://github.com/harrisont/fastbuild-vscode/issues/6)) Support `ForEach` iterating over multiple arrays at a time (single array iterating already supported). This completes support for the full FASTBuild language.
 
 # v0.1.8
 
@@ -65,7 +135,7 @@
 
 # v0.1.6
 
-* [#7](https://github.com/harrisont/fastbuild-vscode/issues/7) Wait for a delay before updating (debounce), to improve performance.
+* ([#7](https://github.com/harrisont/fastbuild-vscode/issues/7)) Wait for a delay before updating (debounce), to improve performance.
 
 # v0.1.5
 
