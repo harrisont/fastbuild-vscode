@@ -139,17 +139,26 @@ export interface TargetReference {
     range: SourceRange;
 }
 
+export interface IncludeReference {
+    includeUri: UriStr;
+    range: SourceRange;
+}
+
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
 
-    variableReferences: VariableReference[] = [];
-
     variableDefinitions: VariableDefinition[] = [];
 
-    targetReferences: TargetReference[] = [];
+    variableReferences: VariableReference[] = [];
 
     // Maps a target name to its definition
     targetDefinitions = new Map<string, TargetDefinition>();
+
+    targetReferences: TargetReference[] = [];
+
+    includeDefinitions = new Set<UriStr>();
+
+    includeReferences: IncludeReference[] = [];
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -1330,7 +1339,17 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementInclude(statement)) {  // #include
                 const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
                 const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
-                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUri.toString())) {
+                const includeUriStr = includeUri.toString();
+                const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
+
+                context.evaluatedData.includeDefinitions.add(includeUriStr);
+                const includeReference: IncludeReference = {
+                    includeUri: includeUriStr,
+                    range: includeRange,
+                };
+                context.evaluatedData.includeReferences.push(includeReference);
+
+                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUriStr)) {
                     const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
                     if (maybeIncludeParseData.hasError) {
                         const includeError = maybeIncludeParseData.getError();
@@ -1338,7 +1357,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         if (includeError instanceof ParseError) {
                             error = includeError;
                         } else {
-                            const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
                             error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`);
                         }
                         return error;
@@ -1364,7 +1382,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         defines: context.defines,
                         userFunctions: context.userFunctions,
                         rootFbuildDirUri: context.rootFbuildDirUri,
-                        thisFbuildUri: includeUri.toString(),
+                        thisFbuildUri: includeUriStr,
                         fileSystem: context.fileSystem,
                         parseDataProvider: context.parseDataProvider,
                         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,

@@ -1,3 +1,9 @@
+# v0.6.0
+
+## New Features
+
+* ([#36](https://github.com/harrisont/fastbuild-vscode/issues/36)) Support "Go To Definition" and "Go to References" for `#include`s.
+
 # v0.5.11
 
 ## Changes

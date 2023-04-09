@@ -20,6 +20,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 * Variables
 * `#import`s
 * `#define`s
+* `#include`s
 
 ![Demo - go to definition and references](https://user-images.githubusercontent.com/144260/229382457-e15236ef-a0d6-4815-9f5c-6763d346399f.gif)
 
