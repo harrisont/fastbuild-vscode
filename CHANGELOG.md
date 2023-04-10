@@ -2,7 +2,7 @@
 
 ## Bug Fixes
 
-* The extension now defines the FASTBuild language, so that the extension works without requiring the `RoscoP.fastbuild` extension.
+* The extension now defines the FASTBuild language, so that the extension works without requiring the `RoscoP.fastbuild` extension. That extension is still useful for syntax highlighting.
 
 # v0.6.0
 
