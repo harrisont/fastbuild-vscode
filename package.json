@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.6.1",
+	"version": "0.7.0",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -39,6 +39,13 @@
 				"aliases": ["FASTBuild", "fastbuild"],
 				"extensions": [".bff"],
 				"configuration": "language-configuration.json"
+			}
+		],
+        "grammars": [
+			{
+				"language": "fastbuild",
+				"scopeName": "source.fastbuild",
+				"path": "fastbuild.tmLanguage.json"
 			}
 		],
 		"configuration": {
