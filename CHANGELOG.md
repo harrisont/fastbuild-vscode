@@ -1,3 +1,9 @@
+# v0.6.1
+
+## Bug Fixes
+
+* The extension now defines the FASTBuild language, so that the extension works without requiring the `RoscoP.fastbuild` extension.
+
 # v0.6.0
 
 ## New Features
