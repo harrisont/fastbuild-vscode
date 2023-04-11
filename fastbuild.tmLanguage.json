@@ -108,7 +108,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.fastbuild",
-					"match": "#(?:if|else|endif|import|include|once)"
+					"match": "#(?:if|else|endif|include|once)"
 				}
 			]
 		},
@@ -124,7 +124,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.fastbuild",
-					"match": "#(?:define|undef)\\s+([\\w]+)",
+					"match": "#(?:define|undef|import)\\s+([\\w]+)",
 					"captures": {
 						"1": {
 							"name": "variable.parameter.fastbuild"
@@ -144,7 +144,15 @@
 		"variable": {
 			"patterns": [
 				{
-					"match": "[\\.^](['\"]?)([\\w\\$]+)\\1?",
+					"match": "[\\.^]([\\w\\$]+)",
+					"captures": {
+						"1": {
+							"name": "variable.other.fastbuild"
+						}
+					}
+				},
+				{
+					"match": "[\\.^](['\"])([\\w\\$]+)\\1",
 					"captures": {
 						"2": {
 							"name": "variable.other.fastbuild"
