@@ -1,1 +1,129 @@
-TODO
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "FASTBuild",
+	"scopeName": "source.fastbuild",
+	"patterns": [
+		{
+			"include": "#keyword"
+		},
+		{
+			"include": "#function"
+		},
+		{
+			"include": "#string_single_quote"
+		},
+		{
+			"include": "#string_double_quote"
+		},
+		{
+			"include": "#define"
+		},
+		{
+			"include": "#directive"
+		},
+		{
+			"include": "#defined_variable"
+		},
+		{
+			"include": "#local_variable"
+		},
+		{
+			"include": "#comment"
+		}
+	],
+	"repository": {
+		"string_escapes": {
+			"patterns": [
+				{
+					"name": "constant.character.escape.fastbuild",
+					"match": "\\^.|\\$[\\w\\d]+\\$|%\\d+"
+				}
+			]
+		},
+		"keyword": {
+			"patterns": [
+				{
+					"name": "keyword.operator.fastbuild",
+					"match": "\\b(\\+\\-/\\*=)\\b"
+				}
+			]
+		},
+		"function": {
+			"patterns": [
+				{
+					"name": "support.function.fastbuild",
+					"match": "\\b(Alias|Compiler|Copy|CopyDir|CSAssembly|DLL|Exec|Executable|ForEach|Library|ObjectList|Print|RemoveDir|Settings|Test|Unity|Using|VCXProject|VSSolution|XCodeProject)\\b"
+				}
+			]
+		},
+		"string_single_quote": {
+			"name": "string.quoted.single.fastbuild",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"include": "#string_escapes"
+				}
+			]
+		},
+		"string_double_quote": {
+			"name": "string.quoted.double.fastbuild",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"include": "#string_escapes"
+				}
+			]
+		},
+		"define": {
+			"patterns": [
+				{
+					"name": "variable.language.fastbuild",
+					"match": "__WINDOWS__|__OSX__|__LINUX__"
+				}
+			]
+		},
+		"directive": {
+			"patterns": [
+				{
+					"name": "keyword.other.fastbuild",
+					"match": "#(undef|if|else|endif|exists|import|include|once)"
+				}
+			]
+		},
+		"defined_variable": {
+			"patterns": [
+				{
+					"name": "keyword.other.fastbuild",
+					"match": "#define\\s+([\\w\\d]+)",
+					"captures": {
+						"1": {
+							"name": "meta.parameter.type.variable.fastbuild"
+						}
+					}
+				}
+			]
+		},
+		"local_variable": {
+			"patterns": [
+				{
+					"match": "[\\s^][\\.^](['\"]?)([\\w\\d\\$]+)\\1?",
+					"captures": {
+						"2": {
+							"name": "variable.other.fastbuild"
+						}
+					}
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.fastbuild",
+					"match": "(//|;).*"
+				}
+			]
+		}
+	}
+}

@@ -38,14 +38,14 @@
 				"id": "fastbuild",
 				"aliases": ["FASTBuild", "fastbuild"],
 				"extensions": [".bff"],
-				"configuration": "language-configuration.json"
+				"configuration": "./language-configuration.json"
 			}
 		],
-        "grammars": [
+		"grammars": [
 			{
 				"language": "fastbuild",
 				"scopeName": "source.fastbuild",
-				"path": "fastbuild.tmLanguage.json"
+				"path": "./fastbuild.tmLanguage.json"
 			}
 		],
 		"configuration": {
