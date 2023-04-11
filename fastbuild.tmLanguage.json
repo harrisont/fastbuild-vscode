@@ -18,7 +18,8 @@
 		{
 			"include": "#builtin_define"
 		},
-			"include": "#define"
+		{
+			"include": "#builtin_variable"
 		},
 		{
 			"include": "#directive"
@@ -101,6 +102,18 @@
 				{
 					"name": "variable.language.fastbuild",
 					"match": "__WINDOWS__|__OSX__|__LINUX__"
+				}
+			]
+		},
+		"builtin_variable": {
+			"patterns": [
+				{
+					"match": "[\\.^](_CURRENT_BFF_DIR_|_FASTBUILD_VERSION_STRING_|_FASTBUILD_VERSION_|_FASTBUILD_EXE_PATH_|_WORKING_DIR_)",
+					"captures": {
+						"1": {
+							"name": "variable.language.fastbuild"
+						}
+					}
 				}
 			]
 		},
