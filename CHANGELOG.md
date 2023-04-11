@@ -2,7 +2,7 @@
 
 ## New Features
 
-* Add syntax highlighting. Now it's no longer necessary to use a separate extension.
+* ([#41](https://github.com/harrisont/fastbuild-vscode/issues/41)) Add syntax highlighting. Now it's no longer necessary to use a separate extension.
 
 # v0.6.1
 
