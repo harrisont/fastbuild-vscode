@@ -36,7 +36,7 @@
 			"patterns": [
 				{
 					"name": "constant.character.escape.fastbuild",
-					"match": "\\^.|\\$[\\w\\d]+\\$|%\\d+"
+					"match": "\\^.|\\$[\\w]+\\$|%\\d+"
 				}
 			]
 		},
@@ -96,7 +96,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.fastbuild",
-					"match": "#define\\s+([\\w\\d]+)",
+					"match": "#define\\s+([\\w]+)",
 					"captures": {
 						"1": {
 							"name": "meta.parameter.type.variable.fastbuild"
@@ -108,7 +108,7 @@
 		"local_variable": {
 			"patterns": [
 				{
-					"match": "[\\s^][\\.^](['\"]?)([\\w\\d\\$]+)\\1?",
+					"match": "(?:\\s|^)[\\.^](['\"]?)([\\w\\$]+)\\1?",
 					"captures": {
 						"2": {
 							"name": "variable.other.fastbuild"
