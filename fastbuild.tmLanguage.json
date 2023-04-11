@@ -4,10 +4,10 @@
 	"scopeName": "source.fastbuild",
 	"patterns": [
 		{
-			"include": "#keyword"
+			"include": "#comment"
 		},
 		{
-			"include": "#function"
+			"include": "#operator"
 		},
 		{
 			"include": "#string_single_quote"
@@ -16,43 +16,63 @@
 			"include": "#string_double_quote"
 		},
 		{
+			"include": "#builtin_define"
+		},
 			"include": "#define"
 		},
 		{
 			"include": "#directive"
 		},
 		{
-			"include": "#defined_variable"
+			"include": "#directive_function"
 		},
 		{
-			"include": "#local_variable"
+			"include": "#define_symbol"
 		},
 		{
-			"include": "#comment"
+			"include": "#constant"
+		},
+		{
+			"include": "#variable"
+		},
+		{
+			"include": "#function"
 		}
 	],
 	"repository": {
-		"string_escapes": {
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.fastbuild",
+					"match": "(?://|;).*"
+				}
+			]
+		},
+		"operator": {
+			"patterns": [
+				{
+					"name": "keyword.operator.comparison.fastbuild",
+					"match": "(?:<=|>=|==|<|>)"
+				},
+				{
+					"name": "keyword.operator.assignment.fastbuild",
+					"match": "(?:\\+|-|=)"
+				},
+				{
+					"name": "keyword.operator.logical.fastbuild",
+					"match": "!"
+				},
+				{
+					"name": "keyword.operator.expression.fastbuild",
+					"match": "\\bin\\b"
+				}
+			]
+		},
+		"string_embed": {
 			"patterns": [
 				{
 					"name": "constant.character.escape.fastbuild",
 					"match": "\\^.|\\$[\\w]+\\$|%\\d+"
-				}
-			]
-		},
-		"keyword": {
-			"patterns": [
-				{
-					"name": "keyword.operator.fastbuild",
-					"match": "\\b(\\+\\-/\\*=)\\b"
-				}
-			]
-		},
-		"function": {
-			"patterns": [
-				{
-					"name": "support.function.fastbuild",
-					"match": "\\b(Alias|Compiler|Copy|CopyDir|CSAssembly|DLL|Exec|Executable|ForEach|Library|ObjectList|Print|RemoveDir|Settings|Test|Unity|Using|VCXProject|VSSolution|XCodeProject)\\b"
 				}
 			]
 		},
@@ -62,7 +82,7 @@
 			"end": "'",
 			"patterns": [
 				{
-					"include": "#string_escapes"
+					"include": "#string_embed"
 				}
 			]
 		},
@@ -72,11 +92,11 @@
 			"end": "\"",
 			"patterns": [
 				{
-					"include": "#string_escapes"
+					"include": "#string_embed"
 				}
 			]
 		},
-		"define": {
+		"builtin_define": {
 			"patterns": [
 				{
 					"name": "variable.language.fastbuild",
@@ -88,27 +108,43 @@
 			"patterns": [
 				{
 					"name": "keyword.other.fastbuild",
-					"match": "#(undef|if|else|endif|exists|import|include|once)"
+					"match": "#(?:if|else|endif|import|include|once)"
 				}
 			]
 		},
-		"defined_variable": {
+		"directive_function": {
+			"patterns": [
+				{
+					"name": "keyword.function.fastbuild",
+					"match": "\\b(?:exists|file_exists)\\b"
+				}
+			]
+		},
+		"define_symbol": {
 			"patterns": [
 				{
 					"name": "keyword.other.fastbuild",
-					"match": "#define\\s+([\\w]+)",
+					"match": "#(?:define|undef)\\s+([\\w]+)",
 					"captures": {
 						"1": {
-							"name": "meta.parameter.type.variable.fastbuild"
+							"name": "variable.parameter.fastbuild"
 						}
 					}
 				}
 			]
 		},
-		"local_variable": {
+		"constant": {
 			"patterns": [
 				{
-					"match": "(?:\\s|^)[\\.^](['\"]?)([\\w\\$]+)\\1?",
+					"name": "constant.language.fastbuild",
+					"match": "\\b(?:true|false)\\b"
+				}
+			]
+		},
+		"variable": {
+			"patterns": [
+				{
+					"match": "[\\.^](['\"]?)([\\w\\$]+)\\1?",
 					"captures": {
 						"2": {
 							"name": "variable.other.fastbuild"
@@ -117,11 +153,11 @@
 				}
 			]
 		},
-		"comment": {
+		"function": {
 			"patterns": [
 				{
-					"name": "comment.line.double-slash.fastbuild",
-					"match": "(//|;).*"
+					"name": "support.function.fastbuild",
+					"match": "\\b(?:Alias|Compiler|Copy|CopyDir|CSAssembly|DLL|Error|Exec|Executable|ForEach|If|Library|ListDependencies|ObjectList|Print|RemoveDir|Settings|Test|TextFile|Unity|Using|VCXProject|VSProjectExternal|VSSolution|XCodeProject)\\b"
 				}
 			]
 		}
