@@ -42,7 +42,6 @@ See errors on the fly as you write the code, before running FASTBuild.
 
 ## Limitations
 
-* The extension does not yet provide syntax highlighting. For that in the meantime, I recommend the FASTBuild (`roscop.fastbuild`) extension ([extension website](https://marketplace.visualstudio.com/items?itemName=RoscoP.fastbuild)).
 * Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.
 
 ## Compatibility

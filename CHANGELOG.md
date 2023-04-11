@@ -1,3 +1,9 @@
+# v0.7.0
+
+## New Features
+
+* Add syntax highlighting. Now it's no longer necessary to use a separate extension.
+
 # v0.6.1
 
 ## Bug Fixes
