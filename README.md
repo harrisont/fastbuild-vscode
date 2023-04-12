@@ -7,6 +7,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
   * [Hover to see variable value](#hover-to-see-variable-value)
   * [Show errors](#show-errors)
   * [Go to symbol in editor or workspace](#go-to-symbol-in-editor-or-workspace)
+  * [Syntax highlighting](#syntax-highlighting)
 * [Limitations](#limitations)
 * [Compatibility](#compatibility)
 * [Installing](#installing)
