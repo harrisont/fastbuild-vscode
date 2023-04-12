@@ -74,9 +74,13 @@ flowchart TB
 3. [ParseDataProvider](server/src/parseDataProvider.ts) reads the file using the `fileContentProvider`, ...
 4. ... which caches the file contents, to avoid re-reading files that have not changed.
 5. [ParseDataProvider](server/src/parseDataProvider.ts) parses the file using [parser.ts](server/src/parser.ts), ...
-6. ... which parses it using the compiled `fbuild-grammar.ts` from step 0.
+6. ... which parses it using the compiled `fbuild-grammar.ts` from step 0. This generates tokens and metadata.
 7. [ParseDataProvider](server/src/parseDataProvider.ts) caches the parse data, to avoid re-parsing files that have not changed.
-8. The [server](server/src/server.ts) evaluates the parsed data using [evaluator.ts](server/src/evaluator.ts).
+8. The [server](server/src/server.ts) evaluates the parsed data using [evaluator.ts](server/src/evaluator.ts). This involves:
+    * Evaluating each statement while maintaining state for variables/defines
+    * Evaluating `If`, `ForEach`, `Using`, etc.
+    * `#include`ing other files
+    * etc.
 9. Evaluating the parsed data parses and evaluates any `#import`ed files.
 10. The [server](server/src/server.ts) caches the evaluated data, so that it can use it for future operations.
 11. The [server](server/src/server.ts) updates the diagnostics (e.g. errors) based on the evaluation.
