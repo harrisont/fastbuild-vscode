@@ -40,6 +40,10 @@ See errors on the fly as you write the code, before running FASTBuild.
 
 ![Demo - go to symbol in editor and workspace](https://user-images.githubusercontent.com/144260/229382499-005885f7-5834-4796-bc27-3ff577d88a7e.gif)
 
+### Syntax highlighting
+
+FASTBuild files are easier to read with syntax highlighting.
+
 ## Limitations
 
 * Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.

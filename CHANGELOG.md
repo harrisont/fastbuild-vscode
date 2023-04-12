@@ -1,3 +1,9 @@
+# v0.7.1
+
+## Changes
+
+* ([#41](https://github.com/harrisont/fastbuild-vscode/issues/41)) Add syntax highlighting to the functionality list in the README (the feature itself was added in the previous release, v0.7.0).
+
 # v0.7.0
 
 ## New Features
