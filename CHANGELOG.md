@@ -1,3 +1,9 @@
+# v0.9.0
+
+## New Features
+
+* ([#44](https://github.com/harrisont/fastbuild-vscode/issues/44)) "Go to definition" now supports multiple definitions. This can be useful when a variable reference has multiple definitions, due to being in a loop or being in a file that is included multiple times. For example, `ForEach` looping over an array of structs, with a `Using` on that struct, referencing a variable in that struct in the loop has multiple definitions, one for each definition in the struct in the array.
+
 # v0.8.0
 
 ## New Features
