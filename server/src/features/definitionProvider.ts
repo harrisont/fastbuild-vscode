@@ -17,7 +17,9 @@ export class DefinitionProvider {
         const uri = params.textDocument.uri;
         const position = params.position;
 
+        //
         // Check for a matching #include definition.
+        //
         for (let i = 0; i < evaluatedData.includeReferences.length; i++) {
             const reference = evaluatedData.includeReferences[i];
             if (uri == reference.range.uri
@@ -34,7 +36,13 @@ export class DefinitionProvider {
             }
         }
 
+        //
         // Check for a matching variable definition.
+        //
+
+        // Map JSON.stringify(SourceRange) to the definition in order to deduplicate definitions.
+        const results = new Map<string, DefinitionLink>();
+
         for (let i = 0; i < evaluatedData.variableReferences.length; i++) {
             const reference = evaluatedData.variableReferences[i];
             if (uri == reference.range.uri
@@ -48,10 +56,14 @@ export class DefinitionProvider {
                     targetRange: definition.range,
                     targetSelectionRange: definition.range,
                 };
-                return [definitionLink];
+                results.set(JSON.stringify(definition.range), definitionLink);
             }
         }
 
-        return null;
+        if (results.size > 0) {
+            return [...results.values()];
+        } else {
+            return null;
+        }
     }
 }
