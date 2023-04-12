@@ -1,3 +1,9 @@
+# v0.8.0
+
+## New Features
+
+* Support folding (collapsing code blocks) for `#if...#endif`.
+
 # v0.7.1
 
 ## Changes
