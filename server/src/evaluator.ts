@@ -113,6 +113,10 @@ export class SourceRange {
     }
 }
 
+function getSourceRangeStr(range: SourceRange) {
+    return `"${range.uri}": ${range.start.line+1}:${range.start.character+1} - ${range.end.line+1}:${range.end.character+1}`;
+}
+
 export interface EvaluatedVariable {
     value: Value;
     range: SourceRange;
@@ -1253,7 +1257,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Ensure that this doesn't resuse an existing target name.
                 const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
-                    return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${existingTargetDefinition.range}.`);
+                    return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${getSourceRangeStr(existingTargetDefinition.range)}.`);
                 }
 
                 // Create a definition and reference for the target name.

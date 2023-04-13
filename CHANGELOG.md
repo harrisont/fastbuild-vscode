@@ -1,3 +1,9 @@
+# v0.9.1
+
+## Bug Fixes
+
+* Fix bug where the error message from duplicate target names said the existing target definition location was at "{Object}". Now it says the file and range.
+
 # v0.9.0
 
 ## New Features
