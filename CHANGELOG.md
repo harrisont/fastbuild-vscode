@@ -1,9 +1,3 @@
-# v0.9.2
-
-## Bug Fixes
-
-* Fix string syntax highlighting bug where `^` followed by any character was treated as an escaped charater. Now only `^"`, `^'`, `^$`, and `^^` are treated as escaped characters.
-
 # v0.9.1
 
 ## Bug Fixes
