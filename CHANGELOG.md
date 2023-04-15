@@ -1,3 +1,9 @@
+# v0.9.2
+
+## Bug Fixes
+
+* ([#47](https://github.com/harrisont/fastbuild-vscode/issues/47)) Fix variable hover value syntax highlighting for strings with `"` in them.
+
 # v0.9.1
 
 ## Bug Fixes

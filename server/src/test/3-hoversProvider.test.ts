@@ -45,12 +45,17 @@ describe('hoversProvider', () => {
 
         it('works for a string', () => {
             const str = valueToString('Hello world');
-            assert.strictEqual('"Hello world"', str);
+            assert.strictEqual("'Hello world'", str);
         });
 
-        it('works for a string with escape characters', () => {
+        it('works for a string with quotes', () => {
+            const str = valueToString('\'Hello\' "world"');
+            assert.strictEqual("'^'Hello^' \"world\"'", str);
+        });
+
+        it('works for a string with backslash characters', () => {
             const str = valueToString('a \\ b');
-            assert.strictEqual('"a \\ b"', str);
+            assert.strictEqual("'a \\ b'", str);
         });
 
         it('works for an empty array', () => {
@@ -66,8 +71,8 @@ describe('hoversProvider', () => {
             const str = valueToString(value);
             assert.strictEqual(
                 `{
-    "Hello"
-    "world"
+    'Hello'
+    'world'
 }`,
                 str);
         });
@@ -75,27 +80,25 @@ describe('hoversProvider', () => {
         it('works for an array of arrays', () => {
             const value = [
                 [
-                    0,
-                    1,
+                    'a',
+                    'b',
                 ],
                 [
-                    10,
-                    11,
+                    'hi',
+                    'bye',
                 ]
             ];
             const str = valueToString(value);
-            assert.strictEqual(
-                `{
+            assert.strictEqual(`{
     {
-        0
-        1
+        'a'
+        'b'
     }
     {
-        10
-        11
+        'hi'
+        'bye'
     }
-}`,
-                str);
+}`, str);
         });
 
         it('works for an empty struct', () => {
@@ -155,7 +158,7 @@ describe('hoversProvider', () => {
                 'a',
             ]);
             const expectedHoverText = `\`\`\`fastbuild
-"a"
+'a'
 \`\`\``;
             assert.strictEqual(actualHoverText, expectedHoverText);
         });
@@ -167,8 +170,8 @@ describe('hoversProvider', () => {
             ]);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
-"a"
-"b"
+'a'
+'b'
 \`\`\``;
             assert.strictEqual(actualHoverText, expectedHoverText);
         });
@@ -179,7 +182,7 @@ Values:
                 'a',
             ]);
             const expectedHoverText = `\`\`\`fastbuild
-"a"
+'a'
 \`\`\``;
             assert.strictEqual(actualHoverText, expectedHoverText);
         });
@@ -191,8 +194,8 @@ Values:
             ]);
             const expectedHoverText = `\`\`\`fastbuild
 {
-    "a"
-    "b"
+    'a'
+    'b'
 }
 \`\`\``;
             assert.strictEqual(actualHoverText, expectedHoverText);
@@ -229,7 +232,7 @@ Values:
             const expectedValueStrLenth = 100000 - expectedHoverTextWithoutValue.length;
             const expectedTruncatedStr = 'a'.repeat(expectedValueStrLenth);
             const expectedHoverText = `\`\`\`fastbuild
-"${expectedTruncatedStr}…
+'${expectedTruncatedStr}…
 \`\`\``;
             assert.strictEqual(actualHoverText.length <= 100000, true);
             assert.strictEqual(actualHoverText.length, expectedHoverText.length);
@@ -245,7 +248,7 @@ Values:
             ]);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
-"${strWithLengthHalfOfLimit1}"
+'${strWithLengthHalfOfLimit1}'
 …
 \`\`\``;
             assert.strictEqual(actualHoverText.length <= 100000, true);

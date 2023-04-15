@@ -56,9 +56,12 @@ export function valueToString(value: Value, indentation = ''): string {
             ];
             return lines.join('\n');
         }
+    } else if (typeof value === 'string') {
+        // Escape single quotes since we display the string in single quotes.
+        const escapedValue = value.replace(/'/g, "^'");
+        return `'${escapedValue}'`;
     } else {
-        // Handle JSON.stringify doubling raw escape characters.
-        return JSON.stringify(value).replace(/\\\\/g, '\\');
+        return value.toString();
     }
 }
 
