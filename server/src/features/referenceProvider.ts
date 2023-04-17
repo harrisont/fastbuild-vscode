@@ -85,25 +85,28 @@ export class ReferenceProvider {
     getVariableReferences(uri: string, position: Position, evaluatedData: EvaluatedData): Location[] {
         const references = evaluatedData.variableReferences;
 
-        const referenceAtPosition = references.find(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)));
-        if (referenceAtPosition === undefined) {
+        const definitionIdsAtPosition = references
+            .filter(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)))
+            .map(ref => ref.definition.id);
+        if (definitionIdsAtPosition.length === 0) {
             return [];
         }
 
         // Search algorithm: for each references, check if the definition is the same as this one.
         // This is not very optimized.
 
-        // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+        // Map JSON.stringify(reference.range) to Location in order to deduplicate referencs in a 'ForEach' loop.
         const locations = new Map<string, Location>();
 
         for (const reference of references)
         {
-            if (reference.definition.id === referenceAtPosition.definition.id) {
+            if (definitionIdsAtPosition.some(defnIdAtPos => (reference.definition.id === defnIdAtPos))) {
                 const location: Location = {
                     uri: reference.range.uri,
                     range: reference.range
                 };
-                locations.set(JSON.stringify(location), location);
+                const key = JSON.stringify(reference.range);
+                locations.set(key, location);
             }
         }
 

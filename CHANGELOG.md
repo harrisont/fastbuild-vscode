@@ -1,3 +1,9 @@
+# v0.9.3
+
+## Bug Fixes
+
+* ([#50](https://github.com/harrisont/fastbuild-vscode/issues/50)) Make "go to references" support multiple references with the same location but to different definitions.
+
 # v0.9.2
 
 ## Bug Fixes
