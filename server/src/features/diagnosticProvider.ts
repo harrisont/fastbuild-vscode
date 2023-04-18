@@ -2,6 +2,7 @@ import {
     Connection,
     Diagnostic,
     DiagnosticSeverity,
+    PublishDiagnosticsParams,
 } from 'vscode-languageserver';
 
 import {
@@ -58,7 +59,8 @@ export class DiagnosticProvider {
     // Ideally it would support setting multiple.
     private _setDiagnostic(rootUri: UriStr, uri: UriStr, diagnostic: Diagnostic, connection: Connection): void {
         const diagnostics = [diagnostic];
-        connection.sendDiagnostics({ uri, diagnostics });
+        const publishDiagnosticsParams: PublishDiagnosticsParams = { uri, diagnostics };
+        connection.sendDiagnostics(publishDiagnosticsParams);
         const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
         if (documentsForRoot === undefined) {
             this._documentRootToDocumentsWithDiagnosticsMap.set(rootUri, new Set<UriStr>([uri]));

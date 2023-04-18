@@ -95,38 +95,36 @@ export function getHoverText(possibleValues: Value[]): string {
     return hoverText;
 }
 
-export class HoverProvider {
-    getHover(params: HoverParams, evaluatedData: EvaluatedData): Hover | null {
-        const uri = params.textDocument.uri;
-        const position = params.position;
+export function getHover(params: HoverParams, evaluatedData: EvaluatedData): Hover | null {
+    const uri = params.textDocument.uri;
+    const position = params.position;
 
-        const possibleValues: Value[] = [];
-        let firstEvaluatedVariable: EvaluatedVariable | null = null;
+    const possibleValues: Value[] = [];
+    let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
-        // Potential optmization: use a different data structure to allow for a more efficient search.
-        for (const evaluatedVariable of evaluatedData.evaluatedVariables) {
-            if (uri == evaluatedVariable.range.uri
-                && isPositionInRange(position, evaluatedVariable.range))
-            {
-                if (firstEvaluatedVariable === null) {
-                    firstEvaluatedVariable = evaluatedVariable;
-                }
-                possibleValues.push(evaluatedVariable.value);
+    // Potential optmization: use a different data structure to allow for a more efficient search.
+    for (const evaluatedVariable of evaluatedData.evaluatedVariables) {
+        if (uri == evaluatedVariable.range.uri
+            && isPositionInRange(position, evaluatedVariable.range))
+        {
+            if (firstEvaluatedVariable === null) {
+                firstEvaluatedVariable = evaluatedVariable;
             }
+            possibleValues.push(evaluatedVariable.value);
         }
+    }
 
-        if (possibleValues.length === 0) {
-            return null;
-        } else {
-            const hoverText = getHoverText(possibleValues);
-            const hover: Hover = {
-                contents: {
-                    kind: MarkupKind.Markdown,
-                    value: hoverText
-                },
-                range: firstEvaluatedVariable?.range
-            };
-            return hover;
-        }
+    if (possibleValues.length === 0) {
+        return null;
+    } else {
+        const hoverText = getHoverText(possibleValues);
+        const hover: Hover = {
+            contents: {
+                kind: MarkupKind.Markdown,
+                value: hoverText
+            },
+            range: firstEvaluatedVariable?.range
+        };
+        return hover;
     }
 }
