@@ -577,6 +577,29 @@ describe('parser', () => {
         ]);
     });
 
+    it('should work on assigning a string literal with an escaped character that does not need to be escaped', () => {
+        const input = `.MyVar = 'h^i'`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: {
+                    type: 'string',
+                    value: 'hi',
+                    range: createRange(0, 9, 0, 14)
+                }
+            }
+        ]);
+    });
+
     it('should work on assigning a single quoted string with a variable', () => {
         const input = `.MyVar = 'pre-$OtherVar$-post'`;
         assertParseResultsEqual(input, [
