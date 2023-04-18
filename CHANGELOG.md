@@ -1,3 +1,9 @@
+# v0.9.4
+
+## Bug Fixes
+
+* ([#52](https://github.com/harrisont/fastbuild-vscode/issues/52)) Allow escaping all characters, not just `^`, `$`, `'`, and `"`.
+
 # v0.9.3
 
 ## Bug Fixes
