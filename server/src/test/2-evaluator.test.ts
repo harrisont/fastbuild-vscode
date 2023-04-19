@@ -563,9 +563,9 @@ describe('evaluator', () => {
                 123,
                 'Hello world!',
                 Struct.from(Object.entries({
-                    MyBool: new StructMember(true, myVarMyBoolDefinition),
-                    MyInt: new StructMember(123, myVarMyIntDefinition),
-                    MyStr: new StructMember('Hello world!', myVarMyStrDefinition),
+                    MyBool: new StructMember(true, [myVarMyBoolDefinition]),
+                    MyInt: new StructMember(123, [myVarMyIntDefinition]),
+                    MyStr: new StructMember('Hello world!', [myVarMyStrDefinition]),
                 }))
             ]);
         });
@@ -583,7 +583,7 @@ describe('evaluator', () => {
                 1,
                 1,
                 Struct.from(Object.entries({
-                    A: new StructMember(1, myVarADefinition),
+                    A: new StructMember(1, [myVarADefinition]),
                 }))
             ]);
         });
@@ -607,8 +607,8 @@ describe('evaluator', () => {
                 2,
                 2,
                 Struct.from(Object.entries({
-                    A1: new StructMember(1, myVarA1Definition),
-                    A2: new StructMember(2, myVarA2Definition),
+                    A1: new StructMember(1, [myVarA1Definition]),
+                    A2: new StructMember(2, [myVarA2Definition]),
                 }))
             ]);
         });
@@ -623,7 +623,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 Struct.from(Object.entries({
-                    MyArray: new StructMember(['a', 'b', 'c'], myVarMyArrayDefinition),
+                    MyArray: new StructMember(['a', 'b', 'c'], [myVarMyArrayDefinition]),
                 }))
             ]);
         });
@@ -639,13 +639,13 @@ describe('evaluator', () => {
             const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30), name: 'MyInt' };
             const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29), name: 'MyStruct' };
             const expectedMyStructValue = Struct.from(Object.entries({
-                MyInt: new StructMember(1, myVarMyStructMyIntDefinition),
+                MyInt: new StructMember(1, [myVarMyStructMyIntDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 expectedMyStructValue,
                 Struct.from(Object.entries({
-                    MyStruct: new StructMember(expectedMyStructValue, myVarMyStructDefinition),
+                    MyStruct: new StructMember(expectedMyStructValue, [myVarMyStructDefinition]),
                 }))
             ]);
         });
@@ -664,24 +664,24 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 Struct.from(Object.entries({
-                    MyInt: new StructMember(1, struct1MyIntDefinition),
+                    MyInt: new StructMember(1, [struct1MyIntDefinition]),
                 })),
                 2,
                 Struct.from(Object.entries({
-                    MyInt: new StructMember(2, struct2MyIntDefinition),
+                    MyInt: new StructMember(2, [struct2MyIntDefinition]),
                 })),
                 Struct.from(Object.entries({
-                    MyInt: new StructMember(1, struct1MyIntDefinition),
+                    MyInt: new StructMember(1, [struct1MyIntDefinition]),
                 })),
                 Struct.from(Object.entries({
-                    MyInt: new StructMember(2, struct2MyIntDefinition),
+                    MyInt: new StructMember(2, [struct2MyIntDefinition]),
                 })),
                 [
                     Struct.from(Object.entries({
-                        MyInt: new StructMember(1, struct1MyIntDefinition),
+                        MyInt: new StructMember(1, [struct1MyIntDefinition]),
                     })),
                     Struct.from(Object.entries({
-                        MyInt: new StructMember(2, struct2MyIntDefinition),
+                        MyInt: new StructMember(2, [struct2MyIntDefinition]),
                     })),
                 ]
             ]);
@@ -1069,7 +1069,7 @@ describe('evaluator', () => {
                 'hello',
                 'hello world',
                 Struct.from(Object.entries({
-                    MyMessage: new StructMember('hello world', myStructMyMessageDefinition),
+                    MyMessage: new StructMember('hello world', [myStructMyMessageDefinition]),
                 })),
                 'hello',
             ]);
@@ -1154,14 +1154,14 @@ describe('evaluator', () => {
             const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
             const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'B' };
             const struct1 = Struct.from(Object.entries({
-                A: new StructMember(0, struct1ADefinition),
-                B: new StructMember(2, struct1BDefinition),
+                A: new StructMember(0, [struct1ADefinition]),
+                B: new StructMember(2, [struct1BDefinition]),
             }));
             const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22), name: 'A' };
             const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22), name: 'C' };
             const struct2 = Struct.from(Object.entries({
-                A: new StructMember(1, struct2ADefinition),
-                C: new StructMember(3, struct2CDefinition),
+                A: new StructMember(1, [struct2ADefinition]),
+                C: new StructMember(3, [struct2CDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 0,
@@ -1173,9 +1173,9 @@ describe('evaluator', () => {
                 struct1,
                 struct2,
                 Struct.from(Object.entries({
-                    A: new StructMember(1, struct2ADefinition),
-                    B: new StructMember(2, struct1BDefinition),
-                    C: new StructMember(3, struct2CDefinition),
+                    A: new StructMember(1, [struct2ADefinition]),
+                    B: new StructMember(2, [struct1BDefinition]),
+                    C: new StructMember(3, [struct2CDefinition]),
                 }))
             ]);
         });
@@ -2049,9 +2049,9 @@ describe('evaluator', () => {
             const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
             const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
             const myStruct = Struct.from(Object.entries({
-                MyBool: new StructMember(true, myStructMyBoolDefinition),
-                MyInt: new StructMember(1, myStructMyIntDefinition),
-                MyString: new StructMember('hello', myStructMyStringDefinition)
+                MyBool: new StructMember(true, [myStructMyBoolDefinition]),
+                MyInt: new StructMember(1, [myStructMyIntDefinition]),
+                MyString: new StructMember('hello', [myStructMyStringDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 false,
@@ -2089,16 +2089,16 @@ describe('evaluator', () => {
             const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange, name: 'MyString' };
             const usingMyStructMyEvaluatedVarDefinition: VariableDefinition = { id: 10, range: usingMyStructRange, name: 'MyEvaluatedVar' };
             const myStruct = Struct.from(Object.entries({
-                MyBool: new StructMember(true, myStructMyBoolDefinition),
-                MyInt: new StructMember(1, myStructMyIntDefinition),
-                MyString: new StructMember('hello', myStructMyStringDefinition),
-                MyEvaluatedVar: new StructMember('fun', myStructMyEvaluatedVarDefinition)
+                MyBool: new StructMember(true, [myStructMyBoolDefinition]),
+                MyInt: new StructMember(1, [myStructMyIntDefinition]),
+                MyString: new StructMember('hello', [myStructMyStringDefinition]),
+                MyEvaluatedVar: new StructMember('fun', [myStructMyEvaluatedVarDefinition]),
             }));
             const other = Struct.from(Object.entries({
-                MyBool: new StructMember(true, usingMyStructMyBoolDefinition),
-                MyInt: new StructMember(1, usingMyStructMyIntDefinition),
-                MyString: new StructMember('hello', usingMyStructMyStringDefinition),
-                MyEvaluatedVar: new StructMember('fun', usingMyStructMyEvaluatedVarDefinition)
+                MyBool: new StructMember(true, [usingMyStructMyBoolDefinition]),
+                MyInt: new StructMember(1, [usingMyStructMyIntDefinition]),
+                MyString: new StructMember('hello', [usingMyStructMyStringDefinition]),
+                MyEvaluatedVar: new StructMember('fun', [usingMyStructMyEvaluatedVarDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 'fun',
@@ -2194,10 +2194,10 @@ describe('evaluator', () => {
             const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39), name: 'MyInt' };
             const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39), name: 'MyInt' };
             const myStruct1 = Struct.from(Object.entries({
-                MyInt: new StructMember(1, myStruct1MyIntDefinition),
+                MyInt: new StructMember(1, [myStruct1MyIntDefinition]),
             }));
             const myStruct2 = Struct.from(Object.entries({
-                MyInt: new StructMember(1, usingMyStruct1MyIntDefinition),
+                MyInt: new StructMember(1, [usingMyStruct1MyIntDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 1,
@@ -2211,7 +2211,7 @@ describe('evaluator', () => {
                 myStruct2,
                 // .MyStruct3 = ...
                 Struct.from(Object.entries({
-                    MyInt: new StructMember(1, usingMyStruct2MyIntDefinition),
+                    MyInt: new StructMember(1, [usingMyStruct2MyIntDefinition]),
                 }))
             ]);
         });
@@ -2239,7 +2239,7 @@ describe('evaluator', () => {
             `;
             const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31), name: 'StructVar1' };
             const myStruct = Struct.from(Object.entries({
-                StructVar1: new StructMember(1, myStructStructVar1Definition)
+                StructVar1: new StructMember(1, [myStructStructVar1Definition])
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 1,
@@ -2317,10 +2317,10 @@ describe('evaluator', () => {
             const myStruct1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value' };
             const myStruct2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value' };
             const myStruct1 = Struct.from(Object.entries({
-                Value: new StructMember(1, myStruct1ValueDefinition)
+                Value: new StructMember(1, [myStruct1ValueDefinition])
             }));
             const myStruct2 = Struct.from(Object.entries({
-                Value: new StructMember(2, myStruct2ValueDefinition)
+                Value: new StructMember(2, [myStruct2ValueDefinition])
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 // .Value = 1
@@ -5048,9 +5048,9 @@ Expecting to see the following:
                 2,
                 3,
                 Struct.from(Object.entries({
-                    A: new StructMember(1, myVarADefinition),
-                    B: new StructMember(2, myVarBDefinition),
-                    C: new StructMember(3, myVarCDefinition),
+                    A: new StructMember(1, [myVarADefinition]),
+                    B: new StructMember(2, [myVarBDefinition]),
+                    C: new StructMember(3, [myVarCDefinition]),
                 }))
             ]);
         });

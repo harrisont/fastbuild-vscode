@@ -53,7 +53,7 @@ export type Value = boolean | number | string | Value[] | Struct;
 export type VariableName = string;
 
 export class StructMember {
-    constructor(readonly value: Value, readonly definition: VariableDefinition) {
+    constructor(readonly value: Value, readonly definitions: VariableDefinition[]) {
     }
 }
 
@@ -634,7 +634,7 @@ interface UserFunction {
 
 interface ScopeVariable {
     value: Value;
-    definition: VariableDefinition;
+    definitions: VariableDefinition[];
 }
 
 class Scope {
@@ -756,13 +756,13 @@ class ScopeStack {
         }
     }
 
-    setVariableInCurrentScope(name: string, value: Value, definition: VariableDefinition): ScopeVariable {
+    setVariableInCurrentScope(name: string, value: Value, definitions: VariableDefinition[]): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
             const variable: ScopeVariable = {
                 value: value,
-                definition: definition,
+                definitions,
             };
             currentScope.variables.set(name, variable);
             return variable;
@@ -852,10 +852,10 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
         return definition;
     };
 
-    scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, createNoLocationVariableDefinition('_WORKING_DIR_'));
-    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', createNoLocationVariableDefinition('_CURRENT_BFF_DIR_'));
-    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', createNoLocationVariableDefinition('_FASTBUILD_VERSION_STRING_'));
-    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, createNoLocationVariableDefinition('_FASTBUILD_VERSION_'));
+    scopeStack.setVariableInCurrentScope('_WORKING_DIR_', rootFbuildDirUri.fsPath, [createNoLocationVariableDefinition('_WORKING_DIR_')]);
+    scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', [createNoLocationVariableDefinition('_CURRENT_BFF_DIR_')]);
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', [createNoLocationVariableDefinition('_FASTBUILD_VERSION_STRING_')]);
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, [createNoLocationVariableDefinition('_FASTBUILD_VERSION_')]);
 
     return scopeStack;
 }
@@ -933,11 +933,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
 
                     const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
-                    variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, definition);
+                    variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, [definition]);
 
                     if (existingVariable === null) {
                         // The definition's LHS is a variable definition.
-                        context.evaluatedData.variableDefinitions.push(variable.definition);
+                        context.evaluatedData.variableDefinitions.push(definition);
                     }
                 } else {
                     const maybeVariable = context.scopeStack.getVariableStartingFromParentScopeOrError(evaluatedLhsName.value, lhsRange);
@@ -972,7 +972,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 // The definition's LHS is a variable reference.
                 context.evaluatedData.variableReferences.push({
-                    definitions: [variable.definition],
+                    definitions: variable.definitions,
                     range: lhsRange,
                 });
 
@@ -1011,7 +1011,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const previousValue = maybeExistingVariableStartingFromParentScope.value;
                     const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
                     context.evaluatedData.variableDefinitions.push(definition);
-                    lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, definition);
+                    lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, [definition]);
                 } else {
                     const maybeExistingVariable = context.scopeStack.getVariableInScopeOrError(lhs.scope, evaluatedLhsName.value, lhsRange);
                     if (maybeExistingVariable.hasError) {
@@ -1044,7 +1044,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 // The LHS is a variable reference.
                 context.evaluatedData.variableReferences.push({
-                    definitions: [lhsVariable.definition],
+                    definitions: lhsVariable.definitions,
                     range: lhsRange,
                 });
 
@@ -1130,32 +1130,34 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 //       * the current scope's variable-from-member's definition from the member's definition
 
                 for (const [structMemberName, structMember] of struct.members) {
-                    // The definition will only be used if the variable does not already exist in the current scope.
-                    let variableDefinition: VariableDefinition;
+                    let variableDefinitions: VariableDefinition[];
                     const existingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName);
                     if (existingVariable !== null) {
                         existingVariable.value = structMember.value;
-                        variableDefinition = existingVariable.definition;
+                        variableDefinitions = existingVariable.definitions;
                     } else {
-                        variableDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
-                        context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinition);
-                        context.evaluatedData.variableDefinitions.push(variableDefinition);
+                        const newDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
+                        variableDefinitions = structMember.definitions.concat(newDefinition);
+                        context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinitions);
+                        context.evaluatedData.variableDefinitions.push(newDefinition);
                     }
 
                     context.evaluatedData.variableReferences.push(
                         {
-                            definitions: [variableDefinition],
+                            definitions: variableDefinitions,
                             range: statementRange,
                         },
                         {
-                            definitions: [structMember.definition],
+                            definitions: structMember.definitions,
                             range: statementRange,
                         },
-                        {
-                            definitions: [variableDefinition],
-                            range: structMember.definition.range,
-                        }
                     );
+                    for (const structMemberDefinition of structMember.definitions) {
+                        context.evaluatedData.variableReferences.push({
+                            definitions: variableDefinitions,
+                            range: structMemberDefinition.range,
+                        });
+                    }
                 }
             } else if (isParsedStatementForEach(statement)) {
                 // Evaluate the iterators (array to loop over plus the loop-variable)
@@ -1209,7 +1211,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     });
 
                     // Set a variable in the current scope for each iterator's loop variable.
-                    const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, loopVarDefinition);
+                    const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, [loopVarDefinition]);
                     iterators.push({
                         loopVariable,
                         arrayItems,
@@ -1456,7 +1458,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`);
                 }
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
-                context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, definition);
+                context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, [definition]);
 
                 const reference: VariableReference = {
                     definitions: [definition],
@@ -1633,7 +1635,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     });
 
     context.evaluatedData.variableReferences.push({
-        definitions: [valueScopeVariable.definition],
+        definitions: valueScopeVariable.definitions,
         range: parsedEvaluatedVariableRange,
     });
 
@@ -1679,7 +1681,7 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Maybe
 
     const structMembers = new Map<VariableName, StructMember>();
     for (const [name, variable] of structScope.variables) {
-        structMembers.set(name, new StructMember(variable.value, variable.definition));
+        structMembers.set(name, new StructMember(variable.value, variable.definitions));
     }
     const evaluatedValue = new Struct(structMembers);
 
@@ -2245,7 +2247,7 @@ function deepCopyValue(value: Value): Value {
         const structMembers = new Map<VariableName, StructMember>(
             Array.from(
                 value.members,
-                ([memberName, member]) => [memberName, new StructMember(deepCopyValue(member.value), member.definition)]));
+                ([memberName, member]) => [memberName, new StructMember(deepCopyValue(member.value), member.definitions)]));
         return new Struct(structMembers);
     } else {
         return value;
