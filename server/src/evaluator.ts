@@ -129,7 +129,7 @@ export interface VariableDefinition {
 }
 
 export interface VariableReference {
-    definition: VariableDefinition;
+    definitions: VariableDefinition[];
     range: SourceRange;
 }
 
@@ -972,7 +972,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 // The definition's LHS is a variable reference.
                 context.evaluatedData.variableReferences.push({
-                    definition: variable.definition,
+                    definitions: [variable.definition],
                     range: lhsRange,
                 });
 
@@ -1044,7 +1044,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                 // The LHS is a variable reference.
                 context.evaluatedData.variableReferences.push({
-                    definition: lhsVariable.definition,
+                    definitions: [lhsVariable.definition],
                     range: lhsRange,
                 });
 
@@ -1144,15 +1144,15 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                     context.evaluatedData.variableReferences.push(
                         {
-                            definition: variableDefinition,
+                            definitions: [variableDefinition],
                             range: statementRange,
                         },
                         {
-                            definition: structMember.definition,
+                            definitions: [structMember.definition],
                             range: statementRange,
                         },
                         {
-                            definition: variableDefinition,
+                            definitions: [variableDefinition],
                             range: structMember.definition.range,
                         }
                     );
@@ -1204,7 +1204,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     // The loop variable is a definition and a reference.
                     context.evaluatedData.variableDefinitions.push(loopVarDefinition);
                     context.evaluatedData.variableReferences.push({
-                        definition: loopVarDefinition,
+                        definitions: [loopVarDefinition],
                         range: loopVarRange,
                     });
 
@@ -1432,7 +1432,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 };
                 context.defines.set(symbol, info);
                 const reference: VariableReference = {
-                    definition,
+                    definitions: [definition],
                     range: statementRange,
                 };
                 context.evaluatedData.variableReferences.push(reference);
@@ -1459,7 +1459,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, definition);
 
                 const reference: VariableReference = {
-                    definition,
+                    definitions: [definition],
                     range: statementRange,
                 };
                 context.evaluatedData.variableReferences.push(reference);
@@ -1633,7 +1633,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     });
 
     context.evaluatedData.variableReferences.push({
-        definition: valueScopeVariable.definition,
+        definitions: [valueScopeVariable.definition],
         range: parsedEvaluatedVariableRange,
     });
 
@@ -2025,7 +2025,7 @@ function evaluateDirectiveIfCondition(
                 evaulatedTerm = (info !== undefined);
                 if (info !== undefined && !info.isPredefined) {
                     const reference: VariableReference = {
-                        definition: info.definition,
+                        definitions: [info.definition],
                         range: termRange,
                     };
                     context.evaluatedData.variableReferences.push(reference);
@@ -2068,8 +2068,8 @@ function evaluateUserFunctionDeclaration(
 ): Error | null {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
     const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
-    const functionNameReference = {
-        definition: functionNameDefinition,
+    const functionNameReference: VariableReference = {
+        definitions: [functionNameDefinition],
         range: nameSourceRange,
     };
 
@@ -2104,7 +2104,7 @@ function evaluateUserFunctionDeclaration(
 
         context.evaluatedData.variableDefinitions.push(definition);
         context.evaluatedData.variableReferences.push({
-            definition: definition,
+            definitions: [definition],
             range: paramSourceRange,
         });
     }
@@ -2132,7 +2132,7 @@ function evaluateUserFunctionCall(
 
     // Reference the function.
     context.evaluatedData.variableReferences.push({
-        definition: userFunction.definition,
+        definitions: [userFunction.definition],
         range: nameSourceRange,
     });
 

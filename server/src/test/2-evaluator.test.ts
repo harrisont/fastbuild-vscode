@@ -1922,11 +1922,11 @@ describe('evaluator', () => {
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                    },
+                    }],
                     range: createRange(1, 16, 1, 22),
                 }
             ];
@@ -1941,19 +1941,19 @@ describe('evaluator', () => {
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                    },
+                    }],
                     range: createRange(1, 16, 1, 22),
                 },
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 22),
                         name: 'MyVar',
-                    },
+                    }],
                     range: createRange(2, 16, 2, 22),
                 }
             ];
@@ -1968,27 +1968,27 @@ describe('evaluator', () => {
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                    },
+                    }],
                     range: createRange(1, 16, 1, 23),
                 },
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                    },
+                    }],
                     range: createRange(2, 26, 2, 33),
                 },
                 {
-                    definition: {
+                    definitions: [{
                         id: 2,
                         range: createRange(2, 16, 2, 23),
                         name: 'MyVar2',
-                    },
+                    }],
                     range: createRange(2, 16, 2, 23),
                 }
             ];
@@ -2003,27 +2003,27 @@ describe('evaluator', () => {
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             const expectedReferences: VariableReference[] = [
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                    },
+                    }],
                     range: createRange(1, 16, 1, 23),
                 },
                 {
-                    definition: {
+                    definitions: [{
                         id: 1,
                         range: createRange(1, 16, 1, 23),
                         name: 'MyVar1',
-                    },
+                    }],
                     range: createRange(2, 27, 2, 35),
                 },
                 {
-                    definition: {
+                    definitions: [{
                         id: 2,
                         range: createRange(2, 16, 2, 23),
                         name: 'MyVar2',
-                    },
+                    }],
                     range: createRange(2, 16, 2, 23),
                 }
             ];
@@ -2157,23 +2157,23 @@ describe('evaluator', () => {
             ];
             assert.deepStrictEqual(result.variableDefinitions, expectedDefinitions);
 
-            const expectedReferences = [
+            const expectedReferences: VariableReference[] = [
                 // .MyVar1 = 0
-                { definition: definitionMyVar1, range: rangeMyVar1 },
+                { definitions: [definitionMyVar1], range: rangeMyVar1 },
                 // MyStruct's .MyVar1 = 1
-                { definition: definitionMyStructMyVar1, range: rangeMyStructMyVar1 },
+                { definitions: [definitionMyStructMyVar1], range: rangeMyStructMyVar1 },
                 // MyStruct's .MyVar2 = 1
-                { definition: definitionMyStructMyVar2, range: rangeMyStructMyVar2 },
+                { definitions: [definitionMyStructMyVar2], range: rangeMyStructMyVar2 },
                 // .MyStruct = ...
-                { definition: definitionMyStruct, range: rangeMyStruct },
+                { definitions: [definitionMyStruct], range: rangeMyStruct },
                 // Using( .MyStruct )
-                { definition: definitionMyStruct, range: rangeUsingStructVar },
-                { definition: definitionMyVar1, range: rangeUsingStatement },
-                { definition: definitionMyStructMyVar1, range: rangeUsingStatement },
-                { definition: definitionMyVar1, range: rangeMyStructMyVar1 },
-                { definition: definitionMyVar2, range: rangeUsingStatement },
-                { definition: definitionMyStructMyVar2, range: rangeUsingStatement },
-                { definition: definitionMyVar2, range: rangeMyStructMyVar2 },
+                { definitions: [definitionMyStruct], range: rangeUsingStructVar },
+                { definitions: [definitionMyVar1], range: rangeUsingStatement },
+                { definitions: [definitionMyStructMyVar1], range: rangeUsingStatement },
+                { definitions: [definitionMyVar1], range: rangeMyStructMyVar1 },
+                { definitions: [definitionMyVar2], range: rangeUsingStatement },
+                { definitions: [definitionMyStructMyVar2], range: rangeUsingStatement },
+                { definitions: [definitionMyVar2], range: rangeMyStructMyVar2 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
@@ -2497,27 +2497,27 @@ describe('evaluator', () => {
             const expectedReferences: VariableReference[] = [
                 // `.MyArray = {'a', 'b'}`
                 {
-                    definition: expectedDefinitionMyArray,
+                    definitions: [expectedDefinitionMyArray],
                     range: expectedDefinitionMyArray.range,
                 },
                 // `...in .MyArray`
                 {
-                    definition: expectedDefinitionMyArray,
+                    definitions: [expectedDefinitionMyArray],
                     range: createRange(2, 34, 2, 42),
                 },
                 // // `ForEach( .Item...`
                 {
-                    definition: expectedDefinitionItem,
+                    definitions: [expectedDefinitionItem],
                     range: expectedDefinitionItem.range,
                 },
                 // `Print( .Item )` for the 1st loop iteration
                 {
-                    definition: expectedDefinitionItem,
+                    definitions: [expectedDefinitionItem],
                     range: createRange(4, 27, 4, 32),
                 },
                 // `Print( .Item )` for the 2nd loop iteration
                 {
-                    definition: expectedDefinitionItem,
+                    definitions: [expectedDefinitionItem],
                     range: createRange(4, 27, 4, 32),
                 },
             ];
@@ -4597,12 +4597,12 @@ Expecting to see the following:
             const expectedVariableReferences: VariableReference[] = [
                 // helper.bff ".FromHelper = 1" LHS
                 {
-                    definition: definitionFromHelper,
+                    definitions: [definitionFromHelper],
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
                 },
                 // fbuild.bff "Print( .FromHelper )"
                 {
-                    definition: definitionFromHelper,
+                    definitions: [definitionFromHelper],
                     range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
                 },
             ];
@@ -5266,17 +5266,17 @@ Expecting to see the following:
             const expectedReferences: VariableReference[] = [
                 // #define MY_DEFINE
                 {
-                    definition: expectedDefinitionMyDefine,
+                    definitions: [expectedDefinitionMyDefine],
                     range: expectedDefinitionMyDefine.range,
                 },
                 // #if MY_DEFINE
                 {
-                    definition: expectedDefinitionMyDefine,
+                    definitions: [expectedDefinitionMyDefine],
                     range: createRange(2, 20, 2, 29),
                 },
                 // .Result = true
                 {
-                    definition: expectedDefinitionResult,
+                    definitions: [expectedDefinitionResult],
                     range: expectedDefinitionResult.range,
                 },
             ];
@@ -5326,7 +5326,7 @@ Expecting to see the following:
             const expectedReferences: VariableReference[] = [
                 // #define MY_DEFINE
                 {
-                    definition: expectedDefinitionMyDefine,
+                    definitions: [expectedDefinitionMyDefine],
                     range: createRange(1, 16, 1, 33),
                 },
             ];
@@ -5371,12 +5371,12 @@ Expecting to see the following:
             const expectedReferences: VariableReference[] = [
                 // #import ${builtInEnvVar}
                 {
-                    definition: expectedDefinition,
+                    definitions: [expectedDefinition],
                     range: createRange(1, 16, 1, 24 + builtInEnvVar.length),
                 },
                 // Print( .${builtInEnvVar} )
                 {
-                    definition: expectedDefinition,
+                    definitions: [expectedDefinition],
                     range: createRange(2, 23, 2, 24 + builtInEnvVar.length),
                 },
             ];
