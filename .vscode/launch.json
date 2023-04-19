@@ -9,7 +9,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
-			"preLaunchTask": "build"
+			"preLaunchTask": "watch-build"
 		},
 		{
 			"name": "Attach to Server",
