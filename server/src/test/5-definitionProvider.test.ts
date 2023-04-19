@@ -83,6 +83,27 @@ describe('definitionProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
         });
 
+        it('variable defined in a loop', () => {
+            const input = `
+                .Items = { 'a', 'b' }
+                ForEach( .A in .Items )
+                {
+                    Print( .A )
+                }
+            `;
+            // The position of the `.` in `Print( .A )`
+            const lookupPosition = Position.create(4, 27);
+            const actualReferences = getDefinition(input, lookupPosition);
+
+            const expectedDefinitions: DefinitionLink[] = [
+                // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `ForEach( .A in .Items )`
+                createDefinition(createRange(4, 27, 29), createRange(2, 25, 27)),
+            ];
+
+            assert.deepStrictEqual(actualReferences, expectedDefinitions);
+        });
+
         it('multiple variables at the same position', () => {
             const input = `
                 .A_B_C = 'foo'
@@ -105,7 +126,7 @@ describe('definitionProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
         });
 
-        it('struct field defined from a `Using`', () => {
+        it('struct field variable defined from a `Using`', () => {
             const input = `
                 .MyStruct = [
                     .A = 1
@@ -129,7 +150,7 @@ describe('definitionProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
         });
 
-        it('struct field defined from a `Using` in a `ForEach`', () => {
+        it('struct field variable defined from a `Using` in a `ForEach`', () => {
             const input = `
                 .MyStruct1 = [
                     .A = 1
