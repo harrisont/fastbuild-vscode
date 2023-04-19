@@ -93,7 +93,7 @@ function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileConten
     return evaluatedStatementsAndMaybeError.data;
 }
 
-function evaluateInput(input: FileContents, enableDiagnostics: boolean): EvaluatedData {
+export function evaluateInput(input: FileContents, enableDiagnostics: boolean): EvaluatedData {
     const thisFbuildUri = 'file:///dummy.bff';
     return evaluateInputs(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), enableDiagnostics);
 }

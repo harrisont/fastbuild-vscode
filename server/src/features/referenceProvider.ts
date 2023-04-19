@@ -5,6 +5,7 @@ import {
 import {
     Location,
     Position,
+    Range,
 } from 'vscode-languageserver-types';
 
 import {
@@ -13,7 +14,15 @@ import {
 
 import {
     EvaluatedData,
+    SourceRange,
 } from '../evaluator';
+
+function createLocationFromSourceRange(sourceRange: SourceRange): Location {
+    return {
+        uri: sourceRange.uri,
+        range: Range.create(sourceRange.start, sourceRange.end),
+    };
+}
 
 export function getReferences(params: ReferenceParams, evaluatedData: EvaluatedData): Location[] {
     const uri = params.textDocument.uri;
@@ -42,10 +51,7 @@ function getTargetReferences(uri: string, position: Position, evaluatedData: Eva
     for (const reference of references)
     {
         if (reference.definition.id === referenceAtPosition.definition.id) {
-            const location: Location = {
-                uri: reference.range.uri,
-                range: reference.range
-            };
+            const location = createLocationFromSourceRange(reference.range);
             locations.set(JSON.stringify(location), location);
         }
     }
@@ -70,10 +76,7 @@ function getIncludeReferences(uri: string, position: Position, evaluatedData: Ev
     for (const reference of references)
     {
         if (reference.includeUri === referenceAtPosition.includeUri) {
-            const location: Location = {
-                uri: reference.range.uri,
-                range: reference.range
-            };
+            const location = createLocationFromSourceRange(reference.range);
             locations.set(JSON.stringify(location), location);
         }
     }
@@ -94,17 +97,14 @@ function getVariableReferences(uri: string, position: Position, evaluatedData: E
     // Search algorithm: for each references, check if the definition is the same as this one.
     // This is not very optimized.
 
-    // Map JSON.stringify(reference.range) to Location in order to deduplicate referencs in a 'ForEach' loop.
+    // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
     const locations = new Map<string, Location>();
 
     for (const reference of references)
     {
         if (definitionIdsAtPosition.some(defnIdAtPos => (reference.definition.id === defnIdAtPos))) {
-            const location: Location = {
-                uri: reference.range.uri,
-                range: reference.range
-            };
-            const key = JSON.stringify(reference.range);
+            const location = createLocationFromSourceRange(reference.range);
+            const key = JSON.stringify(location);
             locations.set(key, location);
         }
     }
