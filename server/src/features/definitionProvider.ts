@@ -1,6 +1,7 @@
 import {
     DefinitionLink,
     DefinitionParams,
+    Range,
 } from 'vscode-languageserver-protocol';
 
 import {
@@ -10,7 +11,12 @@ import {
 
 import {
     EvaluatedData,
+    SourceRange,
 } from '../evaluator';
+
+function createRangeFromSourceRange(sourceRange: SourceRange): Range {
+    return Range.create(sourceRange.start, sourceRange.end);
+}
 
 export function getDefinition(params: DefinitionParams, evaluatedData: EvaluatedData): DefinitionLink[] | null {
     const uri = params.textDocument.uri;
@@ -26,7 +32,7 @@ export function getDefinition(params: DefinitionParams, evaluatedData: Evaluated
         {
             const includeRange = createRange(0, 0, 0, 0);
             const definitionLink: DefinitionLink = {
-                originSelectionRange: reference.range,
+                originSelectionRange: createRangeFromSourceRange(reference.range),
                 targetUri: reference.includeUri,
                 targetRange: includeRange,
                 targetSelectionRange: includeRange,
@@ -48,12 +54,12 @@ export function getDefinition(params: DefinitionParams, evaluatedData: Evaluated
             && isPositionInRange(position, reference.range))
         {
             const definition = reference.definition;
-
+            const definitionRange = createRangeFromSourceRange(definition.range);
             const definitionLink: DefinitionLink = {
-                originSelectionRange: reference.range,
+                originSelectionRange: createRangeFromSourceRange(reference.range),
                 targetUri: definition.range.uri,
-                targetRange: definition.range,
-                targetSelectionRange: definition.range,
+                targetRange: definitionRange,
+                targetSelectionRange: definitionRange,
             };
             results.set(JSON.stringify(definition.range), definitionLink);
         }

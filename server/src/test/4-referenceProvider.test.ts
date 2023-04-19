@@ -1,11 +1,11 @@
 import * as assert from 'assert';
-import * as referenceProvider from '../features/referenceProvider';
-import { evaluateInput } from './2-evaluator.test';
 import {
     Location,
     Position,
     ReferenceParams,
 } from 'vscode-languageserver-protocol';
+import * as referenceProvider from '../features/referenceProvider';
+import { evaluateInput } from './2-evaluator.test';
 
 function createLocation(startLine: number, startCharacter: number, endCharacter: number): Location {
     return {
@@ -39,7 +39,7 @@ function getReferences(input: string, position: Position): Location[] {
 
 describe('referenceProvider', () => {
     describe('getReferences', () => {
-        it('works for a basic reference', () => {
+        it('basic reference', () => {
             const input = `
                 .A = 1
                 Print( .A )
@@ -58,7 +58,7 @@ describe('referenceProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedReferences);
         });
 
-        it('works for a struct field defined from a `Using`', () => {
+        it('struct field defined from a `Using`', () => {
             const input = `
                 .MyStruct = [
                     .A = 1
@@ -82,7 +82,7 @@ describe('referenceProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedReferences);
         });
 
-        it('works for a struct used by a `Using`', () => {
+        it('struct used by a `Using`', () => {
             const input = `
                 .MyStruct = [
                     .A = 1
@@ -114,7 +114,7 @@ describe('referenceProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedReferences);
         });
 
-        it('works for a struct field defined from a `Using` in a `ForEach`', () => {
+        it('struct field defined from a `Using` in a `ForEach`', () => {
             const input = `
                 .MyStruct1 = [
                     .A = 1
@@ -153,7 +153,7 @@ describe('referenceProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedReferences);
         });
 
-        it('works for a struct used by a `Using` in a `ForEach`', () => {
+        it('struct used by a `Using` in a `ForEach`', () => {
             const input = `
                 .MyStruct1 = [
                     .A = 1

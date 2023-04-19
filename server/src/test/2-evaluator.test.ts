@@ -74,7 +74,7 @@ function createFileRange(uri: UriStr, startLine: number, startCharacter: number,
     );
 }
 
-function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluatedData {
+export function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluatedData {
     const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
         fileSystem,
