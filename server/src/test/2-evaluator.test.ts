@@ -2095,12 +2095,12 @@ describe('evaluator', () => {
                 MyEvaluatedVar: new StructMember('fun', [myStructMyEvaluatedVarDefinition]),
             }));
             const other = Struct.from(Object.entries({
-                MyBool: new StructMember(true, [usingMyStructMyBoolDefinition]),
-                MyInt: new StructMember(1, [usingMyStructMyIntDefinition]),
-                MyString: new StructMember('hello', [usingMyStructMyStringDefinition]),
-                MyEvaluatedVar: new StructMember('fun', [usingMyStructMyEvaluatedVarDefinition]),
+                MyBool: new StructMember(true, [myStructMyBoolDefinition, usingMyStructMyBoolDefinition]),
+                MyInt: new StructMember(1, [myStructMyIntDefinition, usingMyStructMyIntDefinition]),
+                MyString: new StructMember('hello', [myStructMyStringDefinition, usingMyStructMyStringDefinition]),
+                MyEvaluatedVar: new StructMember('fun', [myStructMyEvaluatedVarDefinition, usingMyStructMyEvaluatedVarDefinition]),
             }));
-            assertEvaluatedVariablesValueEqual(input, [
+            const expectedEvaluatedVariableValues = [
                 'fun',
                 true,
                 1,
@@ -2113,7 +2113,8 @@ describe('evaluator', () => {
                 myStruct,
                 // .Other = ...
                 other,
-            ]);
+            ];
+            assertEvaluatedVariablesValueEqual(input, expectedEvaluatedVariableValues);
         });
 
         // 'Using' defines the struct variables if they do not already exist,
@@ -2171,9 +2172,9 @@ describe('evaluator', () => {
                 { definitions: [definitionMyVar1], range: rangeUsingStatement },
                 { definitions: [definitionMyStructMyVar1], range: rangeUsingStatement },
                 { definitions: [definitionMyVar1], range: rangeMyStructMyVar1 },
-                { definitions: [definitionMyVar2], range: rangeUsingStatement },
+                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeUsingStatement },
                 { definitions: [definitionMyStructMyVar2], range: rangeUsingStatement },
-                { definitions: [definitionMyVar2], range: rangeMyStructMyVar2 },
+                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeMyStructMyVar2 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
@@ -2197,7 +2198,10 @@ describe('evaluator', () => {
                 MyInt: new StructMember(1, [myStruct1MyIntDefinition]),
             }));
             const myStruct2 = Struct.from(Object.entries({
-                MyInt: new StructMember(1, [usingMyStruct1MyIntDefinition]),
+                MyInt: new StructMember(1, [myStruct1MyIntDefinition, usingMyStruct1MyIntDefinition]),
+            }));
+            const myStruct3 = Struct.from(Object.entries({
+                MyInt: new StructMember(1, [myStruct1MyIntDefinition, usingMyStruct1MyIntDefinition, usingMyStruct2MyIntDefinition]),
             }));
             assertEvaluatedVariablesValueEqual(input, [
                 1,
@@ -2210,9 +2214,7 @@ describe('evaluator', () => {
                 // Using( .MyStruct2 )
                 myStruct2,
                 // .MyStruct3 = ...
-                Struct.from(Object.entries({
-                    MyInt: new StructMember(1, [usingMyStruct2MyIntDefinition]),
-                }))
+                myStruct3,
             ]);
         });
 

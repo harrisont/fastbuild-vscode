@@ -1163,6 +1163,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Evaluate the iterators (array to loop over plus the loop-variable)
                 interface ForEachIterator {
                     loopVariable: ScopeVariable;
+                    loopVariableRange: SourceRange;
                     arrayItems: Value[];
                 }
                 const iterators: ForEachIterator[] = [];
@@ -1214,11 +1215,12 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, [loopVarDefinition]);
                     iterators.push({
                         loopVariable,
+                        loopVariableRange: loopVarRange,
                         arrayItems,
                     });
                 }
 
-                // Evaluate the function body.
+                // Evaluate the ForEach body.
 
                 let error: Error | null = null;
                 const arrayItemsLength = iterators[0].arrayItems.length;
@@ -1231,7 +1233,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
                             context.evaluatedData.evaluatedVariables.push({
                                 value: arrayItem,
-                                range: iterator.loopVariable.definition.range,
+                                range: iterator.loopVariableRange,
                             });
                         }
 
@@ -2193,7 +2195,7 @@ function evaluateUserFunctionCall(
             }
 
             // Note that we set the variable in the function call context, not the current context.
-            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], funcDeclarationParam.definition);
+            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], [funcDeclarationParam.definition]);
         }
 
         error = evaluateStatements(userFunction.statements, functionCallContext);

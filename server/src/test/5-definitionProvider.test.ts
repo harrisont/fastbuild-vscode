@@ -140,11 +140,11 @@ describe('definitionProvider', () => {
 
             const expectedDefinitions: DefinitionLink[] = [
                 // Reference: the `.A` in `Print( .A )`
-                // Definition: `Using( .MyStruct )`
-                createDefinition(createRange(5, 23, 25), createRange(4, 16, 34)),
-                // Reference: the `.A` in `Print( .A )`
                 // Definition: the `.A` in `.A = 1`
                 createDefinition(createRange(5, 23, 25), createRange(2, 20, 22)),
+                // Reference: the `.A` in `Print( .A )`
+                // Definition: `Using( .MyStruct )`
+                createDefinition(createRange(5, 23, 25), createRange(4, 16, 34)),
             ];
 
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
@@ -177,14 +177,14 @@ describe('definitionProvider', () => {
 
             const expectedDefinitions: DefinitionLink[] = [
                 // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `.A = 1`
+                createDefinition(createRange(17, 27, 29), createRange(2, 20, 22)),
+                // Reference: the `.A` in `Print( .A )`
                 // Definition: `Using( .MyStruct )`
                 createDefinition(createRange(17, 27, 29), createRange(16, 20, 38)),
                 // Reference: the `.A` in `Print( .A )`
-                // Definition: the `.A` in `.A = 1`
-                createDefinition(createRange(17, 27, 29), createRange(2, 21, 22)),
-                // Reference: the `.A` in `Print( .A )`
                 // Definition: the `.A` in `.A = 2`
-                createDefinition(createRange(17, 27, 29), createRange(6, 21, 22)),
+                createDefinition(createRange(17, 27, 29), createRange(6, 20, 22)),
             ];
 
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
