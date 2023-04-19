@@ -89,7 +89,9 @@ function getVariableReferences(uri: string, position: Position, evaluatedData: E
 
     const definitionIdsAtPosition = references
         .filter(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)))
-        .map(ref => ref.definition.id);
+        .map(ref => ref.definitions)
+        .reduce((accumulator, currentValue) => accumulator.concat(currentValue))
+        .map(definition => definition.id);
     if (definitionIdsAtPosition.length === 0) {
         return [];
     }
@@ -102,7 +104,7 @@ function getVariableReferences(uri: string, position: Position, evaluatedData: E
 
     for (const reference of references)
     {
-        if (definitionIdsAtPosition.some(defnIdAtPos => (reference.definition.id === defnIdAtPos))) {
+        if (definitionIdsAtPosition.some(defnIdAtPos => (reference.definitions.some(refDef => (refDef.id === defnIdAtPos))))) {
             const location = createLocationFromSourceRange(reference.range);
             const key = JSON.stringify(location);
             locations.set(key, location);

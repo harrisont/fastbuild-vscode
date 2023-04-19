@@ -112,8 +112,8 @@ describe('hoversProvider', () => {
         it('works for a struct', () => {
             const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
-                A: new StructMember(1, dummyDefinition),
-                B: new StructMember(2, dummyDefinition)
+                A: new StructMember(1, [dummyDefinition]),
+                B: new StructMember(2, [dummyDefinition]),
             }));
             const str = valueToString(value);
             assert.strictEqual(
@@ -128,13 +128,13 @@ describe('hoversProvider', () => {
             const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
                 A: new StructMember(Struct.from(Object.entries({
-                    A1: new StructMember(1, dummyDefinition),
-                    A2: new StructMember(2, dummyDefinition)
-                })), dummyDefinition),
+                    A1: new StructMember(1, [dummyDefinition]),
+                    A2: new StructMember(2, [dummyDefinition]),
+                })), [dummyDefinition]),
                 B: new StructMember(Struct.from(Object.entries({
-                    B1: new StructMember(1, dummyDefinition),
-                    B2: new StructMember(2, dummyDefinition)
-                })), dummyDefinition)
+                    B1: new StructMember(1, [dummyDefinition]),
+                    B2: new StructMember(2, [dummyDefinition]),
+                })), [dummyDefinition]),
             }));
             const str = valueToString(value);
             assert.strictEqual(
@@ -204,7 +204,7 @@ Values:
         it('deduplicates identical struct values', () => {
             const dummyDefinition: VariableDefinition = { id: 1, range: createRange('file:///dummy.bff', 0, 0, 0, 0), name: '' };
             const value = Struct.from(Object.entries({
-                A: new StructMember(1, dummyDefinition),
+                A: new StructMember(1, [dummyDefinition]),
             }));
 
             const actualHoverText = getHoverText([

@@ -53,15 +53,16 @@ export function getDefinition(params: DefinitionParams, evaluatedData: Evaluated
         if (uri == reference.range.uri
             && isPositionInRange(position, reference.range))
         {
-            const definition = reference.definition;
-            const definitionRange = createRangeFromSourceRange(definition.range);
-            const definitionLink: DefinitionLink = {
-                originSelectionRange: createRangeFromSourceRange(reference.range),
-                targetUri: definition.range.uri,
-                targetRange: definitionRange,
-                targetSelectionRange: definitionRange,
-            };
-            results.set(JSON.stringify(definition.range), definitionLink);
+            for (const definition of reference.definitions) {
+                const definitionRange = createRangeFromSourceRange(definition.range);
+                const definitionLink: DefinitionLink = {
+                    originSelectionRange: createRangeFromSourceRange(reference.range),
+                    targetUri: definition.range.uri,
+                    targetRange: definitionRange,
+                    targetSelectionRange: definitionRange,
+                };
+                results.set(JSON.stringify(definition.range), definitionLink);
+            }
         }
     }
 

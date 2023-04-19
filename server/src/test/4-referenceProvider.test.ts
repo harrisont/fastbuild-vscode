@@ -71,10 +71,10 @@ describe('referenceProvider', () => {
             const actualReferences = getReferences(input, lookupPosition);
 
             const expectedReferences: Location[] = [
-                // The definition of A in `Using( .MyStruct )`
-                createLocation(4, 16, 34),
                 // The `.A` in `.A = 1`
                 createLocation(2, 20, 22),
+                // The definition of A in `Using( .MyStruct )`
+                createLocation(4, 16, 34),
                 // The `.A` in `Print( .A )`
                 createLocation(5, 23, 25),
             ];
@@ -140,14 +140,14 @@ describe('referenceProvider', () => {
             const actualReferences = getReferences(input, lookupPosition);
 
             const expectedReferences: Location[] = [
-                // The definition of A in `Using( .MyStruct )`
-                createLocation(16, 20, 38),
                 // The `.A` in `.A = 1`
                 createLocation(2, 20, 22),
-                // The `.A` in `Print( .A )`
-                createLocation(17, 27, 29),
                 // The `.A` in `.A = 2`
                 createLocation(6, 20, 22),
+                // The definition of A in `Using( .MyStruct )`
+                createLocation(16, 20, 38),
+                // The `.A` in `Print( .A )`
+                createLocation(17, 27, 29),
             ];
 
             assert.deepStrictEqual(actualReferences, expectedReferences);

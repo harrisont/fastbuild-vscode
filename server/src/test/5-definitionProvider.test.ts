@@ -83,7 +83,50 @@ describe('definitionProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
         });
 
-        it('struct field defined from a `Using`', () => {
+        it('variable defined in a loop', () => {
+            const input = `
+                .Items = { 'a', 'b' }
+                ForEach( .A in .Items )
+                {
+                    Print( .A )
+                }
+            `;
+            // The position of the `.` in `Print( .A )`
+            const lookupPosition = Position.create(4, 27);
+            const actualReferences = getDefinition(input, lookupPosition);
+
+            const expectedDefinitions: DefinitionLink[] = [
+                // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `ForEach( .A in .Items )`
+                createDefinition(createRange(4, 27, 29), createRange(2, 25, 27)),
+            ];
+
+            assert.deepStrictEqual(actualReferences, expectedDefinitions);
+        });
+
+        it('multiple variables at the same position', () => {
+            const input = `
+                .A_B_C = 'foo'
+                .Middle = 'B'
+                Print( ."A_$Middle$_C" )
+            `;
+            // The position of the first `$` in `Print( ."A_$Middle$_C" )`
+            const lookupPosition = Position.create(3, 27);
+            const actualReferences = getDefinition(input, lookupPosition);
+
+            const expectedDefinitions: DefinitionLink[] = [
+                // Reference: the `$Middle$` in `Print( ."A_$Middle$_C" )`
+                // Definition: the `.Middle` in `.Middle = 'B'`
+                createDefinition(createRange(3, 27, 35), createRange(2, 16, 23)),
+                // Reference: the `."A_$Middle$_C"` in `Print( ."A_$Middle$_C" )`
+                // Definition: the `.A_B_C` in `.A_B_C = 'foo'`
+                createDefinition(createRange(3, 23, 38), createRange(1, 16, 22)),
+            ];
+
+            assert.deepStrictEqual(actualReferences, expectedDefinitions);
+        });
+
+        it('struct field variable defined from a `Using`', () => {
             const input = `
                 .MyStruct = [
                     .A = 1
@@ -97,6 +140,9 @@ describe('definitionProvider', () => {
 
             const expectedDefinitions: DefinitionLink[] = [
                 // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `.A = 1`
+                createDefinition(createRange(5, 23, 25), createRange(2, 20, 22)),
+                // Reference: the `.A` in `Print( .A )`
                 // Definition: `Using( .MyStruct )`
                 createDefinition(createRange(5, 23, 25), createRange(4, 16, 34)),
             ];
@@ -104,7 +150,7 @@ describe('definitionProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedDefinitions);
         });
 
-        it('struct field defined from a `Using` in a `ForEach`', () => {
+        it('struct field variable defined from a `Using` in a `ForEach`', () => {
             const input = `
                 .MyStruct1 = [
                     .A = 1
@@ -131,8 +177,14 @@ describe('definitionProvider', () => {
 
             const expectedDefinitions: DefinitionLink[] = [
                 // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `.A = 1`
+                createDefinition(createRange(17, 27, 29), createRange(2, 20, 22)),
+                // Reference: the `.A` in `Print( .A )`
                 // Definition: `Using( .MyStruct )`
                 createDefinition(createRange(17, 27, 29), createRange(16, 20, 38)),
+                // Reference: the `.A` in `Print( .A )`
+                // Definition: the `.A` in `.A = 2`
+                createDefinition(createRange(17, 27, 29), createRange(6, 20, 22)),
             ];
 
             assert.deepStrictEqual(actualReferences, expectedDefinitions);

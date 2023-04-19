@@ -1,3 +1,9 @@
+# v0.10.0
+
+## New Features
+
+* ([#54](https://github.com/harrisont/fastbuild-vscode/issues/54)) "Go to definition" on a variable created by `Using` now also includes the definition from the `Using`'s struct's field. This makes it easier to find the origin of the field's value. Note that this was already possible using "go to references", just not using "go to definition".
+
 # v0.9.4
 
 ## Bug Fixes
