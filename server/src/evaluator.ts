@@ -1143,15 +1143,20 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
 
                     context.evaluatedData.variableReferences.push(
+                        // The `Using` statement references the variable definition being set to the new value,
+                        // which is either the existing definition, if one exists, or the new defintion otherwise.
                         {
                             definitions: variableDefinitions,
                             range: statementRange,
                         },
+                        // // The `Using` statement references the struct's member's definition.
                         {
                             definitions: structMember.definitions,
                             range: statementRange,
                         },
                     );
+                    // The struct's member's definition references the variable definition being set to the new value,
+                    // which is either the existing definition, if one exists, or the new defintion otherwise.
                     for (const structMemberDefinition of structMember.definitions) {
                         context.evaluatedData.variableReferences.push({
                             definitions: variableDefinitions,
