@@ -82,6 +82,33 @@ describe('referenceProvider', () => {
             assert.deepStrictEqual(actualReferences, expectedReferences);
         });
 
+        it('struct field defined from a `Using` that overwrites an existing variable', () => {
+            const input = `
+                .MyStruct = [
+                    .A = 1
+                ]
+                .A = 2
+                Using( .MyStruct )
+                Print( .A )
+            `;
+            // The position of the `.` in `Print( .A )`
+            const lookupPosition = Position.create(6, 23);
+            const actualReferences = getReferences(input, lookupPosition);
+
+            const expectedReferences: Location[] = [
+                // The `.A` in `.A = 2`
+                createLocation(4, 16, 18),
+                // The definition of A in `Using( .MyStruct )`
+                createLocation(5, 16, 34),
+                // The `.A` in `.A = 1`
+                createLocation(2, 20, 22),
+                // The `.A` in `Print( .A )`
+                createLocation(6, 23, 25),
+            ];
+
+            assert.deepStrictEqual(actualReferences, expectedReferences);
+        });
+
         it('struct used by a `Using`', () => {
             const input = `
                 .MyStruct = [
