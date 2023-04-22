@@ -30,11 +30,11 @@ import {
     SourceRange,
 } from './evaluator';
 
-import { HoverProvider } from './features/hoversProvider';
-import { DefinitionProvider } from './features/definitionProvider';
+import * as hoverProvider from './features/hoversProvider';
+import * as definitionProvider from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
-import { ReferenceProvider } from './features/referenceProvider';
-import { SymbolProvider } from './features/symbolProvider';
+import * as referenceProvider from './features/referenceProvider';
+import * as symbolProvider from './features/symbolProvider';
 import { DiskFileSystem } from './fileSystem';
 import { ParseDataProvider } from './parseDataProvider';
 
@@ -97,11 +97,7 @@ class State {
     // Cache the mapping of FASTBuild file to root-FASTBuild file, so that we don't need to compute it each time.
     readonly fileToRootFbuildFileCache = new Map<UriStr, vscodeUri.URI>();
 
-    readonly hoverProvider = new HoverProvider();
-    readonly definitionProvider = new DefinitionProvider();
-    readonly referenceProvider = new ReferenceProvider();
     readonly diagnosticProvider = new DiagnosticProvider();
-    readonly symbolProvider = new SymbolProvider();
 
     // Map of open documents to their root FASTBuild file
     readonly openDocumentToRootMap = new Map<UriStr, UriStr>();
@@ -197,7 +193,7 @@ state.connection.onHover((params: HoverParams) => {
     if (evaluatedData === null) {
         return null;
     }
-    return state.hoverProvider.getHover(params, evaluatedData);
+    return hoverProvider.getHover(params, evaluatedData);
 });
 
 state.connection.onDefinition((params: DefinitionParams) => {
@@ -208,7 +204,7 @@ state.connection.onDefinition((params: DefinitionParams) => {
     if (evaluatedData === null) {
         return null;
     }
-    return state.definitionProvider.getDefinition(params, evaluatedData);
+    return definitionProvider.getDefinition(params, evaluatedData);
 });
 
 state.connection.onReferences((params: ReferenceParams) => {
@@ -219,7 +215,7 @@ state.connection.onReferences((params: ReferenceParams) => {
     if (evaluatedData === null) {
         return null;
     }
-    return state.referenceProvider.getReferences(params, evaluatedData);
+    return referenceProvider.getReferences(params, evaluatedData);
 });
 
 state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
@@ -230,14 +226,14 @@ state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
     if (evaluatedData === null) {
         return null;
     }
-    return state.symbolProvider.getDocumentSymbols(params, evaluatedData);
+    return symbolProvider.getDocumentSymbols(params, evaluatedData);
 });
 
 state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
     // Wait for any queued updates, so that we don't return stale data.
     flushQueuedDocumentUpdates();
 
-    return state.symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
+    return symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.

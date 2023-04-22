@@ -8,5 +8,6 @@
 	"search.exclude": {
 		"**/out": true
 	},
+	"editor.renderFinalNewline": "dimmed",
 	"files.insertFinalNewline": true
 }

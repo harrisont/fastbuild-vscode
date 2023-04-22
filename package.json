@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.7.0",
+	"version": "0.11.0",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -22,7 +22,8 @@
 		"Programming Languages"
 	],
 	"keywords": [
-		"fastbuild"
+		"fastbuild",
+		"bff"
 	],
 	"engines": {
 		"vscode": "^1.43.0"
@@ -32,6 +33,21 @@
 	],
 	"main": "./client/out/extension",
 	"contributes": {
+		"languages": [
+			{
+				"id": "fastbuild",
+				"aliases": ["FASTBuild", "fastbuild"],
+				"extensions": [".bff"],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "fastbuild",
+				"scopeName": "source.fastbuild",
+				"path": "./fastbuild.tmLanguage.json"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "FASTBuild",

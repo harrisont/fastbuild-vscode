@@ -1,8 +1,68 @@
-# v0.7.0
+# v0.11.0
 
 ## New Features
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+
+# v0.10.0
+
+## New Features
+
+* ([#54](https://github.com/harrisont/fastbuild-vscode/issues/54)) "Go to definition" on a variable created by `Using` now also includes the definition from the `Using`'s struct's field. This makes it easier to find the origin of the field's value. Note that this was already possible using "go to references", just not using "go to definition".
+
+# v0.9.4
+
+## Bug Fixes
+
+* ([#52](https://github.com/harrisont/fastbuild-vscode/issues/52)) Allow escaping all characters, not just `^`, `$`, `'`, and `"`.
+
+# v0.9.3
+
+## Bug Fixes
+
+* ([#50](https://github.com/harrisont/fastbuild-vscode/issues/50)) Make "go to references" support multiple references with the same location but to different definitions.
+
+# v0.9.2
+
+## Bug Fixes
+
+* ([#47](https://github.com/harrisont/fastbuild-vscode/issues/47)) Fix variable hover value syntax highlighting for strings with `"` in them.
+
+# v0.9.1
+
+## Bug Fixes
+
+* Fix bug where the error message from duplicate target names said the existing target definition location was at "{Object}". Now it says the file and range.
+
+# v0.9.0
+
+## New Features
+
+* ([#44](https://github.com/harrisont/fastbuild-vscode/issues/44)) "Go to definition" now supports multiple definitions. This can be useful when a variable reference has multiple definitions, due to being in a loop or being in a file that is included multiple times. For example, `ForEach` looping over an array of structs, with a `Using` on that struct, referencing a variable in that struct in the loop has multiple definitions, one for each definition in the struct in the array.
+
+# v0.8.0
+
+## New Features
+
+* Support folding (collapsing code blocks) for `#if...#endif`.
+
+# v0.7.1
+
+## Changes
+
+* ([#41](https://github.com/harrisont/fastbuild-vscode/issues/41)) Add syntax highlighting to the functionality list in the README (the feature itself was added in the previous release, v0.7.0).
+
+# v0.7.0
+
+## New Features
+
+* ([#41](https://github.com/harrisont/fastbuild-vscode/issues/41)) Add syntax highlighting. Now it's no longer necessary to use a separate extension.
+
+# v0.6.1
+
+## Bug Fixes
+
+* The extension now defines the FASTBuild language, so that the extension works without requiring the `RoscoP.fastbuild` extension. That extension is still useful for syntax highlighting.
 
 # v0.6.0
 
