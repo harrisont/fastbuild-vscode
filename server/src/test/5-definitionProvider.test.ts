@@ -193,7 +193,7 @@ ForEach( .MyStruct in .MyStructs )
         });
 
         describe('include', () => {
-            it('include definition', () => {
+            it('basic definition', () => {
                 const inputs =  new Map<UriStr, FileContents>([
                     [
                         'file:///fbuild.bff',
@@ -215,6 +215,99 @@ ForEach( .MyStruct in .MyStructs )
                     // Reference: the `'helper.bff'` in `#include 'helper.bff'`
                     // Definition: helper.bff
                     createDefinition(createRange(1, 9, 21), createRange(0, 0, 0), 'file:///helper.bff'),
+                ];
+
+                assert.deepStrictEqual(actualReferences, expectedDefinitions);
+            });
+        });
+
+        describe('target', () => {
+            it('basic definition', () => {
+                const input = `
+TextFile('MyTarget1')
+{
+}
+
+Alias('MyTarget2')
+{
+    .Targets = { 'MyTarget1' }
+}
+                `;
+
+                // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                // The position of the `.` in `.Targets = ...`
+                const lookupPosition = Position.create(7, 4);
+                const actualReferences = getDefinition(input, lookupPosition);
+
+                const expectedDefinitions: DefinitionLink[] = [
+                    // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                    // Reference: the `.Targets` in `.Targets = ...`
+                    // Definition: the `'MyTarget1'` in `TextFile('MyTarget1')`
+                    createDefinition(createRange(7, 4, 12), createRange(1, 9, 20)),
+                ];
+
+                assert.deepStrictEqual(actualReferences, expectedDefinitions);
+            });
+
+            it('multiple definitions', () => {
+                const input = `
+TextFile('MyTarget1')
+{
+}
+
+TextFile('MyTarget2')
+{
+}
+
+Alias('MyTarget3')
+{
+    .Targets = { 'MyTarget1', 'MyTarget2' }
+}
+                `;
+
+                // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                // The position of the `.` in `.Targets = ...`
+                const lookupPosition = Position.create(11, 4);
+                const actualReferences = getDefinition(input, lookupPosition);
+
+                const expectedDefinitions: DefinitionLink[] = [
+                    // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                    // Reference: the `.Targets` in `.Targets = ...`
+                    // Definition: the `'MyTarget1'` in `TextFile('MyTarget1')`
+                    createDefinition(createRange(11, 4, 12), createRange(1, 9, 20)),
+                ];
+
+                assert.deepStrictEqual(actualReferences, expectedDefinitions);
+            });
+
+            it('reference in non-sibling, non-child scope', () => {
+                const input = `
+// Scope 1
+{
+    TextFile('MyTarget1')
+    {
+    }
+}
+
+// Scope 2 (non-sibling, non-child scope)
+{
+    Alias('MyTarget2')
+    {
+        .Targets = { 'MyTarget1' }
+    }
+}
+                `;
+
+                // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                // The position of the `.` in `.Targets = ...`
+                const lookupPosition = Position.create(12, 8);
+                const actualReferences = getDefinition(input, lookupPosition);
+
+                const expectedDefinitions: DefinitionLink[] = [
+                    // TODO: switch to using the target reference, not the `.Targets` variable reference.
+                    // Reference: the `.Targets` in `.Targets = ...`
+                    // Definition: the `'MyTarget1'` in `TextFile('MyTarget1')`
+                    createDefinition(createRange(12, 8, 16), createRange(3, 13, 24)),
                 ];
 
                 assert.deepStrictEqual(actualReferences, expectedDefinitions);
