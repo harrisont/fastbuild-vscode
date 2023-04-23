@@ -15,6 +15,7 @@ import {
 import {
     EvaluatedData,
     SourceRange,
+    VariableDefinition,
 } from '../evaluator';
 
 function createLocationFromSourceRange(sourceRange: SourceRange): Location {
@@ -89,7 +90,7 @@ function getVariableReferences(uri: string, position: Position, evaluatedData: E
 
     const definitionIdsAtPosition = references
         .filter(ref => (ref.range.uri == uri && isPositionInRange(position, ref.range)))
-        .map(ref => ref.definitions)
+        .map(ref => ref.definitions as VariableDefinition[])
         .reduce((accumulator, currentValue) => accumulator.concat(currentValue))
         .map(definition => definition.id);
     if (definitionIdsAtPosition.length === 0) {

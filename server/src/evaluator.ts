@@ -53,7 +53,7 @@ export type Value = boolean | number | string | Value[] | Struct;
 export type VariableName = string;
 
 export class StructMember {
-    constructor(readonly value: Value, readonly definitions: VariableDefinition[]) {
+    constructor(readonly value: Value, readonly definitions: AtLeast1VariableDefinition) {
     }
 }
 
@@ -128,8 +128,10 @@ export interface VariableDefinition {
     name: string;
 }
 
+type AtLeast1VariableDefinition = [VariableDefinition, ...VariableDefinition[]];
+
 export interface VariableReference {
-    definitions: VariableDefinition[];
+    definitions: AtLeast1VariableDefinition;
     range: SourceRange;
 }
 
@@ -634,7 +636,7 @@ interface UserFunction {
 
 interface ScopeVariable {
     value: Value;
-    definitions: VariableDefinition[];
+    definitions: AtLeast1VariableDefinition;
 }
 
 class Scope {
@@ -756,7 +758,7 @@ class ScopeStack {
         }
     }
 
-    setVariableInCurrentScope(name: string, value: Value, definitions: VariableDefinition[]): ScopeVariable {
+    setVariableInCurrentScope(name: string, value: Value, definitions: AtLeast1VariableDefinition): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
@@ -1130,14 +1132,14 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 //       * the current scope's variable-from-member's definition from the member's definition
 
                 for (const [structMemberName, structMember] of struct.members) {
-                    let variableDefinitions: VariableDefinition[];
+                    let variableDefinitions: AtLeast1VariableDefinition;
                     const existingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName);
                     if (existingVariable !== null) {
                         existingVariable.value = structMember.value;
                         variableDefinitions = existingVariable.definitions;
                     } else {
                         const newDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
-                        variableDefinitions = structMember.definitions.concat(newDefinition);
+                        variableDefinitions = structMember.definitions.concat(newDefinition) as AtLeast1VariableDefinition;
                         context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinitions);
                         context.evaluatedData.variableDefinitions.push(newDefinition);
                     }
