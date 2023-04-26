@@ -40,6 +40,19 @@ function getReferences(input: string, position: Position): Location[] {
 describe('referenceProvider', () => {
     describe('getReferences', () => {
         describe('variable', () => {
+            it('no references', () => {
+                const input = `
+.A = 1
+                `;
+                // The position of the `1` in `.A = 1`
+                const lookupPosition = Position.create(1, 5);
+                const actualReferences = getReferences(input, lookupPosition);
+
+                const expectedReferences: Location[] = [];
+
+                assert.deepStrictEqual(actualReferences, expectedReferences);
+            });
+
             it('basic reference', () => {
                 const input = `
 .A = 1

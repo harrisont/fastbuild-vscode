@@ -1,3 +1,9 @@
+# v0.10.1
+
+## Bug Fixes
+
+* ([#58](https://github.com/harrisont/fastbuild-vscode/issues/58)) Fix "go to references" bug where it errored when there are no references. This bug was introduced in [v0.10.0](#v0100) in [commit 8cfa091](https://github.com/harrisont/fastbuild-vscode/commit/8cfa091e1634e01d8e8f5e058bbbab6910cf8329).
+
 # v0.10.0
 
 ## New Features
