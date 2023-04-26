@@ -1,3 +1,9 @@
+# v0.10.2
+
+## Performance improvements
+
+* ([#59](https://github.com/harrisont/fastbuild-vscode/issues/59)) Stop unnecessarily re-parsing and re-evaluating when holding `Ctrl` and hovering over a variable/include whose definition is in an unopened file.
+
 # v0.10.1
 
 ## Bug Fixes

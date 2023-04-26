@@ -237,7 +237,10 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
-state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document.uri));
+state.documents.onDidChangeContent(change => {
+    console.log(`REMOVE BEFORE MERGE: onDidChangeContent: uri="${change.document.uri}", content=${JSON.stringify(change.document.getText())}`);
+    queueDocumentUpdate(change.document.uri);
+});
 
 // Wait for a period of time before updating.
 // This improves the performance when the user is rapidly modifying the document (e.g. typing),
@@ -356,6 +359,8 @@ function updateDocument(changedDocumentUriStr: UriStr, settings: Settings): void
 
 // Track the open files by root FASTBuild file.
 state.documents.onDidOpen(change => {
+    console.log(`REMOVE BEFORE MERGE: onDidOpen: uri="${change.document.uri}", content=${JSON.stringify(change.document.getText())}`);
+
     const changedDocumentUriStr: UriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
     const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
@@ -366,6 +371,8 @@ state.documents.onDidOpen(change => {
 
 // If the closed document's root's tree has no more open documents, clear state for the root.
 state.documents.onDidClose(change => {
+    console.log(`REMOVE BEFORE MERGE: onDidClose: uri="${change.document.uri}"`);
+
     const closedDocumentUriStr: UriStr = change.document.uri;
     const rootFbuildUriStr = state.openDocumentToRootMap.get(closedDocumentUriStr);
     if (rootFbuildUriStr === undefined) {
