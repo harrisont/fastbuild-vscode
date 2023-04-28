@@ -239,7 +239,6 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 state.documents.onDidChangeContent(change => {
-    console.log(`REMOVE BEFORE MERGE: onDidChangeContent: uri="${change.document.uri}", content=${JSON.stringify(change.document.getText())}`);
     queueDocumentUpdate(change);
 });
 
@@ -308,7 +307,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
         const cachedEvaluatedData = state.rootToEvaluatedDataMap.get(rootFbuildUriStr);
         const changedDocumentContent = change.document.getText();
         const cachedDocumentContent = state.parseDataProvider.getCachedDocumentContent(changedDocumentUri);
-        if (cachedEvaluatedData !== undefined && cachedDocumentContent == changedDocumentContent) {
+        if (cachedEvaluatedData !== undefined && changedDocumentContent === cachedDocumentContent) {
             return;
         }
 
@@ -369,8 +368,6 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
 
 // Track the open files by root FASTBuild file.
 state.documents.onDidOpen(change => {
-    console.log(`REMOVE BEFORE MERGE: onDidOpen: uri="${change.document.uri}", content=${JSON.stringify(change.document.getText())}`);
-
     const changedDocumentUriStr: UriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
     const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
@@ -381,8 +378,6 @@ state.documents.onDidOpen(change => {
 
 // If the closed document's root's tree has no more open documents, clear state for the root.
 state.documents.onDidClose(change => {
-    console.log(`REMOVE BEFORE MERGE: onDidClose: uri="${change.document.uri}"`);
-
     const closedDocumentUriStr: UriStr = change.document.uri;
     const rootFbuildUriStr = state.openDocumentToRootMap.get(closedDocumentUriStr);
     if (rootFbuildUriStr === undefined) {
