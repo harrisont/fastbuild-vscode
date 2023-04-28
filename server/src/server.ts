@@ -238,6 +238,12 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
+//
+// Note that it also can occur when holding 'Ctrl' (the go-to-definition hotkey) and hovering over a reference
+// whose definition is in an unopened file.
+// In this case, VS Code opens and closes that file, which triggers this `onDidChangeContent` event even though
+// no content changed.
+// See [#59](https://github.com/harrisont/fastbuild-vscode/issues/59) for details.
 state.documents.onDidChangeContent(change => {
     queueDocumentUpdate(change);
 });
