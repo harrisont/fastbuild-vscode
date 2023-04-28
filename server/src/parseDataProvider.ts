@@ -69,17 +69,6 @@ export class ParseDataProvider {
         }
     }
 
-    // The same as `updateParseDataWithContent`, but skips re-parsing if the content is the same
-    // as the cached content.
-    updateParseDataWithContentIfChanged(uri: vscodeUri.URI, content: string): Maybe<ParseData>  {
-        const cachedData = this.data.get(uri.toString());
-        if (cachedData !== undefined && content === cachedData.fileContent) {
-            return Maybe.ok(cachedData.data);
-        } else {
-            return this.updateParseDataWithContent(uri, content);
-        }
-    }
-
     // Returns the parse data for a URI.
     // If the data is already cached, it just returns it, even if the cached data is stale.
     // Otherwise, it calculates the parse data and caches it.
@@ -92,6 +81,16 @@ export class ParseDataProvider {
             return this.updateParseData(uri);
         } else {
             return Maybe.ok(cachedData.data);
+        }
+    }
+
+    // Returns the cached content for a URI if it exists, or `null` otherwise.
+    getCachedDocumentContent(uri: vscodeUri.URI): string | null {
+        const cachedData = this.data.get(uri.toString());
+        if (cachedData === undefined) {
+            return null;
+        } else {
+            return cachedData.fileContent;
         }
     }
 }

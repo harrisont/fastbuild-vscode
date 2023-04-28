@@ -305,11 +305,18 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
         }
         rootFbuildUriStr = rootFbuildUri.toString();
 
+        const cachedEvaluatedData = state.rootToEvaluatedDataMap.get(rootFbuildUriStr);
+        const changedDocumentContent = change.document.getText();
+        const cachedDocumentContent = state.parseDataProvider.getCachedDocumentContent(changedDocumentUri);
+        if (cachedEvaluatedData !== undefined && cachedDocumentContent == changedDocumentContent) {
+            return;
+        }
+
         const parseDurationLabel = 'parse-duration';
         if (settings.logPerformanceMetrics) {
             console.time(parseDurationLabel);
         }
-        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseDataWithContentIfChanged(changedDocumentUri, change.document.getText());
+        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseDataWithContent(changedDocumentUri, changedDocumentContent);
         if (maybeChangedDocumentParseData.hasError) {
             if (settings.logPerformanceMetrics) {
                 console.timeEnd(parseDurationLabel);
