@@ -9,6 +9,7 @@ import {
     InitializeResult,
     ProposedFeatures,
     ReferenceParams,
+    TextDocumentChangeEvent,
     TextDocuments,
     TextDocumentSyncKind,
     WorkspaceSymbolParams,
@@ -237,12 +238,21 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
-state.documents.onDidChangeContent(change => queueDocumentUpdate(change.document.uri));
+//
+// Note that it also can occur when holding 'Ctrl' (the go-to-definition hotkey) and hovering over a reference
+// whose definition is in an unopened file.
+// In this case, VS Code opens and closes that file, which triggers this `onDidChangeContent` event even though
+// no content changed.
+// See [#59](https://github.com/harrisont/fastbuild-vscode/issues/59) for details.
+state.documents.onDidChangeContent(change => {
+    queueDocumentUpdate(change);
+});
 
 // Wait for a period of time before updating.
 // This improves the performance when the user is rapidly modifying the document (e.g. typing),
 // at the cost of introducing a small amount of latency.
-async function queueDocumentUpdate(documentUriStr: UriStr): Promise<void> {
+async function queueDocumentUpdate(change: TextDocumentChangeEvent<TextDocument>): Promise<void> {
+    const documentUriStr = change.document.uri;
     const settings = await state.getSettings();
 
     // Cancel any existing queued update.
@@ -252,7 +262,7 @@ async function queueDocumentUpdate(documentUriStr: UriStr): Promise<void> {
         state.queuedDocumentUpdates.delete(documentUriStr);
     }
 
-    const updateFunction = () => updateDocument(documentUriStr, settings);
+    const updateFunction = () => updateDocument(change, settings);
 
     // Skip the delay and immediately update if the document has no evaulated data.
     // This is necesasry in order to do initially populate the data.
@@ -283,7 +293,8 @@ function flushQueuedDocumentUpdates() {
     state.queuedDocumentUpdates.clear();
 }
 
-function updateDocument(changedDocumentUriStr: UriStr, settings: Settings): void {
+function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings: Settings): void {
+    const changedDocumentUriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
 
     let evaluatedData = new EvaluatedData();
@@ -299,11 +310,18 @@ function updateDocument(changedDocumentUriStr: UriStr, settings: Settings): void
         }
         rootFbuildUriStr = rootFbuildUri.toString();
 
+        const cachedEvaluatedData = state.rootToEvaluatedDataMap.get(rootFbuildUriStr);
+        const changedDocumentContent = change.document.getText();
+        const cachedDocumentContent = state.parseDataProvider.getCachedDocumentContent(changedDocumentUri);
+        if (cachedEvaluatedData !== undefined && changedDocumentContent === cachedDocumentContent) {
+            return;
+        }
+
         const parseDurationLabel = 'parse-duration';
         if (settings.logPerformanceMetrics) {
             console.time(parseDurationLabel);
         }
-        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseData(changedDocumentUri);
+        const maybeChangedDocumentParseData = state.parseDataProvider.updateParseDataWithContent(changedDocumentUri, changedDocumentContent);
         if (maybeChangedDocumentParseData.hasError) {
             if (settings.logPerformanceMetrics) {
                 console.timeEnd(parseDurationLabel);
