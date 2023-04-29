@@ -37,14 +37,28 @@ export class DiagnosticProvider {
 
     setParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
         const diagnostic = createDiagnosticError(error.message, error.range);
-        this._setDiagnostic(rootUri, error.fileUri, diagnostic, connection);
+        this._setDiagnostic(rootUri, error.fileUri, [diagnostic], connection);
     }
 
-    setEvaluationErrorDiagnostic(rootUri: UriStr, error: EvaluationError, connection: Connection): void {
-        const isInternalError = error instanceof InternalEvaluationError;
-        const message = isInternalError ? `Internal error: ${error.stack}` : error.message;
-        const diagnostic = createDiagnosticError(message, error.range);
-        this._setDiagnostic(rootUri, error.range.uri, diagnostic, connection);
+    setEvaluationErrorDiagnostic(rootUri: UriStr, errors: EvaluationError[], connection: Connection): void {
+        // Create diagnostics for the errors, grouping them by URI.
+        const uriToDiagnostics = new Map<UriStr, Diagnostic[]>();
+        for (const error of errors) {
+            const isInternalError = error instanceof InternalEvaluationError;
+            const message = isInternalError ? `Internal error: ${error.stack}` : error.message;
+            const diagnostic = createDiagnosticError(message, error.range);
+
+            const existingDiagnostics = uriToDiagnostics.get(error.range.uri);
+            if (existingDiagnostics === undefined) {
+                uriToDiagnostics.set(error.range.uri, [diagnostic]);
+            } else {
+                existingDiagnostics.push(diagnostic);
+            }
+        }
+
+        for (const [uri, diagnostics] of uriToDiagnostics) {
+            this._setDiagnostic(rootUri, uri, diagnostics, connection);
+        }
     }
 
     setUnknownErrorDiagnostic(rootUri: UriStr, error: Error, connection: Connection): void {
@@ -52,13 +66,10 @@ export class DiagnosticProvider {
         const uri = '';
         const message = `Internal error: ${error.stack ?? error.message}`;
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
-        this._setDiagnostic(rootUri, uri, diagnostic, connection);
+        this._setDiagnostic(rootUri, uri, [diagnostic], connection);
     }
 
-    // This currently only supports setting a single diagnostic.
-    // Ideally it would support setting multiple.
-    private _setDiagnostic(rootUri: UriStr, uri: UriStr, diagnostic: Diagnostic, connection: Connection): void {
-        const diagnostics = [diagnostic];
+    private _setDiagnostic(rootUri: UriStr, uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
         const publishDiagnosticsParams: PublishDiagnosticsParams = { uri, diagnostics };
         connection.sendDiagnostics(publishDiagnosticsParams);
         const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
