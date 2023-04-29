@@ -25,7 +25,7 @@ const MAX_SCOPE_STACK_DEPTH = 128;
 
 // This indicates a problem with the content being evaluated.
 export class EvaluationError extends Error {
-    constructor(readonly range: SourceRange, message: string, ) {
+    constructor(readonly range: SourceRange, message: string) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = EvaluationError.name;
@@ -34,7 +34,7 @@ export class EvaluationError extends Error {
 
 // This indicates a programming problem with the language server.
 export class InternalEvaluationError extends EvaluationError {
-    constructor(readonly range: SourceRange, message: string, ) {
+    constructor(readonly range: SourceRange, message: string) {
         super(range, message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = InternalEvaluationError.name;
@@ -165,6 +165,8 @@ export class EvaluatedData {
     includeDefinitions = new Set<UriStr>();
 
     includeReferences: IncludeReference[] = [];
+
+    nonFatalErrors: EvaluationError[] = [];
 }
 
 type ScopeLocation = 'current' | 'parent';
@@ -1268,7 +1270,8 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 // Ensure that this doesn't resuse an existing target name.
                 const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
-                    return new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${getSourceRangeStr(existingTargetDefinition.range)}.`);
+                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${getSourceRangeStr(existingTargetDefinition.range)}.`));
+                    continue;
                 }
 
                 // Create a definition and reference for the target name.
@@ -2198,7 +2201,8 @@ function evaluateUserFunctionCall(
             if (funcDeclarationParam.definition === undefined) {
                 const callParam = call.parameters[i];
                 const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
-                throw new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
+                error = new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
+                return;
             }
 
             // Note that we set the variable in the function call context, not the current context.

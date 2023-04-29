@@ -353,14 +353,20 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
         }
 
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
+
+        // Handle non-fatal errors.
+        state.diagnosticProvider.setEvaluationErrorDiagnostic(rootFbuildUriStr, evaluatedData.nonFatalErrors, state.connection);
     } catch (error) {
+        // Handle fatal errors.
+
         // Clear previous diagnostics because they are now potentially stale.
         state.diagnosticProvider.clearDiagnosticsForRoot(rootFbuildUriStr, state.connection);
 
         if (error instanceof ParseError) {
             state.diagnosticProvider.setParseErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else if (error instanceof EvaluationError) {
-            state.diagnosticProvider.setEvaluationErrorDiagnostic(rootFbuildUriStr, error, state.connection);
+            const errors = [...evaluatedData.nonFatalErrors, error];
+            state.diagnosticProvider.setEvaluationErrorDiagnostic(rootFbuildUriStr, errors, state.connection);
         } else if (error instanceof Error) {
             state.diagnosticProvider.setUnknownErrorDiagnostic(rootFbuildUriStr, error, state.connection);
         } else {
