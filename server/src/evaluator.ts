@@ -23,9 +23,14 @@ import * as vscodeUri from 'vscode-uri';
 
 const MAX_SCOPE_STACK_DEPTH = 128;
 
+export interface ErrorRelatedInformation {
+    range: SourceRange;
+    message: string;
+}
+
 // This indicates a problem with the content being evaluated.
 export class EvaluationError extends Error {
-    constructor(readonly range: SourceRange, message: string) {
+    constructor(readonly range: SourceRange, message: string, readonly relatedInformation: ErrorRelatedInformation[]) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = EvaluationError.name;
@@ -34,8 +39,8 @@ export class EvaluationError extends Error {
 
 // This indicates a programming problem with the language server.
 export class InternalEvaluationError extends EvaluationError {
-    constructor(readonly range: SourceRange, message: string) {
-        super(range, message);
+    constructor(range: SourceRange, message: string) {
+        super(range, message, []);
         Object.setPrototypeOf(this, new.target.prototype);
         this.name = InternalEvaluationError.name;
     }
@@ -111,10 +116,6 @@ export class SourceRange {
             }
         );
     }
-}
-
-function getSourceRangeStr(range: SourceRange) {
-    return `"${range.uri}": ${range.start.line+1}:${range.start.character+1} - ${range.end.line+1}:${range.end.character+1}`;
 }
 
 export interface EvaluatedVariable {
@@ -704,7 +705,7 @@ class ScopeStack {
     getVariableStartingFromCurrentScopeOrError(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const maybeVariable = this.getVariableStartingFromCurrentScope(variableName);
         if (maybeVariable === null) {
-            return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`));
+            return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope or any of the parent scopes.`, []));
         } else {
             return Maybe.ok(maybeVariable);
         }
@@ -714,7 +715,7 @@ class ScopeStack {
     // Return EvaluationError if the variable is not defined.
     getVariableStartingFromParentScopeOrError(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         if (this.stack.length < 2) {
-            return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`));
+            return Maybe.error(new EvaluationError(variableRange, `Cannot access parent scope because there is no parent scope.`, []));
         }
 
         const currentScope = this.stack[this.stack.length - 1];
@@ -727,7 +728,7 @@ class ScopeStack {
                 }
             }
         }
-        return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`));
+        return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`, []));
     }
 
     // Return null if the variable is not defined.
@@ -745,7 +746,7 @@ class ScopeStack {
     getVariableInCurrentScopeOrError(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const maybeVariable = this.getVariableInCurrentScope(variableName);
         if (maybeVariable === null) {
-            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`));
+            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`, []));
         } else {
             return Maybe.ok(maybeVariable);
         }
@@ -923,7 +924,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
                 if (typeof evaluatedLhsName.value !== 'string') {
-                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`);
+                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []);
                 }
 
                 let variable: ScopeVariable | null = null;
@@ -959,7 +960,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         // Assignment to an empty Array: the RHS can be any valid Array.
                         if (typeof value !== 'string' && !(value instanceof Struct)) {
                             const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`);
+                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []);
                         }
                     } else {
                         // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
@@ -968,7 +969,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                             || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
                         {
                             const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`);
+                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []);
                         }
                     }
                     variable.value = [value];
@@ -1002,7 +1003,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 }
                 const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
                 if (typeof evaluatedLhsName.value !== 'string') {
-                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`);
+                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []);
                 }
 
                 let lhsVariable: ScopeVariable;
@@ -1067,7 +1068,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
                 if (context.previousStatementLhs === null) {
                     const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
-                    return new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.');
+                    return new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []);
                 }
                 const lhsVariable = context.previousStatementLhs.variable;
                 // Allow chaining of unnamed operators.
@@ -1111,7 +1112,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
 
                 if (statement.struct.type !== 'evaluatedVariable') {
-                    return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`);
+                    return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`, []);
                 }
                 const maybeEvaluated = evaluateEvaluatedVariable(statement.struct, context);
                 if (maybeEvaluated.hasError) {
@@ -1122,7 +1123,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const structVariable = evaluated.valueScopeVariable;
                 const struct = structVariable.value;
                 if (!(struct instanceof Struct)) {
-                    return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`);
+                    return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []);
                 }
 
                 //
@@ -1190,11 +1191,11 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     const evaluatedArrayToLoopOver = maybeEvaluatedArrayToLoopOver.getValue();
                     const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
                     if (!(arrayItems instanceof Array)) {
-                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`);
+                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`, []);
                     }
 
                     if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
-                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`);
+                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`, []);
                     }
 
                     const loopVar = iterator.loopVar;
@@ -1264,13 +1265,22 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const evaluatedTargetName = maybeEvaluatedTargetNameName.getValue();
                 const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
                 if (typeof evaluatedTargetName.value !== 'string') {
-                    return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`);
+                    return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []);
                 }
 
                 // Ensure that this doesn't resuse an existing target name.
                 const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
                 if (existingTargetDefinition !== undefined) {
-                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(evaluatedTargetNameRange, `Target name "${evaluatedTargetName.value}" already exists at ${getSourceRangeStr(existingTargetDefinition.range)}.`));
+                    const existingTargetDefinitionInfo: ErrorRelatedInformation = {
+                        range: existingTargetDefinition.range,
+                        message: 'Defined here',
+                    };
+                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                        evaluatedTargetNameRange,
+                        `Target name "${evaluatedTargetName.value}" already exists`,
+                        [existingTargetDefinitionInfo]
+                    )
+                    );
                     continue;
                 }
 
@@ -1345,10 +1355,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     }
                 }
             } else if (isParsedStatementUserFunction(statement)) {
-                const error = evaluateUserFunctionDeclaration(statement, context);
-                if (error !== null) {
-                    return error;
-                }
+                evaluateUserFunctionDeclaration(statement, context);
             } else if (isParsedStatementUserFunctionCall(statement)) {
                 const error = evaluateUserFunctionCall(statement, context);
                 if (error !== null) {
@@ -1375,7 +1382,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                         if (includeError instanceof ParseError) {
                             error = includeError;
                         } else {
-                            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`);
+                            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`, []);
                         }
                         return error;
                     }
@@ -1436,8 +1443,18 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementDefine(statement)) {  // #define
                 const symbol = statement.symbol;
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                if (context.defines.has(symbol)) {
-                    return new EvaluationError(statementRange, `Cannot #define already defined symbol "${symbol}".`);
+                const existingDefine = context.defines.get(symbol);
+                if (existingDefine !== undefined) {
+                    const existingDefineInfo: ErrorRelatedInformation = {
+                        range: existingDefine.definition.range,
+                        message: 'Defined here',
+                    };
+                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                        statementRange,
+                        `Cannot #define already defined symbol "${symbol}".`,
+                        [existingDefineInfo]
+                    ));
+                    continue;
                 }
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
                 const info: DefineInfo = {
@@ -1455,10 +1472,10 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const symbol = statement.symbol;
                 const sourceRange = new SourceRange(context.thisFbuildUri, statement.range);
                 if (symbol === getPlatformSpecificDefineSymbol()) {
-                    return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`);
+                    return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`, []);
                 }
                 if (!context.defines.has(symbol)) {
-                    return new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`);
+                    return new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`, []);
                 }
                 context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
@@ -1467,7 +1484,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                 const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
                 const environmentVariableValue = process.env[symbolName];
                 if (environmentVariableValue === undefined) {
-                    return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`);
+                    return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`, []);
                 }
                 const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
                 context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, [definition]);
@@ -1602,14 +1619,14 @@ function evaluateRValueArray(
                     if (typeof evaluated.value === 'boolean'
                         || typeof evaluated.value === 'number')
                     {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`));
+                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`, []));
                     } else if (evaluated.value instanceof Struct && !isParsedEvaluatedVariable(item)) {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`));
+                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`, []));
                     }
                 } else {
                     const itemTypeNameA = getValueTypeNameA(evaluated.value);
                     if (itemTypeNameA !== firstItemTypeNameA) {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `All values in an Array must have the same type, but the first item is ${firstItemTypeNameA} and this item is ${itemTypeNameA}`));
+                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `All values in an Array must have the same type, but the first item is ${firstItemTypeNameA} and this item is ${itemTypeNameA}`, []));
                     }
                 }
 
@@ -1761,24 +1778,24 @@ function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceR
                 existingValue.members.set(structMemberName, structMember);
             }
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a Struct. Can only add a Struct.`));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a Struct. Can only add a Struct.`, []));
         }
     } else if (typeof existingValue === 'string') {
         if (typeof summand === 'string') {
             existingValue += summand;
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a String. Can only add a String.`));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a String. Can only add a String.`, []));
         }
     } else if (typeof existingValue === 'number') {
         if (typeof summand === 'number') {
             existingValue += summand;
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to an Integer. Can only add an Integer.`));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to an Integer. Can only add an Integer.`, []));
         }
     } else if (typeof existingValue === 'boolean') {
-        return Maybe.error(new EvaluationError(additionRange, `Cannot add to a Boolean.`));
+        return Maybe.error(new EvaluationError(additionRange, `Cannot add to a Boolean.`, []));
     } else {
-        return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to ${getValueTypeNameA(existingValue)}.`));
+        return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to ${getValueTypeNameA(existingValue)}.`, []));
     }
 
     return Maybe.ok(existingValue);
@@ -1793,14 +1810,14 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
                     // Remove all occurrences of |valueToSubtract|.
                     existingValue = existingValue.filter(value => value != valueToSubtract);
                 } else {
-                    return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Array of Strings. Can only subtract a String.`));
+                    return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Array of Strings. Can only subtract a String.`, []));
                 }
             } else {
-                return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from an Array of ${getValueTypeName(existingValue[0])}s. Can only subtract from an Array if it is an Array of Strings.`));
+                return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from an Array of ${getValueTypeName(existingValue[0])}s. Can only subtract from an Array if it is an Array of Strings.`, []));
             }
         }
     } else if (existingValue instanceof Struct) {
-        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Struct.`));
+        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Struct.`, []));
     } else if (typeof existingValue === 'string') {
         if (typeof valueToSubtract === 'string') {
             // Remove all substrings of |valueToSubtract|.
@@ -1808,18 +1825,18 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
             const escapedValueToSubtract = valueToSubtract.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
             existingValue = existingValue.replace(new RegExp(escapedValueToSubtract, 'g'), '');
         } else {
-            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from a String. Can only subtract a String.`));
+            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from a String. Can only subtract a String.`, []));
         }
     } else if (typeof existingValue === 'number') {
         if (typeof valueToSubtract === 'number') {
             existingValue -= valueToSubtract;
         } else {
-            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Integer. Can only subtract an Integer.`));
+            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Integer. Can only subtract an Integer.`, []));
         }
     } else if (typeof existingValue === 'boolean') {
-        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Boolean.`));
+        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Boolean.`, []));
     } else {
-        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from ${getValueTypeNameA(existingValue)}.`));
+        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from ${getValueTypeNameA(existingValue)}.`, []));
     }
 
     return Maybe.ok(existingValue);
@@ -1841,7 +1858,7 @@ function evaluateIfCondition(
         const evaluatedConditionValue = evaluatedCondition.value;
         if (typeof evaluatedConditionValue !== 'boolean') {
             const conditionValueRange = new SourceRange(context.thisFbuildUri, evaluatedCondition.range);
-            return Maybe.error(new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`));
+            return Maybe.error(new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`, []));
         }
         const result: EvaluatedCondition = {
             condition: condition.invert ? !evaluatedConditionValue : evaluatedConditionValue,
@@ -1871,18 +1888,18 @@ function evaluateIfCondition(
         if (operator.value === '==' || operator.value === '!=') {
             if (!['boolean', 'string', 'number'].includes(typeof evaluatedLhsValue)) {
                 const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Booleans, Strings, and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`));
+                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Booleans, Strings, and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
             }
         } else {
             if (!['string', 'number'].includes(typeof evaluatedLhsValue)) {
                 const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Strings and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`));
+                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Strings and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
             }
         }
 
         if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
             const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
-            return Maybe.error(new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`));
+            return Maybe.error(new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
         }
 
         let comparisonResult = false;
@@ -1939,11 +1956,11 @@ function evaluateIfCondition(
         let isPresent = true;
 
         if (!(evaluatedRhsValue instanceof Array)) {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`));
+            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
         }
 
         if (!isParsedEvaluatedVariable(rhs)) {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`));
+            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
         }
 
         if (evaluatedRhsValue.length === 0) {
@@ -1954,7 +1971,7 @@ function evaluateIfCondition(
                 isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
             } else if (evaluatedLhsValue instanceof Array) {
                 if (!isParsedEvaluatedVariable(lhs)) {
-                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`));
+                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
                 }
 
                 if (evaluatedLhsValue.length === 0) {
@@ -1962,13 +1979,13 @@ function evaluateIfCondition(
                 } else if (typeof evaluatedLhsValue[0] === 'string') {
                     isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                 } else {
-                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`));
+                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`, []));
                 }
             } else {
-                return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`));
+                return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`, []));
             }
         } else {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`));
+            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`, []));
         }
 
         const result: EvaluatedCondition = {
@@ -2076,10 +2093,11 @@ function evaluateDirectiveIfCondition(
     return Maybe.ok(result);
 }
 
+// Returns an `Error` on fatal error, or `null` otherwise.
 function evaluateUserFunctionDeclaration(
     userFunction: ParsedStatementUserFunctionDeclaration,
     context: EvaluationContext
-): Error | null {
+): void {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
     const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
     const functionNameReference: VariableReference = {
@@ -2092,12 +2110,27 @@ function evaluateUserFunctionDeclaration(
 
     // Ensure that the function name is not reserved.
     if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
-        return new EvaluationError(nameSourceRange, `Cannot use function name "${userFunction.name}" because it is reserved.`);
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            nameSourceRange,
+            `Cannot use function name "${userFunction.name}" because it is reserved.`,
+            []
+        ));
+        return;
     }
 
+    const existingFunction = context.userFunctions.get(userFunction.name);
     // Ensure that the function name is not already used by another user function.
-    if (context.userFunctions.has(userFunction.name)) {
-        return new EvaluationError(nameSourceRange, `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`);
+    if (existingFunction !== undefined) {
+        const existingFunctionInfo: ErrorRelatedInformation = {
+            range: existingFunction.definition.range,
+            message: 'Defined here',
+        };
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            nameSourceRange,
+            `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`,
+            [existingFunctionInfo]
+        ));
+        return;
     }
 
     // Define and reference each parameter.
@@ -2109,7 +2142,12 @@ function evaluateUserFunctionDeclaration(
         const paramSourceRange = new SourceRange(context.thisFbuildUri, parameter.range);
 
         if (usedParameterNames.includes(parameter.name)) {
-            return new EvaluationError(paramSourceRange, `User-function argument names must be unique.`);
+            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                paramSourceRange,
+                `User-function argument names must be unique.`,
+                []
+            ));
+            return;
         }
         usedParameterNames.push(parameter.name);
 
@@ -2128,8 +2166,6 @@ function evaluateUserFunctionDeclaration(
         parameters: userFunction.parameters,
         statements: userFunction.statements,
     });
-
-    return null;
 }
 
 function evaluateUserFunctionCall(
@@ -2141,7 +2177,7 @@ function evaluateUserFunctionCall(
     // Lookup the function.
     const userFunction = context.userFunctions.get(call.name);
     if (userFunction === undefined) {
-        return new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`);
+        return new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`, []);
     }
 
     // Reference the function.
@@ -2153,12 +2189,12 @@ function evaluateUserFunctionCall(
     if (call.parameters.length !== userFunction.parameters.length) {
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
         const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
-        return new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`);
+        return new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`, []);
     }
 
     if (context.scopeStack.getDepth() > MAX_SCOPE_STACK_DEPTH) {
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
-        return new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.');
+        return new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.', []);
     }
 
     // Evaluate the call-parameters' values.
