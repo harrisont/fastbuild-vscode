@@ -16,6 +16,7 @@ import {
 } from '../parser';
 
 import {
+    ErrorRelatedInformation,
     evaluate,
     EvaluatedData,
     EvaluatedVariable,
@@ -109,6 +110,10 @@ function getParseSourceRangeString(range: ParseSourceRange): string {
     return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
 }
 
+function getSourceRangeString(range: SourceRange): string {
+    return `${range.uri}: ${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+}
+
 function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
     const enableDiagnostics = false;
@@ -124,7 +129,11 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
     );
 }
 
-function assertEvaluationError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
+function assertEvaluationError(
+    input: string,
+    expectedErrorMessage: string,
+    expectedRange: ParseSourceRange
+): void {
     // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
     const enableDiagnostics = false;
 
@@ -136,9 +145,29 @@ function assertEvaluationError(input: string, expectedErrorMessage: string, expe
             // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
             const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
             assert.deepStrictEqual(actualRange, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
+            assert.deepStrictEqual(actualError.relatedInformation, []);
             return true;
         }
     );
+}
+
+// Only supports a single non-fatal error, for ease of calling.
+function assertNonFatalError(
+    input: string,
+    expectedErrorMessage: string,
+    expectedRange: ParseSourceRange,
+    expectedRelatedInformation: ErrorRelatedInformation[],
+): void {
+    // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
+    const enableDiagnostics = false;
+    const result = evaluateInput(input, enableDiagnostics);
+    assert.deepStrictEqual(result.nonFatalErrors.length, 1, `Expected 1 non-fatal error, but got ${result.nonFatalErrors.length}.`);
+    const actualError = result.nonFatalErrors[0];
+
+    assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
+    assert.strictEqual(actualError.message, expectedErrorMessage, `Error message was different than expected`);
+    assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getSourceRangeString(actualError.range)}`);
+    assert.deepStrictEqual(actualError.relatedInformation, expectedRelatedInformation);
 }
 
 describe('evaluator', () => {
@@ -2132,12 +2161,12 @@ describe('evaluator', () => {
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
 
-            const rangeMyVar1 = createFileRange('file:///dummy.bff', 1, 16, 1, 23);
-            const rangeMyStructMyVar1 = createFileRange('file:///dummy.bff', 3, 20, 3, 27);
-            const rangeMyStructMyVar2 = createFileRange('file:///dummy.bff', 4, 20, 4, 27);
-            const rangeMyStruct = createFileRange('file:///dummy.bff', 2, 16, 2, 25);
-            const rangeUsingStatement = createFileRange('file:///dummy.bff', 6, 16, 6, 34);
-            const rangeUsingStructVar = createFileRange('file:///dummy.bff', 6, 23, 6, 32);
+            const rangeMyVar1 = createRange(1, 16, 1, 23);
+            const rangeMyStructMyVar1 = createRange(3, 20, 3, 27);
+            const rangeMyStructMyVar2 = createRange(4, 20, 4, 27);
+            const rangeMyStruct = createRange(2, 16, 2, 25);
+            const rangeUsingStatement = createRange(6, 16, 6, 34);
+            const rangeUsingStructVar = createRange(6, 23, 6, 32);
 
             const definitionMyVar1 = { id: 1, range:  rangeMyVar1, name: 'MyVar1' };  // MyVar1
             const definitionMyStructMyVar1 = { id: 2, range: rangeMyStructMyVar1, name: 'MyVar1' };  // MyStruct's MyVar1
@@ -2649,6 +2678,23 @@ describe('evaluator', () => {
                     `;
                     const expectedErrorMessage = `Target name must evaluate to a String, but instead evaluates to an Integer`;
                     assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 26 + functionName.length, 2, 39 + functionName.length));
+                });
+
+                it('non-fatally errors if the target name is already used', () => {
+                    const input = `
+                        ${functionName}('MyTargetName') {}
+                        ${functionName}('MyTargetName') {}
+                    `;
+                    const relatedInfo: ErrorRelatedInformation = {
+                        range: createRange(1, 25 + functionName.length, 1, 39 + functionName.length),
+                        message: 'Defined here',
+                    };
+                    assertNonFatalError(
+                        input,
+                        'Target name "MyTargetName" already exists',
+                        createRange(2, 25 + functionName.length, 2, 39 + functionName.length),
+                        [relatedInfo]
+                    );
                 });
 
                 it('evaluates body statements', () => {
@@ -4255,25 +4301,37 @@ Expecting to see the following:
                 assertParseSyntaxError(input, expectedErrorMessage, createParseRange(3, 0, 3, 1));
             });
 
-            it('Function name that is reserved', () => {
+            it('non-fatally errors on a function name that is reserved', () => {
                 const input = `
                     function true() {
                     }
                 `;
-                const expectedErrorMessage = 'Cannot use function name "true" because it is reserved.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 29, 1, 33));
+                assertNonFatalError(
+                    input,
+                    'Cannot use function name "true" because it is reserved.',
+                    createRange(1, 29, 1, 33),
+                    []
+                );
             });
 
             // Error case: Duplicate definition. Functions must be uniquely named.
-            it('Duplicate definition', () => {
+            it('non-fatally errors on a duplicate definition', () => {
                 const input = `
                     function Func(){
                     }
                     function Func(){
                     }
                 `;
-                const expectedErrorMessage = 'Cannot use function name "Func" because it is already used by another user function. Functions must be uniquely named.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 29, 3, 33));
+                const relatedInfo: ErrorRelatedInformation = {
+                    range: createRange(1, 29, 1, 33),
+                    message: 'Defined here',
+                };
+                assertNonFatalError(
+                    input,
+                    'Cannot use function name "Func" because it is already used by another user function. Functions must be uniquely named.',
+                    createRange(3, 29, 3, 33),
+                    [relatedInfo]
+                );
             });
         });
 
@@ -4330,8 +4388,12 @@ Expecting to see one of the following:
                     function Func( .Arg .Arg ){
                     }
                 `;
-                const expectedErrorMessage = 'User-function argument names must be unique.';
-                assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 40, 1, 44));
+                assertNonFatalError(
+                    input,
+                    'User-function argument names must be unique.',
+                    createRange(1, 40, 1, 44),
+                    []
+                );
             });
 
             it('Body on the same line', () => {
@@ -5290,8 +5352,16 @@ Expecting to see the following:
                 #define MY_DEFINE
                 #define MY_DEFINE
             `;
-            const expectedErrorMessage = `Cannot #define already defined symbol "MY_DEFINE".`;
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 33));
+            const relatedInfo: ErrorRelatedInformation = {
+                range: createRange(1, 16, 1, 33),
+                message: 'Defined here',
+            };
+            assertNonFatalError(
+                input,
+                `Cannot #define already defined symbol "MY_DEFINE".`,
+                createRange(2, 16, 2, 33),
+                [relatedInfo]
+            );
         });
     });
 

@@ -1,6 +1,7 @@
 import {
     Connection,
     Diagnostic,
+    DiagnosticRelatedInformation,
     DiagnosticSeverity,
     PublishDiagnosticsParams,
 } from 'vscode-languageserver';
@@ -14,6 +15,7 @@ import {
 } from '../parser';
 
 import {
+    ErrorRelatedInformation,
     EvaluationError,
     InternalEvaluationError,
 } from '../evaluator';
@@ -22,12 +24,31 @@ const SOURCE_NAME = 'FASTBuild';
 
 type UriStr = string;
 
-function createDiagnosticError(message: string, range: Range): Diagnostic {
-    return {
+function createDiagnosticError(message: string, range: Range, relatedInformation: DiagnosticRelatedInformation[]): Diagnostic {
+    const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Error,
         range,
         message: message,
         source: SOURCE_NAME
+    };
+
+    if (relatedInformation.length !== 0) {
+        diagnostic.relatedInformation = relatedInformation;
+    }
+
+    return diagnostic;
+}
+
+function convertErrorRelatedInformation(info: ErrorRelatedInformation): DiagnosticRelatedInformation {
+    return {
+        location: {
+            uri: info.range.uri,
+            range: {
+                start: info.range.start,
+                end: info.range.end,
+            }
+        },
+        message: info.message,
     };
 }
 
@@ -36,7 +57,8 @@ export class DiagnosticProvider {
     readonly _documentRootToDocumentsWithDiagnosticsMap = new Map<UriStr, Set<UriStr>>();
 
     setParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
-        const diagnostic = createDiagnosticError(error.message, error.range);
+        const relatedInformation: DiagnosticRelatedInformation[] = [];
+        const diagnostic = createDiagnosticError(error.message, error.range, relatedInformation);
         this._setDiagnostic(rootUri, error.fileUri, [diagnostic], connection);
     }
 
@@ -46,7 +68,10 @@ export class DiagnosticProvider {
         for (const error of errors) {
             const isInternalError = error instanceof InternalEvaluationError;
             const message = isInternalError ? `Internal error: ${error.stack}` : error.message;
-            const diagnostic = createDiagnosticError(message, error.range);
+            const relatedInformation = this.hasDiagnosticRelatedInformationCapability
+                ? error.relatedInformation.map(info => convertErrorRelatedInformation(info))
+                : [];
+            const diagnostic = createDiagnosticError(message, error.range, relatedInformation);
 
             const existingDiagnostics = uriToDiagnostics.get(error.range.uri);
             if (existingDiagnostics === undefined) {
@@ -65,7 +90,8 @@ export class DiagnosticProvider {
         // We do not know which URI caused the error, so use a dummy error range.
         const uri = '';
         const message = `Internal error: ${error.stack ?? error.message}`;
-        const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0));
+        const relatedInformation: DiagnosticRelatedInformation[] = [];
+        const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0), relatedInformation);
         this._setDiagnostic(rootUri, uri, [diagnostic], connection);
     }
 

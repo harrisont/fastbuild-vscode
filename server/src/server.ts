@@ -306,7 +306,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
         const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
         if (rootFbuildUri === null) {
             const errorRange = SourceRange.create(changedDocumentUriStr, 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
-            throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`);
+            throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`, []);
         }
         rootFbuildUriStr = rootFbuildUri.toString();
 

@@ -1,3 +1,9 @@
+# v0.11.0
+
+## New Features
+
+* ([#64](https://github.com/harrisont/fastbuild-vscode/issues/64)) Support jumping to the existing definition for redefinition errors. Supports `#define`s, target aliases, and user-function names.
+
 # v0.10.2
 
 ## Performance improvements
