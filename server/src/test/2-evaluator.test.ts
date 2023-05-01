@@ -112,10 +112,6 @@ function getParseSourceRangeString(range: ParseSourceRange): string {
     return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
 }
 
-function getSourceRangeString(range: SourceRange): string {
-    return `${range.uri}: ${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
-}
-
 function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
     // Disable diagnostics because we expect it to error so it's not helpful to get the diagnostic logs.
     const enableDiagnostics = false;
@@ -168,7 +164,9 @@ function assertNonFatalError(
 
     assert.strictEqual(actualError.name, 'EvaluationError', `Expected an EvaluationError exception but got ${actualError}:\n\n${actualError.stack}`);
     assert.strictEqual(actualError.message, expectedErrorMessage, `Error message was different than expected`);
-    assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getSourceRangeString(actualError.range)}`);
+    // Create a `ParseSourceRange` out of the `SourceRange` in order to drop the file URI.
+    const actualRange = createParseRange(actualError.range.start.line, actualError.range.start.character, actualError.range.end.line, actualError.range.end.character);
+    assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualRange)}`);
     assert.deepStrictEqual(actualError.relatedInformation, expectedRelatedInformation);
 }
 
@@ -2777,7 +2775,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Compiler" is missing required property "Executable".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 44),
                     []
                 );
             });
@@ -2800,7 +2798,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Copy" is missing required properties "Source", "Dest".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 40),
                     []
                 );
             });
@@ -2823,7 +2821,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "CopyDir" is missing required properties "SourcePaths", "Dest".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 43),
                     []
                 );
             });
@@ -2846,8 +2844,8 @@ describe('evaluator', () => {
                 `;
                 assertNonFatalError(
                     input,
-                    'Call to function "CSAssembly" is missing required property "Compiler", "CompilerOptions", "CompilerOutput".',
-                    createRange(1, 20, 1, 41),
+                    'Call to function "CSAssembly" is missing required properties "Compiler", "CompilerOptions", "CompilerOutput".',
+                    createRange(1, 20, 1, 46),
                     []
                 );
             });
@@ -2873,7 +2871,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "DLL" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 39),
                     []
                 );
             });
@@ -2896,7 +2894,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Exec" is missing required properties "ExecExecutable", "ExecOutput".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 40),
                     []
                 );
             });
@@ -2922,7 +2920,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Executable" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 46),
                     []
                 );
             });
@@ -2949,7 +2947,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Library" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath", "Librarian", "LibrarianOptions", "LibrarianOutput".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 43),
                     []
                 );
             });
@@ -2972,7 +2970,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "ListDependencies" is missing required properties "Source", "Dest".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 52),
                     []
                 );
             });
@@ -2996,7 +2994,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "ObjectList" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 46),
                     []
                 );
             });
@@ -3018,7 +3016,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "RemoveDir" is missing required property "RemovePaths".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 45),
                     []
                 );
             });
@@ -3041,7 +3039,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Test" is missing required properties "TestExecutable", "TestOutput".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 40),
                     []
                 );
             });
@@ -3064,7 +3062,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "TextFile" is missing required properties "TextFileOutput", "TextFileInputStrings".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 44),
                     []
                 );
             });
@@ -3108,7 +3106,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VCXProject" is missing required property "ProjectOutput".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 46),
                     []
                 );
             });
@@ -3130,7 +3128,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VSProjectExternal" is missing required property "ExternalProjectPath".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 53),
                     []
                 );
             });
@@ -3152,7 +3150,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VSSolution" is missing required property "SolutionOutput".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 46),
                     []
                 );
             });
@@ -3175,7 +3173,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "XCodeProject" is missing required properties "ProjectOutput", "ProjectConfigs".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 1, 48),
                     []
                 );
             });
