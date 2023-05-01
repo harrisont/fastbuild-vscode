@@ -2556,167 +2556,389 @@ describe('evaluator', () => {
         });
     });
 
-    // Functions that all we handle are registering their target and evaluating their statements.
+    // Functions that all we handle are registering their target, ensuring required properties, and evaluating their statements.
+    // In other words, we do not evaluate the function call.
     describe('Generic functions declaring targets', () => {
-        const genericFunctionNames = [
-            'Alias',
-            'Compiler',
-            'Copy',
-            'CopyDir',
-            'CSAssembly',
-            'DLL',
-            'Exec',
-            'Executable',
-            'Library',
-            'ListDependencies',
-            'ObjectList',
-            'RemoveDir',
-            'Test',
-            'TextFile',
-            'Unity',
-            'VCXProject',
-            'VSProjectExternal',
-            'VSSolution',
-            'XCodeProject',
-        ];
+        function commonTests(functionName: string, propertyInput: string) {
+            it('handles a literal target name', () => {
+                const input = `
+                    ${functionName}('MyTargetName')
+                    {
+                        ${propertyInput}
+                    }
+                `;
+                evaluateInput(input, true /*enableDiagnostics*/);
+            });
 
-        for (const functionName of genericFunctionNames) {
-            describe(functionName, () => {
-                it('handles a literal target name', () => {
-                    const input = `
+            it('handles an evaluated variable target name', () => {
+                const input = `
+                    .MyTargetName = 'SomeName'
+                    ${functionName}(.MyTargetName)
+                    {
+                        ${propertyInput}
+                    }
+                `;
+                evaluateInput(input, true /*enableDiagnostics*/);
+            });
+
+            it('handles a dynamic-variable target name', () => {
+                const input = `
+                    .MyTargetName = 'SomeName'
+                    .TargetNameVariable = 'MyTargetName'
+                    ${functionName}(.'$TargetNameVariable$')
+                    {
+                        ${propertyInput}
+                    }
+                `;
+                evaluateInput(input, true /*enableDiagnostics*/);
+            });
+
+            it('creates a definition for the target name that can be referenced', () => {
+                const input = `
+                    {
                         ${functionName}('MyTargetName')
                         {
-                        }
-                    `;
-                    assertEvaluatedVariablesValueEqual(input, []);
-                });
-
-                it('handles an evaluated variable target name', () => {
-                    const input = `
-                        .MyTargetName = 'SomeName'
-                        ${functionName}(.MyTargetName)
-                        {
-                        }
-                    `;
-                    assertEvaluatedVariablesValueEqual(input, [
-                        'SomeName',
-                        'SomeName',
-                    ]);
-                });
-
-                it('handles a dynamic-variable target name', () => {
-                    const input = `
-                        .MyTargetName = 'SomeName'
-                        .TargetNameVariable = 'MyTargetName'
-                        ${functionName}(.'$TargetNameVariable$')
-                        {
-                        }
-                    `;
-                    assertEvaluatedVariablesValueEqual(input, [
-                        // .MyTargetName = ...
-                        'SomeName',
-                        // .TargetNameVariable = ...
-                        'MyTargetName',
-                        // $TargetNameVariable$
-                        'MyTargetName',
-                        // .'$TargetNameVariable$'
-                        'SomeName',
-                    ]);
-                });
-
-                it('creates a definition for the target name that can be referenced', () => {
-                    const input = `
-                        {
-                            ${functionName}('MyTargetName')
-                            {
-                            }
-
-                            // TODO
-                            //.MyTargetNameReferenceStatic = 'MyTargetName'
-                            //.MyTargetNameReferenceDynamic = 'My' + 'TargetName'
+                            ${propertyInput}
                         }
 
                         // TODO
-                        // The target reference does not need to be in the same scope as the target definition.
-                        //{
-                        //    .MyTargetNameReferenceInDifferentScope = 'MyTargetName'
-                        //}
-                    `;
+                        //.MyTargetNameReferenceStatic = 'MyTargetName'
+                        //.MyTargetNameReferenceDynamic = 'My' + 'TargetName'
+                    }
 
-                    const result = evaluateInput(input, true /*enableDiagnostics*/);
+                    // TODO
+                    // The target reference does not need to be in the same scope as the target definition.
+                    //{
+                    //    .MyTargetNameReferenceInDifferentScope = 'MyTargetName'
+                    //}
+                `;
 
-                    const expectedDefinitionMyTarget1: TargetDefinition = {
-                        id: 1,
-                        range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
-                    };
-                    assert.deepStrictEqual(Array.from(result.targetDefinitions.keys()), ['MyTargetName']);
-                    assert.deepStrictEqual(result.targetDefinitions.get('MyTargetName'), expectedDefinitionMyTarget1);
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
 
-                    const expectedReferences: TargetReference[] = [
-                        // MyTarget1's definition's reference
-                        {
-                            definition: expectedDefinitionMyTarget1,
-                            range: createRange(2, 29 + functionName.length, 2, 43 + functionName.length),
-                        },
-                    ];
-                    assert.deepStrictEqual(result.targetReferences, expectedReferences);
-                });
+                const expectedDefinitionMyTarget1: TargetDefinition = {
+                    id: 1,
+                    range: createRange(2, 25 + functionName.length, 2, 39 + functionName.length),
+                };
+                assert.deepStrictEqual(Array.from(result.targetDefinitions.keys()), ['MyTargetName']);
+                assert.deepStrictEqual(result.targetDefinitions.get('MyTargetName'), expectedDefinitionMyTarget1);
 
-                it('body on the same line', () => {
-                    const input = `
-                        ${functionName}('MyTargetName'){}
-                    `;
-                    assertEvaluatedVariablesValueEqual(input, []);
-                });
+                const expectedReferences: TargetReference[] = [
+                    // MyTarget1's definition's reference
+                    {
+                        definition: expectedDefinitionMyTarget1,
+                        range: createRange(2, 25 + functionName.length, 2, 39 + functionName.length),
+                    },
+                ];
+                assert.deepStrictEqual(result.targetReferences, expectedReferences);
+            });
 
-                it('errors if the evaluated variable target name is not a string', () => {
-                    const input = `
-                        .MyTargetName = 123
-                        ${functionName}( .MyTargetName )
-                        {
-                        }
-                    `;
-                    const expectedErrorMessage = `Target name must evaluate to a String, but instead evaluates to an Integer`;
-                    assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 26 + functionName.length, 2, 39 + functionName.length));
-                });
+            it('body on the same line', () => {
+                const input = `
+                    ${functionName}('MyTargetName'){ ${propertyInput} }
+                `;
+                evaluateInput(input, true /*enableDiagnostics*/);
+            });
 
-                it('non-fatally errors if the target name is already used', () => {
-                    const input = `
-                        ${functionName}('MyTargetName') {}
-                        ${functionName}('MyTargetName') {}
-                    `;
-                    const relatedInfo: ErrorRelatedInformation = {
-                        range: createRange(1, 25 + functionName.length, 1, 39 + functionName.length),
-                        message: 'Defined here',
-                    };
-                    assertNonFatalError(
-                        input,
-                        'Target name "MyTargetName" already exists',
-                        createRange(2, 25 + functionName.length, 2, 39 + functionName.length),
-                        [relatedInfo]
-                    );
-                });
+            it('errors if the evaluated variable target name is not a string', () => {
+                const input = `
+                    .MyTargetName = 123
+                    ${functionName}( .MyTargetName )
+                    {
+                        ${propertyInput}
+                    }
+                `;
+                const expectedErrorMessage = `Target name must evaluate to a String, but instead evaluates to an Integer`;
+                assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 22 + functionName.length, 2, 35 + functionName.length));
+            });
 
-                it('evaluates body statements', () => {
-                    const input = `
-                        .MyVar = 1
-                        ${functionName}('MyTargetName')
-                        {
-                            Print( .MyVar )
-                            Print( ^MyVar )
-                        }
-                    `;
-                    assertEvaluatedVariablesValueEqual(input, [
-                        // .MyVar = ...
-                        1,
-                        // Print( .MyVar )
-                        1,
-                        // Print( ^MyVar )
-                        1,
-                    ]);
-                });
+            it('non-fatally errors if the target name is already used', () => {
+                const input = `
+                    ${functionName}('MyTargetName') {
+                        ${propertyInput}
+                    }
+                    ${functionName}('MyTargetName') {
+                        ${propertyInput}
+                    }
+                `;
+                const relatedInfo: ErrorRelatedInformation = {
+                    range: createRange(1, 21 + functionName.length, 1, 35 + functionName.length),
+                    message: 'Defined here',
+                };
+                const secondFunctionCallLine = 3 + propertyInput.split('\n').length;
+                assertNonFatalError(
+                    input,
+                    'Target name "MyTargetName" already exists',
+                    createRange(secondFunctionCallLine, 21 + functionName.length, secondFunctionCallLine, 35 + functionName.length),
+                    [relatedInfo]
+                );
+            });
+
+            it('evaluates body statements', () => {
+                const input = `
+                    .MyVar = 1
+                    ${functionName}('MyTargetName')
+                    {
+                        Print( .MyVar )
+                        Print( ^MyVar )
+
+                        ${propertyInput}
+                    }
+                `;
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+
+                const expectedValuesWithoutProperties: Value[] = [
+                    // .MyVar = ...
+                    1,
+                    // Print( .MyVar )
+                    1,
+                    // Print( ^MyVar )
+                    1,
+                ];
+
+                // Ensure that the non-proprety body is evaluated.
+                assert.deepStrictEqual(actualValues.slice(0,expectedValuesWithoutProperties.length), expectedValuesWithoutProperties);
             });
         }
+
+        describe('Alias', () => {
+            const propertyInput = `
+                .Targets = { 'MyOtherTarget' }
+            `;
+
+            commonTests('Alias', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                const input = `
+                    Alias('MyTargetName')
+                    {
+                    }
+                `;
+                // TODO
+                assertNonFatalErrors(
+                    input,
+                    'Call to function "Alias" is missing required property "Targets".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
+            });
+        });
+
+        describe('Compiler', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Compiler', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Copy', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Copy', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('CopyDir', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('CopyDir', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('CSAssembly', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('CSAssembly', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('DLL', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('DLL', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Exec', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Exec', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Executable', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Executable', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Library', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Library', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('ListDependencies', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('ListDependencies', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('ObjectList', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('ObjectList', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('RemoveDir', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('RemoveDir', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Test', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Test', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('TextFile', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('TextFile', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('Unity', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('Unity', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('VCXProject', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('VCXProject', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('VSProjectExternal', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('VSProjectExternal', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('VSSolution', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('VSSolution', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
+
+        describe('XCodeProject', () => {
+            const propertyInput = `
+                .Todo = 'MyString'
+            `;
+
+            commonTests('XCodeProject', propertyInput);
+
+            it('non-fatally errors when missing required properties', () => {
+                // TODO
+            });
+        });
     });
 
     describe('Functions with no effect for our evaluation', () => {
