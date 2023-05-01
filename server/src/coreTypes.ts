@@ -13,10 +13,10 @@ export class Maybe<T> {
 
     // Throws an Error if |hasError| is |true|.
     getValue(): T {
-        if (this._value === null) {
+        if (this.hasError === true) {
             throw new Error(`'Maybe' has an error, not a value. Check 'hasError' before calling 'getValue'. Error: ${this._error}`);
         }
-        return this._value;
+        return <T>this._value;
     }
 
     // Throws an Error if |hasError| is |false|.

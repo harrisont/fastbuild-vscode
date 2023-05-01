@@ -470,7 +470,7 @@ interface ParsedStatementUserFunctionDeclaration {
     statements: Statement[];
 }
 
-function isParsedStatementUserFunction(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclaration {
+function isParsedStatementUserFunctionDeclaration(obj: Record<string, any>): obj is ParsedStatementUserFunctionDeclaration {
     const userFunction = obj as ParsedStatementUserFunctionDeclaration;
 
     if (userFunction.type !== 'userFunctionDeclaration') {
@@ -903,598 +903,102 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
 }
 
 // The resulting evaluated data is stored in `context.evaluatedData`.
+// Returns `Error` on fatal error, or `null` otherwise.
 function evaluateStatements(statements: Statement[], context: EvaluationContext): Error | null {
     try {
         for (const statement of statements) {
             let statementLhs: VariableAndEvaluatedVariable | null = null;
 
             if (isParsedStatementVariableDefintion(statement)) {
-                const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-                if (maybeEvaluatedRhs.hasError) {
-                    return maybeEvaluatedRhs.getError();
+                const maybeStatementLhs = evaluateStatementVariableDefinition(statement, context);
+                if (maybeStatementLhs.hasError) {
+                    return maybeStatementLhs.getError();
                 }
-                const evaluatedRhs = maybeEvaluatedRhs.getValue();
-
-                const lhs: ParsedVariableDefinitionLhs = statement.lhs;
-                const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
-
-                const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
-                if (maybeEvaluatedLhsName.hasError) {
-                    return maybeEvaluatedLhsName.getError();
-                }
-                const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
-                if (typeof evaluatedLhsName.value !== 'string') {
-                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []);
-                }
-
-                let variable: ScopeVariable | null = null;
-                let existingValue: Value | null = null;
-                // Copy the RHS value so that future modifications to the value do not modify the RHS value.
-                const value = deepCopyValue(evaluatedRhs.value);
-                if (lhs.scope === 'current') {
-                    const existingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value);
-                    if (existingVariable !== null) {
-                        existingValue = existingVariable.value;
-                    }
-
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
-                    variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, [definition]);
-
-                    if (existingVariable === null) {
-                        // The definition's LHS is a variable definition.
-                        context.evaluatedData.variableDefinitions.push(definition);
-                    }
-                } else {
-                    const maybeVariable = context.scopeStack.getVariableStartingFromParentScopeOrError(evaluatedLhsName.value, lhsRange);
-                    if (maybeVariable.hasError) {
-                        return maybeVariable.getError();
-                    }
-                    variable = maybeVariable.getValue();
-                    existingValue = variable.value;
-                    variable.value = value;
-                }
-
-                // Assigning a non-Array to an Array results in an Array with a single item: the RHS.
-                if (existingValue !== null && existingValue instanceof Array && !(value instanceof Array)) {
-                    if (existingValue.length === 0) {
-                        // Assignment to an empty Array: the RHS can be any valid Array.
-                        if (typeof value !== 'string' && !(value instanceof Struct)) {
-                            const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []);
-                        }
-                    } else {
-                        // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
-                        const lhsFirstItem = existingValue[0];
-                        if ((typeof lhsFirstItem === 'string' && typeof value !== 'string')
-                            || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
-                        {
-                            const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                            return new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []);
-                        }
-                    }
-                    variable.value = [value];
-                }
-
-                // The definition's LHS is a variable reference.
-                context.evaluatedData.variableReferences.push({
-                    definitions: variable.definitions,
-                    range: lhsRange,
-                });
-
-                // The definition's LHS is an evaluation.
-                const evaluatedVariable: EvaluatedVariable = {
-                    // Deep copy the value so that future modifications don't modify this captured evaluation.
-                    value: deepCopyValue(variable.value),
-                    range: lhsRange,
-                };
-                context.evaluatedData.evaluatedVariables.push(evaluatedVariable);
-
-                statementLhs = {
-                    variable,
-                    evaluatedVariable,
-                };
+                statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementBinaryOperator(statement)) {
-                const lhs = statement.lhs;
-                const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
-
-                const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
-                if (maybeEvaluatedLhsName.hasError) {
-                    return maybeEvaluatedLhsName.getError();
+                const maybeStatementLhs = evaluateStatementBinaryOperator(statement, context);
+                if (maybeStatementLhs.hasError) {
+                    return maybeStatementLhs.getError();
                 }
-                const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
-                if (typeof evaluatedLhsName.value !== 'string') {
-                    return new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []);
-                }
-
-                let lhsVariable: ScopeVariable;
-                let maybeExistingVariableStartingFromParentScope: ScopeVariable | null;
-                // Adding to a current-scope non-existant, parent-scope existant variable defines it in the current scope to be the sum.
-                if (lhs.scope === 'current'
-                    && context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null
-                    && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
-                {
-                    const previousValue = maybeExistingVariableStartingFromParentScope.value;
-                    const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
-                    context.evaluatedData.variableDefinitions.push(definition);
-                    lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, [definition]);
-                } else {
-                    const maybeExistingVariable = context.scopeStack.getVariableInScopeOrError(lhs.scope, evaluatedLhsName.value, lhsRange);
-                    if (maybeExistingVariable.hasError) {
-                        return maybeExistingVariable.getError();
-                    }
-                    lhsVariable = maybeExistingVariable.getValue();
-                }
-
-                const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-                if (maybeEvaluatedRhs.hasError) {
-                    return maybeEvaluatedRhs.getError();
-                }
-                const evaluatedRhs = maybeEvaluatedRhs.getValue();
-
-                const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
-                let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
-                switch (statement.operator) {
-                    case '+':
-                        inPlaceBinaryOperatorFunc = inPlaceAdd;
-                        break;
-                    case '-':
-                        inPlaceBinaryOperatorFunc = inPlaceSubtract;
-                        break;
-                }
-                const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
-                if (maybeOperatorResult.hasError) {
-                    return maybeOperatorResult.getError();
-                }
-                lhsVariable.value = maybeOperatorResult.getValue();
-
-                // The LHS is a variable reference.
-                context.evaluatedData.variableReferences.push({
-                    definitions: lhsVariable.definitions,
-                    range: lhsRange,
-                });
-
-                // The LHS is an evaluated variable.
-                // We could also add an entry for the pre-operator value that we read, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
-                const evaluatedVariable: EvaluatedVariable = {
-                    value: deepCopyValue(lhsVariable.value),
-                    range: lhsRange,
-                };
-                context.evaluatedData.evaluatedVariables.push(evaluatedVariable);
-
-                statementLhs = {
-                    variable: lhsVariable,
-                    evaluatedVariable,
-                };
+                statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
-                if (context.previousStatementLhs === null) {
-                    const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
-                    return new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []);
+                const maybeStatementLhs = evaluateStatementBinaryOperatorOnUnnamed(statement, context);
+                if (maybeStatementLhs.hasError) {
+                    return maybeStatementLhs.getError();
                 }
-                const lhsVariable = context.previousStatementLhs.variable;
-                // Allow chaining of unnamed operators.
-                statementLhs = context.previousStatementLhs;
-
-                const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-                if (maybeEvaluatedRhs.hasError) {
-                    return maybeEvaluatedRhs.getError();
-                }
-                const evaluatedRhs = maybeEvaluatedRhs.getValue();
-
-                const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
-                let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
-                switch (statement.operator) {
-                    case '+':
-                        inPlaceBinaryOperatorFunc = inPlaceAdd;
-                        break;
-                    case '-':
-                        inPlaceBinaryOperatorFunc = inPlaceSubtract;
-                        break;
-                }
-                const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
-                if (maybeOperatorResult.hasError) {
-                    return maybeOperatorResult.getError();
-                }
-                lhsVariable.value = maybeOperatorResult.getValue();
-
-                // Modify the previous statement's LHS variable evaluation to be the new value.
-                // We could instead capture both the previous value and the new value, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
-                context.previousStatementLhs.evaluatedVariable.value = lhsVariable.value;
+                statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementScopedStatements(statement)) {
-                let error: Error | null = null;
-                context.scopeStack.withScope(() => {
-                    error = evaluateStatements(statement.statements, context);
-                });
+                const error = evaluateStatementScopedStatements(statement, context);
                 if (error !== null) {
                     return error;
                 }
             } else if (isParsedStatementUsing(statement)) {
-                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
-
-                if (statement.struct.type !== 'evaluatedVariable') {
-                    return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`, []);
-                }
-                const maybeEvaluated = evaluateEvaluatedVariable(statement.struct, context);
-                if (maybeEvaluated.hasError) {
-                    return maybeEvaluated.getError();
-                }
-                const evaluated = maybeEvaluated.getValue();
-
-                const structVariable = evaluated.valueScopeVariable;
-                const struct = structVariable.value;
-                if (!(struct instanceof Struct)) {
-                    return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []);
-                }
-
-                //
-                // For each struct member:
-                //   * If it is already defined in the current scope, update it and add a reference to the definition.
-                //   * Otherwise, define it and add a reference to the definition.
-                //   * Either way, add references to:
-                //       * the struct member's definition from the statement
-                //       * the current scope's variable-from-member's definition from the member's definition
-
-                for (const [structMemberName, structMember] of struct.members) {
-                    let variableDefinitions: AtLeast1VariableDefinition;
-                    const existingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName);
-                    if (existingVariable !== null) {
-                        existingVariable.value = structMember.value;
-                        variableDefinitions = existingVariable.definitions;
-                    } else {
-                        const newDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
-                        variableDefinitions = structMember.definitions.concat(newDefinition) as AtLeast1VariableDefinition;
-                        context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinitions);
-                        context.evaluatedData.variableDefinitions.push(newDefinition);
-                    }
-
-                    context.evaluatedData.variableReferences.push(
-                        // The `Using` statement references the variable definition being set to the new value,
-                        // which is either the existing definition, if one exists, or the new defintion otherwise.
-                        {
-                            definitions: variableDefinitions,
-                            range: statementRange,
-                        },
-                        // // The `Using` statement references the struct's member's definition.
-                        {
-                            definitions: structMember.definitions,
-                            range: statementRange,
-                        },
-                    );
-                    // The struct's member's definition references the variable definition being set to the new value,
-                    // which is either the existing definition, if one exists, or the new defintion otherwise.
-                    for (const structMemberDefinition of structMember.definitions) {
-                        context.evaluatedData.variableReferences.push({
-                            definitions: variableDefinitions,
-                            range: structMemberDefinition.range,
-                        });
-                    }
+                const error = evaluateStatementUsing(statement, context);
+                if (error !== null) {
+                    return error;
                 }
             } else if (isParsedStatementForEach(statement)) {
-                // Evaluate the iterators (array to loop over plus the loop-variable)
-                interface ForEachIterator {
-                    loopVariable: ScopeVariable;
-                    loopVariableRange: SourceRange;
-                    arrayItems: Value[];
-                }
-                const iterators: ForEachIterator[] = [];
-                for (const iterator of statement.iterators) {
-                    // Evaluate the array to loop over.
-                    if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
-                        const range = new SourceRange(context.thisFbuildUri, statement.range);
-                        return new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
-                    }
-                    const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
-                    const maybeEvaluatedArrayToLoopOver = evaluateEvaluatedVariable(iterator.arrayToLoopOver, context);
-                    if (maybeEvaluatedArrayToLoopOver.hasError) {
-                        return maybeEvaluatedArrayToLoopOver.getError();
-                    }
-                    const evaluatedArrayToLoopOver = maybeEvaluatedArrayToLoopOver.getValue();
-                    const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
-                    if (!(arrayItems instanceof Array)) {
-                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`, []);
-                    }
-
-                    if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
-                        return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`, []);
-                    }
-
-                    const loopVar = iterator.loopVar;
-                    const loopVarRange = new SourceRange(context.thisFbuildUri, loopVar.range);
-
-                    // Evaluate the loop-variable name.
-                    const maybeEvaluatedLoopVarName = evaluateRValue(loopVar.name, context);
-                    if (maybeEvaluatedLoopVarName.hasError) {
-                        return maybeEvaluatedLoopVarName.getError();
-                    }
-                    const evaluatedLoopVarName = maybeEvaluatedLoopVarName.getValue();
-                    if (typeof evaluatedLoopVarName.value !== 'string') {
-                        return new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
-                    }
-                    const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
-
-                    const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
-
-                    // The loop variable is a definition and a reference.
-                    context.evaluatedData.variableDefinitions.push(loopVarDefinition);
-                    context.evaluatedData.variableReferences.push({
-                        definitions: [loopVarDefinition],
-                        range: loopVarRange,
-                    });
-
-                    // Set a variable in the current scope for each iterator's loop variable.
-                    const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, [loopVarDefinition]);
-                    iterators.push({
-                        loopVariable,
-                        loopVariableRange: loopVarRange,
-                        arrayItems,
-                    });
-                }
-
-                // Evaluate the ForEach body.
-
-                let error: Error | null = null;
-                const arrayItemsLength = iterators[0].arrayItems.length;
-                for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
-                    context.scopeStack.withScope(() => {
-                        // Update the loop variables' values and add evaluated-variables for them.
-                        for (const iterator of iterators) {
-                            const arrayItem = iterator.arrayItems[arrayItemIndex];
-                            iterator.loopVariable.value = arrayItem;
-
-                            context.evaluatedData.evaluatedVariables.push({
-                                value: arrayItem,
-                                range: iterator.loopVariableRange,
-                            });
-                        }
-
-                        error = evaluateStatements(statement.statements, context);
-                        if (error !== null) {
-                            return;
-                        }
-                    });
-                }
+                const error = evaluateStatementForEach(statement, context);
                 if (error !== null) {
                     return error;
                 }
             } else if (isParsedStatementGenericFunction(statement)) {
-                // Evaluate the target name.
-                const maybeEvaluatedTargetNameName = evaluateRValue(statement.targetName, context);
-                if (maybeEvaluatedTargetNameName.hasError) {
-                    return maybeEvaluatedTargetNameName.getError();
-                }
-                const evaluatedTargetName = maybeEvaluatedTargetNameName.getValue();
-                const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
-                if (typeof evaluatedTargetName.value !== 'string') {
-                    return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []);
-                }
-
-                // Ensure that this doesn't resuse an existing target name.
-                const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
-                if (existingTargetDefinition !== undefined) {
-                    const existingTargetDefinitionInfo: ErrorRelatedInformation = {
-                        range: existingTargetDefinition.range,
-                        message: 'Defined here',
-                    };
-                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                        evaluatedTargetNameRange,
-                        `Target name "${evaluatedTargetName.value}" already exists`,
-                        [existingTargetDefinitionInfo]
-                    )
-                    );
-                    continue;
-                }
-
-                // Create a definition and reference for the target name.
-                const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange);
-                const targetNameReference: TargetReference = {
-                    definition: targetNameDefinition,
-                    range: evaluatedTargetNameRange,
-                };
-                context.evaluatedData.targetDefinitions.set(evaluatedTargetName.value, targetNameDefinition);
-                context.evaluatedData.targetReferences.push(targetNameReference);
-
-                // Evaluate the function body.
-                let error: Error | null = null;
-                context.scopeStack.withScope(() => {
-                    error = evaluateStatements(statement.statements, context);
-                    if (error !== null) {
-                        return;
-                    }
-                });
+                const error = evaluateStatementGenericFunction(statement, context);
                 if (error !== null) {
                     return error;
                 }
             } else if (isParsedStatementError(statement)) {
-                const maybeEvaluatedValue = evaluateRValue(statement.value, context);
-                if (maybeEvaluatedValue.hasError) {
-                    return maybeEvaluatedValue.getError();
-                }
-                const evaluatedValue = maybeEvaluatedValue.getValue();
-                if (typeof evaluatedValue.value !== 'string') {
-                    const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    return new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`);
+                const error = evaluateStatementError(statement, context);
+                if (error !== null) {
+                    return error;
                 }
             } else if (isParsedStatementPrint(statement)) {
-                const value = statement.value;
-                const maybeEvaluatedValue = evaluateRValue(value, context);
-                if (maybeEvaluatedValue.hasError) {
-                    return maybeEvaluatedValue.getError();
-                }
-                const evaluatedValue = maybeEvaluatedValue.getValue();
-                if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
-                    const range = new SourceRange(context.thisFbuildUri, statement.range);
-                    return new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
+                const error = evaluateStatementPrint(statement, context);
+                if (error !== null) {
+                    return error;
                 }
             } else if (isParsedStatementSettings(statement)) {
-                // Evaluate the function body.
-                let error: Error | null = null;
-                context.scopeStack.withScope(() => {
-                    error = evaluateStatements(statement.statements, context);
-                });
+                const error = evaluateStatementSettings(statement, context);
                 if (error !== null) {
                     return error;
                 }
             } else if (isParsedStatementIf(statement)) {
-                // Evaluate the condition.
-                const condition = statement.condition;
-                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const maybeEvaluatedCondition = evaluateIfCondition(condition, context, statementRange);
-                if (maybeEvaluatedCondition.hasError) {
-                    return maybeEvaluatedCondition.getError();
+                const error = evaluateStatementIf(statement, context);
+                if (error !== null) {
+                    return error;
                 }
-                const evaluatedCondition = maybeEvaluatedCondition.getValue();
-
-                // Evaluate the function body if the condition was true.
-                if (evaluatedCondition.condition === true) {
-                    let error: Error | null = null;
-                    context.scopeStack.withScope(() => {
-                        error = evaluateStatements(statement.statements, context);
-                    });
-                    if (error !== null) {
-                        return error;
-                    }
-                }
-            } else if (isParsedStatementUserFunction(statement)) {
-                evaluateUserFunctionDeclaration(statement, context);
+            } else if (isParsedStatementUserFunctionDeclaration(statement)) {
+                evaluateStatementUserFunctionDeclaration(statement, context);
             } else if (isParsedStatementUserFunctionCall(statement)) {
-                const error = evaluateUserFunctionCall(statement, context);
+                const error = evaluateStatementUserFunctionCall(statement, context);
                 if (error !== null) {
                     return error;
                 }
             } else if (isParsedStatementInclude(statement)) {  // #include
-                const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
-                const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
-                const includeUriStr = includeUri.toString();
-                const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
-
-                context.evaluatedData.includeDefinitions.add(includeUriStr);
-                const includeReference: IncludeReference = {
-                    includeUri: includeUriStr,
-                    range: includeRange,
-                };
-                context.evaluatedData.includeReferences.push(includeReference);
-
-                if (!context.onceIncludeUrisAlreadyIncluded.includes(includeUriStr)) {
-                    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
-                    if (maybeIncludeParseData.hasError) {
-                        const includeError = maybeIncludeParseData.getError();
-                        let error: Error;
-                        if (includeError instanceof ParseError) {
-                            error = includeError;
-                        } else {
-                            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`, []);
-                        }
-                        return error;
-                    }
-                    const includeParseData = maybeIncludeParseData.getValue();
-
-                    // Save the current `_CURRENT_BFF_DIR_` value so that we can restore it after processing the include.
-                    const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-                    const maybeCurrentBffDirVariable = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
-                    if (maybeCurrentBffDirVariable.hasError) {
-                        return maybeCurrentBffDirVariable.getError();
-                    }
-                    const currentBffDirVariable = maybeCurrentBffDirVariable.getValue();
-                    const currentBffDirBeforeInclude = currentBffDirVariable.value;
-
-                    // Update the `_CURRENT_BFF_DIR_` value for the include.
-                    const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri.toString(), vscodeUri.Utils.dirname(includeUri).toString());
-                    currentBffDirVariable.value = includeDirRelativeToRoot;
-
-                    const includeContext: EvaluationContext = {
-                        evaluatedData: context.evaluatedData,
-                        scopeStack: context.scopeStack,
-                        defines: context.defines,
-                        userFunctions: context.userFunctions,
-                        rootFbuildDirUri: context.rootFbuildDirUri,
-                        thisFbuildUri: includeUriStr,
-                        fileSystem: context.fileSystem,
-                        parseDataProvider: context.parseDataProvider,
-                        onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
-                        previousStatementLhs: context.previousStatementLhs,
-                    };
-
-                    const error = evaluateStatements(includeParseData.statements, includeContext);
-                    if (error !== null) {
-                        return error;
-                    }
-
-                    // Restore the `_CURRENT_BFF_DIR_` value.
-                    currentBffDirVariable.value = currentBffDirBeforeInclude;
+                const error = evaluateStatementInclude(statement, context);
+                if (error !== null) {
+                    return error;
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
             } else if (isParsedStatementDirectiveIf(statement)) {  // #if
-                const maybeEvaluatedCondition = evaluateDirectiveIfCondition(statement, context);
-                if (maybeEvaluatedCondition.hasError) {
-                    return maybeEvaluatedCondition.getError();
+                const maybeStatementLhs = evaluateStatementDirectiveIf(statement, context);
+                if (maybeStatementLhs.hasError) {
+                    return maybeStatementLhs.getError();
                 }
-
-                // Evaluate the '#if' body statements if the condition was true.
-                // Otherwise, evaluate the '#else' body statements.
-                const statements = maybeEvaluatedCondition.getValue() ? statement.ifStatements : statement.elseStatements;
-                const error = evaluateStatements(statements, context);
+                statementLhs = maybeStatementLhs.getValue();
+            } else if (isParsedStatementDefine(statement)) {  // #define
+                evaluateStatementDefine(statement, context);
+            } else if (isParsedStatementUndefine(statement)) {  // #undef
+                const error = evaluateStatementUndefine(statement, context);
                 if (error !== null) {
                     return error;
                 }
-
-                // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
-                statementLhs = context.previousStatementLhs;
-            } else if (isParsedStatementDefine(statement)) {  // #define
-                const symbol = statement.symbol;
-                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const existingDefine = context.defines.get(symbol);
-                if (existingDefine !== undefined) {
-                    const existingDefineInfo: ErrorRelatedInformation = {
-                        range: existingDefine.definition.range,
-                        message: 'Defined here',
-                    };
-                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                        statementRange,
-                        `Cannot #define already defined symbol "${symbol}".`,
-                        [existingDefineInfo]
-                    ));
-                    continue;
-                }
-                const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
-                const info: DefineInfo = {
-                    isPredefined: false,
-                    definition,
-                };
-                context.defines.set(symbol, info);
-                const reference: VariableReference = {
-                    definitions: [definition],
-                    range: statementRange,
-                };
-                context.evaluatedData.variableReferences.push(reference);
-                context.evaluatedData.variableDefinitions.push(definition);
-            } else if (isParsedStatementUndefine(statement)) {  // #undef
-                const symbol = statement.symbol;
-                const sourceRange = new SourceRange(context.thisFbuildUri, statement.range);
-                if (symbol === getPlatformSpecificDefineSymbol()) {
-                    return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`, []);
-                }
-                if (!context.defines.has(symbol)) {
-                    return new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`, []);
-                }
-                context.defines.delete(symbol);
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
-                // Read an environment variable and store the value in a variable with the same name as the environment variable.
-                const symbolName = statement.symbol;
-                const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
-                const environmentVariableValue = process.env[symbolName];
-                if (environmentVariableValue === undefined) {
-                    return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`, []);
+                const error = evaluateStatementImportEnvVar(statement, context);
+                if (error !== null) {
+                    return error;
                 }
-                const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
-                context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, [definition]);
-
-                const reference: VariableReference = {
-                    definitions: [definition],
-                    range: statementRange,
-                };
-                context.evaluatedData.variableReferences.push(reference);
-                context.evaluatedData.variableDefinitions.push(definition);
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
                 return new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
@@ -1513,6 +1017,796 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
         }
     }
 
+    return null;
+}
+
+// Returns an `Error` on fatal error, or the statement's LHS otherwise.
+function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefintion, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+    const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
+    if (maybeEvaluatedRhs.hasError) {
+        return Maybe.error(maybeEvaluatedRhs.getError());
+    }
+    const evaluatedRhs = maybeEvaluatedRhs.getValue();
+
+    const lhs: ParsedVariableDefinitionLhs = statement.lhs;
+    const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
+
+    const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
+    if (maybeEvaluatedLhsName.hasError) {
+        return Maybe.error(maybeEvaluatedLhsName.getError());
+    }
+    const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
+    if (typeof evaluatedLhsName.value !== 'string') {
+        return Maybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
+    }
+
+    let variable: ScopeVariable | null = null;
+    let existingValue: Value | null = null;
+    // Copy the RHS value so that future modifications to the value do not modify the RHS value.
+    const value = deepCopyValue(evaluatedRhs.value);
+    if (lhs.scope === 'current') {
+        const existingVariable = context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value);
+        if (existingVariable !== null) {
+            existingValue = existingVariable.value;
+        }
+
+        const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
+        variable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, value, [definition]);
+
+        if (existingVariable === null) {
+            // The definition's LHS is a variable definition.
+            context.evaluatedData.variableDefinitions.push(definition);
+        }
+    } else {
+        const maybeVariable = context.scopeStack.getVariableStartingFromParentScopeOrError(evaluatedLhsName.value, lhsRange);
+        if (maybeVariable.hasError) {
+            return Maybe.error(maybeVariable.getError());
+        }
+        variable = maybeVariable.getValue();
+        existingValue = variable.value;
+        variable.value = value;
+    }
+
+    // Assigning a non-Array to an Array results in an Array with a single item: the RHS.
+    if (existingValue !== null && existingValue instanceof Array && !(value instanceof Array)) {
+        if (existingValue.length === 0) {
+            // Assignment to an empty Array: the RHS can be any valid Array.
+            if (typeof value !== 'string' && !(value instanceof Struct)) {
+                const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
+                return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []));
+            }
+        } else {
+            // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
+            const lhsFirstItem = existingValue[0];
+            if ((typeof lhsFirstItem === 'string' && typeof value !== 'string')
+                || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
+            {
+                const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
+                return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []));
+            }
+        }
+        variable.value = [value];
+    }
+
+    // The definition's LHS is a variable reference.
+    context.evaluatedData.variableReferences.push({
+        definitions: variable.definitions,
+        range: lhsRange,
+    });
+
+    // The definition's LHS is an evaluation.
+    const evaluatedVariable: EvaluatedVariable = {
+        // Deep copy the value so that future modifications don't modify this captured evaluation.
+        value: deepCopyValue(variable.value),
+        range: lhsRange,
+    };
+    context.evaluatedData.evaluatedVariables.push(evaluatedVariable);
+
+    const statementLhs: VariableAndEvaluatedVariable = {
+        variable,
+        evaluatedVariable,
+    };
+    return Maybe.ok(statementLhs);
+}
+
+// Returns an `Error` on fatal error, or the statement's LHS otherwise.
+function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperator, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+    const lhs = statement.lhs;
+    const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
+
+    const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
+    if (maybeEvaluatedLhsName.hasError) {
+        return Maybe.error(maybeEvaluatedLhsName.getError());
+    }
+    const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
+    if (typeof evaluatedLhsName.value !== 'string') {
+        return Maybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
+    }
+
+    let lhsVariable: ScopeVariable;
+    let maybeExistingVariableStartingFromParentScope: ScopeVariable | null;
+    // Adding to a current-scope non-existant, parent-scope existant variable defines it in the current scope to be the sum.
+    if (lhs.scope === 'current'
+        && context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null
+        && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
+    {
+        const previousValue = maybeExistingVariableStartingFromParentScope.value;
+        const definition = context.scopeStack.createVariableDefinition(lhsRange, evaluatedLhsName.value);
+        context.evaluatedData.variableDefinitions.push(definition);
+        lhsVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLhsName.value, previousValue, [definition]);
+    } else {
+        const maybeExistingVariable = context.scopeStack.getVariableInScopeOrError(lhs.scope, evaluatedLhsName.value, lhsRange);
+        if (maybeExistingVariable.hasError) {
+            return Maybe.error(maybeExistingVariable.getError());
+        }
+        lhsVariable = maybeExistingVariable.getValue();
+    }
+
+    const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
+    if (maybeEvaluatedRhs.hasError) {
+        return Maybe.error(maybeEvaluatedRhs.getError());
+    }
+    const evaluatedRhs = maybeEvaluatedRhs.getValue();
+
+    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
+    let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+    switch (statement.operator) {
+        case '+':
+            inPlaceBinaryOperatorFunc = inPlaceAdd;
+            break;
+        case '-':
+            inPlaceBinaryOperatorFunc = inPlaceSubtract;
+            break;
+    }
+    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
+    if (maybeOperatorResult.hasError) {
+        return Maybe.error(maybeOperatorResult.getError());
+    }
+    lhsVariable.value = maybeOperatorResult.getValue();
+
+    // The LHS is a variable reference.
+    context.evaluatedData.variableReferences.push({
+        definitions: lhsVariable.definitions,
+        range: lhsRange,
+    });
+
+    // The LHS is an evaluated variable.
+    // We could also add an entry for the pre-operator value that we read, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
+    const evaluatedVariable: EvaluatedVariable = {
+        value: deepCopyValue(lhsVariable.value),
+        range: lhsRange,
+    };
+    context.evaluatedData.evaluatedVariables.push(evaluatedVariable);
+
+    const statementLhs: VariableAndEvaluatedVariable = {
+        variable: lhsVariable,
+        evaluatedVariable,
+    };
+    return Maybe.ok(statementLhs);
+}
+
+// Returns an `Error` on fatal error, or the statement's LHS otherwise.
+function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBinaryOperatorOnUnnamed, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+    if (context.previousStatementLhs === null) {
+        const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
+        return Maybe.error(new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []));
+    }
+    const lhsVariable = context.previousStatementLhs.variable;
+
+    const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
+    if (maybeEvaluatedRhs.hasError) {
+        return Maybe.error(maybeEvaluatedRhs.getError());
+    }
+    const evaluatedRhs = maybeEvaluatedRhs.getValue();
+
+    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
+    let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+    switch (statement.operator) {
+        case '+':
+            inPlaceBinaryOperatorFunc = inPlaceAdd;
+            break;
+        case '-':
+            inPlaceBinaryOperatorFunc = inPlaceSubtract;
+            break;
+    }
+    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
+    if (maybeOperatorResult.hasError) {
+        return Maybe.error(maybeOperatorResult.getError());
+    }
+    lhsVariable.value = maybeOperatorResult.getValue();
+
+    // Modify the previous statement's LHS variable evaluation to be the new value.
+    // We could instead capture both the previous value and the new value, but it's not very useful and reduces clarity because normally you just want to read the new value, not the old value.
+    context.previousStatementLhs.evaluatedVariable.value = lhsVariable.value;
+
+    // Allow chaining of unnamed operators.
+    return Maybe.ok(context.previousStatementLhs);
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementScopedStatements(statement: ParsedStatementScopedStatements, context: EvaluationContext): Error | null {
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        error = evaluateStatements(statement.statements, context);
+    });
+    return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementUsing(statement: ParsedStatementUsing, context: EvaluationContext): Error | null {
+    const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+    const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
+
+    if (statement.struct.type !== 'evaluatedVariable') {
+        return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`, []);
+    }
+    const maybeEvaluated = evaluateEvaluatedVariable(statement.struct, context);
+    if (maybeEvaluated.hasError) {
+        return maybeEvaluated.getError();
+    }
+    const evaluated = maybeEvaluated.getValue();
+
+    const structVariable = evaluated.valueScopeVariable;
+    const struct = structVariable.value;
+    if (!(struct instanceof Struct)) {
+        return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []);
+    }
+
+    //
+    // For each struct member:
+    //   * If it is already defined in the current scope, update it and add a reference to the definition.
+    //   * Otherwise, define it and add a reference to the definition.
+    //   * Either way, add references to:
+    //       * the struct member's definition from the statement
+    //       * the current scope's variable-from-member's definition from the member's definition
+
+    for (const [structMemberName, structMember] of struct.members) {
+        let variableDefinitions: AtLeast1VariableDefinition;
+        const existingVariable = context.scopeStack.getVariableInCurrentScope(structMemberName);
+        if (existingVariable !== null) {
+            existingVariable.value = structMember.value;
+            variableDefinitions = existingVariable.definitions;
+        } else {
+            const newDefinition = context.scopeStack.createVariableDefinition(statementRange, structMemberName);
+            variableDefinitions = structMember.definitions.concat(newDefinition) as AtLeast1VariableDefinition;
+            context.scopeStack.setVariableInCurrentScope(structMemberName, structMember.value, variableDefinitions);
+            context.evaluatedData.variableDefinitions.push(newDefinition);
+        }
+
+        context.evaluatedData.variableReferences.push(
+            // The `Using` statement references the variable definition being set to the new value,
+            // which is either the existing definition, if one exists, or the new defintion otherwise.
+            {
+                definitions: variableDefinitions,
+                range: statementRange,
+            },
+            // // The `Using` statement references the struct's member's definition.
+            {
+                definitions: structMember.definitions,
+                range: statementRange,
+            },
+        );
+        // The struct's member's definition references the variable definition being set to the new value,
+        // which is either the existing definition, if one exists, or the new defintion otherwise.
+        for (const structMemberDefinition of structMember.definitions) {
+            context.evaluatedData.variableReferences.push({
+                definitions: variableDefinitions,
+                range: structMemberDefinition.range,
+            });
+        }
+    }
+
+    return null;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementForEach(statement: ParsedStatementForEach, context: EvaluationContext): Error | null {
+    // Evaluate the iterators (array to loop over plus the loop-variable)
+    interface ForEachIterator {
+        loopVariable: ScopeVariable;
+        loopVariableRange: SourceRange;
+        arrayItems: Value[];
+    }
+    const iterators: ForEachIterator[] = [];
+    for (const iterator of statement.iterators) {
+        // Evaluate the array to loop over.
+        if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
+            const range = new SourceRange(context.thisFbuildUri, statement.range);
+            return new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
+        }
+        const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
+        const maybeEvaluatedArrayToLoopOver = evaluateEvaluatedVariable(iterator.arrayToLoopOver, context);
+        if (maybeEvaluatedArrayToLoopOver.hasError) {
+            return maybeEvaluatedArrayToLoopOver.getError();
+        }
+        const evaluatedArrayToLoopOver = maybeEvaluatedArrayToLoopOver.getValue();
+        const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
+        if (!(arrayItems instanceof Array)) {
+            return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`, []);
+        }
+
+        if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
+            return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`, []);
+        }
+
+        const loopVar = iterator.loopVar;
+        const loopVarRange = new SourceRange(context.thisFbuildUri, loopVar.range);
+
+        // Evaluate the loop-variable name.
+        const maybeEvaluatedLoopVarName = evaluateRValue(loopVar.name, context);
+        if (maybeEvaluatedLoopVarName.hasError) {
+            return maybeEvaluatedLoopVarName.getError();
+        }
+        const evaluatedLoopVarName = maybeEvaluatedLoopVarName.getValue();
+        if (typeof evaluatedLoopVarName.value !== 'string') {
+            return new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
+        }
+        const evaluatedLoopVarNameValue: string = evaluatedLoopVarName.value;
+
+        const loopVarDefinition = context.scopeStack.createVariableDefinition(loopVarRange, evaluatedLoopVarNameValue);
+
+        // The loop variable is a definition and a reference.
+        context.evaluatedData.variableDefinitions.push(loopVarDefinition);
+        context.evaluatedData.variableReferences.push({
+            definitions: [loopVarDefinition],
+            range: loopVarRange,
+        });
+
+        // Set a variable in the current scope for each iterator's loop variable.
+        const loopVariable = context.scopeStack.setVariableInCurrentScope(evaluatedLoopVarNameValue, 0, [loopVarDefinition]);
+        iterators.push({
+            loopVariable,
+            loopVariableRange: loopVarRange,
+            arrayItems,
+        });
+    }
+
+    // Evaluate the ForEach body.
+
+    let error: Error | null = null;
+    const arrayItemsLength = iterators[0].arrayItems.length;
+    for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
+        context.scopeStack.withScope(() => {
+            // Update the loop variables' values and add evaluated-variables for them.
+            for (const iterator of iterators) {
+                const arrayItem = iterator.arrayItems[arrayItemIndex];
+                iterator.loopVariable.value = arrayItem;
+
+                context.evaluatedData.evaluatedVariables.push({
+                    value: arrayItem,
+                    range: iterator.loopVariableRange,
+                });
+            }
+
+            error = evaluateStatements(statement.statements, context);
+            if (error !== null) {
+                return;
+            }
+        });
+    }
+    return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
+    // Evaluate the target name.
+    const maybeEvaluatedTargetNameName = evaluateRValue(statement.targetName, context);
+    if (maybeEvaluatedTargetNameName.hasError) {
+        return maybeEvaluatedTargetNameName.getError();
+    }
+    const evaluatedTargetName = maybeEvaluatedTargetNameName.getValue();
+    const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
+    if (typeof evaluatedTargetName.value !== 'string') {
+        return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []);
+    }
+
+    // Ensure that this doesn't resuse an existing target name.
+    const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
+    if (existingTargetDefinition !== undefined) {
+        const existingTargetDefinitionInfo: ErrorRelatedInformation = {
+            range: existingTargetDefinition.range,
+            message: 'Defined here',
+        };
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            evaluatedTargetNameRange,
+            `Target name "${evaluatedTargetName.value}" already exists`,
+            [existingTargetDefinitionInfo]
+        )
+        );
+        return null;
+    }
+
+    // Create a definition and reference for the target name.
+    const targetNameDefinition = context.scopeStack.createTargetDefinition(evaluatedTargetNameRange);
+    const targetNameReference: TargetReference = {
+        definition: targetNameDefinition,
+        range: evaluatedTargetNameRange,
+    };
+    context.evaluatedData.targetDefinitions.set(evaluatedTargetName.value, targetNameDefinition);
+    context.evaluatedData.targetReferences.push(targetNameReference);
+
+    // Evaluate the function body.
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        error = evaluateStatements(statement.statements, context);
+        if (error !== null) {
+            return;
+        }
+    });
+    return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementError(statement: ParsedStatementError, context: EvaluationContext): Error | null {
+    const maybeEvaluatedValue = evaluateRValue(statement.value, context);
+    if (maybeEvaluatedValue.hasError) {
+        return maybeEvaluatedValue.getError();
+    }
+    const evaluatedValue = maybeEvaluatedValue.getValue();
+    if (typeof evaluatedValue.value !== 'string') {
+        const range = new SourceRange(context.thisFbuildUri, statement.range);
+        return new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`);
+    }
+    return null;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementPrint(statement: ParsedStatementPrint, context: EvaluationContext): Error | null {
+    const value = statement.value;
+    const maybeEvaluatedValue = evaluateRValue(value, context);
+    if (maybeEvaluatedValue.hasError) {
+        return maybeEvaluatedValue.getError();
+    }
+    const evaluatedValue = maybeEvaluatedValue.getValue();
+    if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
+        const range = new SourceRange(context.thisFbuildUri, statement.range);
+        return new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
+    }
+    return null;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementSettings(statement: ParsedStatementSettings, context: EvaluationContext): Error | null {
+    // Evaluate the function body.
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        error = evaluateStatements(statement.statements, context);
+    });
+    return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationContext): Error | null {
+    // Evaluate the condition.
+    const condition = statement.condition;
+    const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+    const maybeEvaluatedCondition = evaluateIfCondition(condition, context, statementRange);
+    if (maybeEvaluatedCondition.hasError) {
+        return maybeEvaluatedCondition.getError();
+    }
+    const evaluatedCondition = maybeEvaluatedCondition.getValue();
+
+    // Skip evaluating the function body if the condition was false.
+    if (evaluatedCondition.condition === false) {
+        return null;
+    }
+
+    // Evaluate the function body.
+    let error: Error | null = null;
+    context.scopeStack.withScope(() => {
+        error = evaluateStatements(statement.statements, context);
+    });
+    return error;
+}
+
+// Returns an `Error` on fatal error, or `null` otherwise.
+function evaluateStatementUserFunctionDeclaration(
+    userFunction: ParsedStatementUserFunctionDeclaration,
+    context: EvaluationContext
+): void {
+    const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
+    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
+    const functionNameReference: VariableReference = {
+        definitions: [functionNameDefinition],
+        range: nameSourceRange,
+    };
+
+    context.evaluatedData.variableReferences.push(functionNameReference);
+    context.evaluatedData.variableDefinitions.push(functionNameDefinition);
+
+    // Ensure that the function name is not reserved.
+    if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            nameSourceRange,
+            `Cannot use function name "${userFunction.name}" because it is reserved.`,
+            []
+        ));
+        return;
+    }
+
+    const existingFunction = context.userFunctions.get(userFunction.name);
+    // Ensure that the function name is not already used by another user function.
+    if (existingFunction !== undefined) {
+        const existingFunctionInfo: ErrorRelatedInformation = {
+            range: existingFunction.definition.range,
+            message: 'Defined here',
+        };
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            nameSourceRange,
+            `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`,
+            [existingFunctionInfo]
+        ));
+        return;
+    }
+
+    // Define and reference each parameter.
+    //
+    // Ensure that the parameter names are unique.
+    // Use an Array instead of a Set since we're optimizing for a small number of parameters.
+    const usedParameterNames: string[] = [];
+    for (const parameter of userFunction.parameters) {
+        const paramSourceRange = new SourceRange(context.thisFbuildUri, parameter.range);
+
+        if (usedParameterNames.includes(parameter.name)) {
+            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                paramSourceRange,
+                `User-function argument names must be unique.`,
+                []
+            ));
+            return;
+        }
+        usedParameterNames.push(parameter.name);
+
+        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name);
+        parameter.definition = definition;
+
+        context.evaluatedData.variableDefinitions.push(definition);
+        context.evaluatedData.variableReferences.push({
+            definitions: [definition],
+            range: paramSourceRange,
+        });
+    }
+
+    context.userFunctions.set(userFunction.name, {
+        definition: functionNameDefinition,
+        parameters: userFunction.parameters,
+        statements: userFunction.statements,
+    });
+}
+
+function evaluateStatementUserFunctionCall(
+    call: ParsedStatementUserFunctionCall,
+    context: EvaluationContext
+): Error | null {
+    const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
+
+    // Lookup the function.
+    const userFunction = context.userFunctions.get(call.name);
+    if (userFunction === undefined) {
+        return new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`, []);
+    }
+
+    // Reference the function.
+    context.evaluatedData.variableReferences.push({
+        definitions: [userFunction.definition],
+        range: nameSourceRange,
+    });
+
+    if (call.parameters.length !== userFunction.parameters.length) {
+        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
+        const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
+        return new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`, []);
+    }
+
+    if (context.scopeStack.getDepth() > MAX_SCOPE_STACK_DEPTH) {
+        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
+        return new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.', []);
+    }
+
+    // Evaluate the call-parameters' values.
+    // Note that we evaluate the call's parameter in the current context, not the function call context.
+    const paramValues: Value[] = new Array(call.parameters.length);
+    for (const [i, callParam] of call.parameters.entries()) {
+        const maybeEvaluatedValue = evaluateRValue(callParam.value, context);
+        if (maybeEvaluatedValue.hasError) {
+            return maybeEvaluatedValue.getError();
+        }
+        const evaluatedValue = maybeEvaluatedValue.getValue();
+        paramValues[i] = evaluatedValue.value;
+    }
+
+    //
+    // Call the function.
+    //
+    // Note that the call uses the current `EvaluationContext`, but the body of the call uses a new context.
+    //
+    let error: Error | null = null;
+    // User functions can only use passed-in arguments and not variables in scope where they are defined.
+    context.scopeStack.withPrivateScope(() => {
+        const functionCallContext: EvaluationContext = {
+            evaluatedData: context.evaluatedData,
+            scopeStack: context.scopeStack,
+            // User functions do not share defines.
+            defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
+            // User functions can call other user functions.
+            userFunctions: context.userFunctions,
+            rootFbuildDirUri: context.rootFbuildDirUri,
+            thisFbuildUri: context.thisFbuildUri,
+            fileSystem: context.fileSystem,
+            parseDataProvider: context.parseDataProvider,
+            onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+            previousStatementLhs: null,
+        };
+
+        // Set a variable for each parameter.
+        for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
+            if (funcDeclarationParam.definition === undefined) {
+                const callParam = call.parameters[i];
+                const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
+                error = new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
+                return;
+            }
+
+            // Note that we set the variable in the function call context, not the current context.
+            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], [funcDeclarationParam.definition]);
+        }
+
+        error = evaluateStatements(userFunction.statements, functionCallContext);
+    });
+    return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementInclude(statement: ParsedStatementInclude, context: EvaluationContext): Error | null {
+    const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
+    const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
+    const includeUriStr = includeUri.toString();
+    const includeRange = new SourceRange(context.thisFbuildUri, statement.path.range);
+
+    context.evaluatedData.includeDefinitions.add(includeUriStr);
+    const includeReference: IncludeReference = {
+        includeUri: includeUriStr,
+        range: includeRange,
+    };
+    context.evaluatedData.includeReferences.push(includeReference);
+
+    // Skip the include if it's marked to only be included once and it has already been included.
+    if (context.onceIncludeUrisAlreadyIncluded.includes(includeUriStr)) {
+        return null;
+    }
+
+    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
+    if (maybeIncludeParseData.hasError) {
+        const includeError = maybeIncludeParseData.getError();
+        let error: Error;
+        if (includeError instanceof ParseError) {
+            error = includeError;
+        } else {
+            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`, []);
+        }
+        return error;
+    }
+    const includeParseData = maybeIncludeParseData.getValue();
+
+    // Save the current `_CURRENT_BFF_DIR_` value so that we can restore it after processing the include.
+    const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
+    const maybeCurrentBffDirVariable = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
+    if (maybeCurrentBffDirVariable.hasError) {
+        return maybeCurrentBffDirVariable.getError();
+    }
+    const currentBffDirVariable = maybeCurrentBffDirVariable.getValue();
+    const currentBffDirBeforeInclude = currentBffDirVariable.value;
+
+    // Update the `_CURRENT_BFF_DIR_` value for the include.
+    const includeDirRelativeToRoot = path.relative(context.rootFbuildDirUri.toString(), vscodeUri.Utils.dirname(includeUri).toString());
+    currentBffDirVariable.value = includeDirRelativeToRoot;
+
+    const includeContext: EvaluationContext = {
+        evaluatedData: context.evaluatedData,
+        scopeStack: context.scopeStack,
+        defines: context.defines,
+        userFunctions: context.userFunctions,
+        rootFbuildDirUri: context.rootFbuildDirUri,
+        thisFbuildUri: includeUriStr,
+        fileSystem: context.fileSystem,
+        parseDataProvider: context.parseDataProvider,
+        onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+        previousStatementLhs: context.previousStatementLhs,
+    };
+
+    const error = evaluateStatements(includeParseData.statements, includeContext);
+    if (error !== null) {
+        return error;
+    }
+
+    // Restore the `_CURRENT_BFF_DIR_` value.
+    currentBffDirVariable.value = currentBffDirBeforeInclude;
+
+    return null;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementDirectiveIf(statement: ParsedStatementDirectiveIf, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable | null> {
+
+    const maybeEvaluatedCondition = evaluateDirectiveIfCondition(statement, context);
+    if (maybeEvaluatedCondition.hasError) {
+        return Maybe.error(maybeEvaluatedCondition.getError());
+    }
+
+    // Evaluate the '#if' body statements if the condition was true.
+    // Otherwise, evaluate the '#else' body statements.
+    const statements = maybeEvaluatedCondition.getValue() ? statement.ifStatements : statement.elseStatements;
+    const error = evaluateStatements(statements, context);
+    if (error !== null) {
+        return Maybe.error(error);
+    }
+
+    // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
+    return Maybe.ok(context.previousStatementLhs);
+}
+
+function evaluateStatementDefine(statement: ParsedStatementDefine, context: EvaluationContext): void {
+    const symbol = statement.symbol;
+    const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+    const existingDefine = context.defines.get(symbol);
+    if (existingDefine !== undefined) {
+        const existingDefineInfo: ErrorRelatedInformation = {
+            range: existingDefine.definition.range,
+            message: 'Defined here',
+        };
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            statementRange,
+            `Cannot #define already defined symbol "${symbol}".`,
+            [existingDefineInfo]
+        ));
+        return;
+    }
+    const definition = context.scopeStack.createVariableDefinition(statementRange, symbol);
+    const info: DefineInfo = {
+        isPredefined: false,
+        definition,
+    };
+    context.defines.set(symbol, info);
+    const reference: VariableReference = {
+        definitions: [definition],
+        range: statementRange,
+    };
+    context.evaluatedData.variableReferences.push(reference);
+    context.evaluatedData.variableDefinitions.push(definition);
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementUndefine(statement: ParsedStatementUndefine, context: EvaluationContext): Error | null {
+    const symbol = statement.symbol;
+    const sourceRange = new SourceRange(context.thisFbuildUri, statement.range);
+    if (symbol === getPlatformSpecificDefineSymbol()) {
+        return new EvaluationError(sourceRange, `Cannot #undef built-in symbol "${symbol}".`, []);
+    }
+    if (!context.defines.has(symbol)) {
+        return new EvaluationError(sourceRange, `Cannot #undef undefined symbol "${symbol}".`, []);
+    }
+    context.defines.delete(symbol);
+    return null;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateStatementImportEnvVar(statement: ParsedStatementImportEnvVar, context: EvaluationContext): Error | null {
+    // Read an environment variable and store the value in a variable with the same name as the environment variable.
+    const symbolName = statement.symbol;
+    const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+    const environmentVariableValue = process.env[symbolName];
+    if (environmentVariableValue === undefined) {
+        return new EvaluationError(statementRange, `Cannot import environment variable "${symbolName}" because it does not exist.`, []);
+    }
+    const definition = context.scopeStack.createVariableDefinition(statementRange, symbolName);
+    context.scopeStack.setVariableInCurrentScope(symbolName, environmentVariableValue, [definition]);
+
+    const reference: VariableReference = {
+        definitions: [definition],
+        range: statementRange,
+    };
+    context.evaluatedData.variableReferences.push(reference);
+    context.evaluatedData.variableDefinitions.push(definition);
     return null;
 }
 
@@ -1848,7 +2142,6 @@ function evaluateIfCondition(
     statementRange: SourceRange
 ): Maybe<EvaluatedCondition>
 {
-
     if (isParsedIfConditionBoolean(condition)) {
         const maybeEvaluatedCondition = evaluateRValue(condition.value, context);
         if (maybeEvaluatedCondition.hasError) {
@@ -2091,163 +2384,6 @@ function evaluateDirectiveIfCondition(
     }
 
     return Maybe.ok(result);
-}
-
-// Returns an `Error` on fatal error, or `null` otherwise.
-function evaluateUserFunctionDeclaration(
-    userFunction: ParsedStatementUserFunctionDeclaration,
-    context: EvaluationContext
-): void {
-    const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
-    const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
-    const functionNameReference: VariableReference = {
-        definitions: [functionNameDefinition],
-        range: nameSourceRange,
-    };
-
-    context.evaluatedData.variableReferences.push(functionNameReference);
-    context.evaluatedData.variableDefinitions.push(functionNameDefinition);
-
-    // Ensure that the function name is not reserved.
-    if (RESERVED_SYMBOL_NAMES.has(userFunction.name)) {
-        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-            nameSourceRange,
-            `Cannot use function name "${userFunction.name}" because it is reserved.`,
-            []
-        ));
-        return;
-    }
-
-    const existingFunction = context.userFunctions.get(userFunction.name);
-    // Ensure that the function name is not already used by another user function.
-    if (existingFunction !== undefined) {
-        const existingFunctionInfo: ErrorRelatedInformation = {
-            range: existingFunction.definition.range,
-            message: 'Defined here',
-        };
-        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-            nameSourceRange,
-            `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`,
-            [existingFunctionInfo]
-        ));
-        return;
-    }
-
-    // Define and reference each parameter.
-    //
-    // Ensure that the parameter names are unique.
-    // Use an Array instead of a Set since we're optimizing for a small number of parameters.
-    const usedParameterNames: string[] = [];
-    for (const parameter of userFunction.parameters) {
-        const paramSourceRange = new SourceRange(context.thisFbuildUri, parameter.range);
-
-        if (usedParameterNames.includes(parameter.name)) {
-            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                paramSourceRange,
-                `User-function argument names must be unique.`,
-                []
-            ));
-            return;
-        }
-        usedParameterNames.push(parameter.name);
-
-        const definition = context.scopeStack.createVariableDefinition(paramSourceRange, parameter.name);
-        parameter.definition = definition;
-
-        context.evaluatedData.variableDefinitions.push(definition);
-        context.evaluatedData.variableReferences.push({
-            definitions: [definition],
-            range: paramSourceRange,
-        });
-    }
-
-    context.userFunctions.set(userFunction.name, {
-        definition: functionNameDefinition,
-        parameters: userFunction.parameters,
-        statements: userFunction.statements,
-    });
-}
-
-function evaluateUserFunctionCall(
-    call: ParsedStatementUserFunctionCall,
-    context: EvaluationContext
-): Error | null {
-    const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
-
-    // Lookup the function.
-    const userFunction = context.userFunctions.get(call.name);
-    if (userFunction === undefined) {
-        return new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`, []);
-    }
-
-    // Reference the function.
-    context.evaluatedData.variableReferences.push({
-        definitions: [userFunction.definition],
-        range: nameSourceRange,
-    });
-
-    if (call.parameters.length !== userFunction.parameters.length) {
-        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
-        const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
-        return new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`, []);
-    }
-
-    if (context.scopeStack.getDepth() > MAX_SCOPE_STACK_DEPTH) {
-        const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
-        return new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.', []);
-    }
-
-    // Evaluate the call-parameters' values.
-    // Note that we evaluate the call's parameter in the current context, not the function call context.
-    const paramValues: Value[] = new Array(call.parameters.length);
-    for (const [i, callParam] of call.parameters.entries()) {
-        const maybeEvaluatedValue = evaluateRValue(callParam.value, context);
-        if (maybeEvaluatedValue.hasError) {
-            return maybeEvaluatedValue.getError();
-        }
-        const evaluatedValue = maybeEvaluatedValue.getValue();
-        paramValues[i] = evaluatedValue.value;
-    }
-
-    //
-    // Call the function.
-    //
-    // Note that the call uses the current `EvaluationContext`, but the body of the call uses a new context.
-    //
-    let error: Error | null = null;
-    // User functions can only use passed-in arguments and not variables in scope where they are defined.
-    context.scopeStack.withPrivateScope(() => {
-        const functionCallContext: EvaluationContext = {
-            evaluatedData: context.evaluatedData,
-            scopeStack: context.scopeStack,
-            // User functions do not share defines.
-            defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
-            // User functions can call other user functions.
-            userFunctions: context.userFunctions,
-            rootFbuildDirUri: context.rootFbuildDirUri,
-            thisFbuildUri: context.thisFbuildUri,
-            fileSystem: context.fileSystem,
-            parseDataProvider: context.parseDataProvider,
-            onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
-            previousStatementLhs: null,
-        };
-
-        // Set a variable for each parameter.
-        for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
-            if (funcDeclarationParam.definition === undefined) {
-                const callParam = call.parameters[i];
-                const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
-                error = new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
-                return;
-            }
-
-            // Note that we set the variable in the function call context, not the current context.
-            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], [funcDeclarationParam.definition]);
-        }
-
-        error = evaluateStatements(userFunction.statements, functionCallContext);
-    });
-    return error;
 }
 
 function getValueTypeName(value: Value): ValueTypeName {
