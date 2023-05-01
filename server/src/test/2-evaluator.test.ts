@@ -104,6 +104,8 @@ function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues:
     const result = evaluateInput(input, true /*enableDiagnostics*/);
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
+
+    assert.deepStrictEqual(result.nonFatalErrors, []);
 }
 
 function getParseSourceRangeString(range: ParseSourceRange): string {
@@ -813,6 +815,7 @@ describe('evaluator', () => {
                     `
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -857,6 +860,7 @@ describe('evaluator', () => {
                     `
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const root_fbuild_dir = `${path.sep}some${path.sep}path`;
 
@@ -1878,6 +1882,8 @@ describe('evaluator', () => {
                 Print( 'pre-$MyVar1$-$MyVar2$-post' )
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 // MyValue1 definition
                 {
@@ -1909,6 +1915,8 @@ describe('evaluator', () => {
                 Print( .MyVar )
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 // MyValue definition
                 {
@@ -1932,6 +1940,8 @@ describe('evaluator', () => {
                 .MyVar = 2
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedDefinitions: VariableDefinition[] = [
                 {
                     id: 1,
@@ -1949,6 +1959,8 @@ describe('evaluator', () => {
                 .MyVar = 1
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedReferences: VariableReference[] = [
                 {
                     definitions: [{
@@ -1968,6 +1980,8 @@ describe('evaluator', () => {
                 .MyVar + 2
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedReferences: VariableReference[] = [
                 {
                     definitions: [{
@@ -1995,6 +2009,8 @@ describe('evaluator', () => {
                 .MyVar2 = .MyVar1
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedReferences: VariableReference[] = [
                 {
                     definitions: [{
@@ -2030,6 +2046,8 @@ describe('evaluator', () => {
                 .MyVar2 = '$MyVar1$ world'
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const expectedReferences: VariableReference[] = [
                 {
                     definitions: [{
@@ -2160,6 +2178,7 @@ describe('evaluator', () => {
             `;
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const rangeMyVar1 = createRange(1, 16, 1, 23);
             const rangeMyStructMyVar1 = createRange(3, 20, 3, 27);
@@ -2505,6 +2524,7 @@ describe('evaluator', () => {
             `;
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             // `.MyArray = {'a', 'b'}`
             const expectedDefinitionMyArray: VariableDefinition = {
@@ -2567,7 +2587,8 @@ describe('evaluator', () => {
                         ${propertyInput}
                     }
                 `;
-                evaluateInput(input, true /*enableDiagnostics*/);
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
             });
 
             it('handles an evaluated variable target name', () => {
@@ -2578,7 +2599,8 @@ describe('evaluator', () => {
                         ${propertyInput}
                     }
                 `;
-                evaluateInput(input, true /*enableDiagnostics*/);
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
             });
 
             it('handles a dynamic-variable target name', () => {
@@ -2590,7 +2612,19 @@ describe('evaluator', () => {
                         ${propertyInput}
                     }
                 `;
-                evaluateInput(input, true /*enableDiagnostics*/);
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
+            });
+
+            it('Properties work even if they are defined in a parent scope', () => {
+                const input = `
+                    ${propertyInput}
+                    ${functionName}('MyTargetName')
+                    {
+                    }
+                `;
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
             });
 
             it('creates a definition for the target name that can be referenced', () => {
@@ -2614,6 +2648,7 @@ describe('evaluator', () => {
                 `;
 
                 const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
 
                 const expectedDefinitionMyTarget1: TargetDefinition = {
                     id: 1,
@@ -2636,7 +2671,8 @@ describe('evaluator', () => {
                 const input = `
                     ${functionName}('MyTargetName'){ ${propertyInput} }
                 `;
-                evaluateInput(input, true /*enableDiagnostics*/);
+                const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
             });
 
             it('errors if the evaluated variable target name is not a string', () => {
@@ -2685,6 +2721,8 @@ describe('evaluator', () => {
                     }
                 `;
                 const result = evaluateInput(input, true /*enableDiagnostics*/);
+                assert.deepStrictEqual(result.nonFatalErrors, []);
+
                 const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
 
                 const expectedValuesWithoutProperties: Value[] = [
@@ -2714,8 +2752,7 @@ describe('evaluator', () => {
                     {
                     }
                 `;
-                // TODO
-                assertNonFatalErrors(
+                assertNonFatalError(
                     input,
                     'Call to function "Alias" is missing required property "Targets".',
                     createRange(1, 20, 1, 41),
@@ -4857,6 +4894,7 @@ Expecting to see the following:
                     `
                 ]
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
@@ -4924,6 +4962,7 @@ Expecting to see the following:
                     `
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
@@ -4990,6 +5029,7 @@ Expecting to see the following:
                     `
                 ]
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const expectedEvaluatedVariables: EvaluatedVariable[] = [
                 {
@@ -5074,6 +5114,7 @@ Expecting to see the following:
                     `
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -5118,6 +5159,7 @@ Expecting to see the following:
                     `
                 ]
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             assert.deepStrictEqual(result.evaluatedVariables, [
                 {
@@ -5419,6 +5461,8 @@ Expecting to see the following:
                     ''
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -5438,6 +5482,8 @@ Expecting to see the following:
                     ''
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -5457,6 +5503,8 @@ Expecting to see the following:
                     ''
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, [true]);
         });
@@ -5485,6 +5533,8 @@ Expecting to see the following:
                     ''
                 ],
             ]), true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualValues, []);
         });
@@ -5527,6 +5577,8 @@ Expecting to see the following:
             `;
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualEvaluatedValues, [true]);
 
@@ -5599,6 +5651,8 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
 
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
+
             const actualEvaluatedValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
             assert.deepStrictEqual(actualEvaluatedValues, []);
 
@@ -5653,6 +5707,7 @@ Expecting to see the following:
                 Print( .${builtInEnvVar} )
             `;
             const result = evaluateInput(input, true /*enableDiagnostics*/);
+            assert.deepStrictEqual(result.nonFatalErrors, []);
 
             const expectedDefinition: VariableDefinition =
             {

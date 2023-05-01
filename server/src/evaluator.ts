@@ -1432,6 +1432,21 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
         if (error !== null) {
             return;
         }
+
+        // Ensure that all required properties are set.
+        if (statement.functionName == 'Alias') {
+            const requiredPropertyName = 'Targets';
+
+            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(requiredPropertyName);
+            if (propertyVariable === null) {
+                context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                    new SourceRange(context.thisFbuildUri, statement.range),
+                    `Call to function "${statement.functionName}" is missing required property "${requiredPropertyName}".`,
+                    []
+                ));
+                return;
+            }
+        }
     });
     return error;
 }
