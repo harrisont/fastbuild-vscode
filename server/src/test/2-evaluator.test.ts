@@ -2763,217 +2763,421 @@ describe('evaluator', () => {
 
         describe('Compiler', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Executable = 'MyString'
             `;
 
             commonTests('Compiler', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Compiler('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Compiler" is missing required property "Executable".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Copy', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Source = 'MyString'
+                .Dest = 'MyString'
             `;
 
             commonTests('Copy', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Copy('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Copy" is missing required properties "Source", "Dest".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('CopyDir', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .SourcePaths = 'MyString'
+                .Dest = 'MyString'
             `;
 
             commonTests('CopyDir', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    CopyDir('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "CopyDir" is missing required properties "SourcePaths", "Dest".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('CSAssembly', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Compiler = 'MyString'
+                .CompilerOptions = 'MyString'
+                .CompilerOutput = 'MyString'
             `;
 
             commonTests('CSAssembly', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    CSAssembly('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "CSAssembly" is missing required property "Compiler", "CompilerOptions", "CompilerOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('DLL', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Linker = 'MyString'
+                .LinkerOutput = 'MyString'
+                .LinkerOptions = 'MyString'
+                .Libraries = 'MyString'
+                .Libraries2 = 'MyString'
             `;
 
             commonTests('DLL', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    DLL('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "DLL" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Exec', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .ExecExecutable = 'MyString'
+                .ExecOutput = 'MyString'
             `;
 
             commonTests('Exec', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Exec('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Exec" is missing required properties "ExecExecutable", "ExecOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Executable', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Linker = 'MyString'
+                .LinkerOutput = 'MyString'
+                .LinkerOptions = 'MyString'
+                .Libraries = 'MyString'
+                .Libraries2 = 'MyString'
             `;
 
             commonTests('Executable', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Executable('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Executable" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Library', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Compiler = 'MyString'
+                .CompilerOptions = 'MyString'
+                .CompilerOutputPath = 'MyString'
+                .Librarian = 'MyString'
+                .LibrarianOptions = 'MyString'
+                .LibrarianOutput = 'MyString'
             `;
 
             commonTests('Library', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Library('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Library" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath", "Librarian", "LibrarianOptions", "LibrarianOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('ListDependencies', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Source = 'MyString'
+                .Dest = 'MyString'
             `;
 
             commonTests('ListDependencies', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    ListDependencies('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "ListDependencies" is missing required properties "Source", "Dest".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('ObjectList', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .Compiler = 'MyString'
+                .CompilerOptions = 'MyString'
+                .CompilerOutputPath = 'MyString'
             `;
 
             commonTests('ObjectList', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    ObjectList('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "ObjectList" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('RemoveDir', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .RemovePaths = 'MyString'
             `;
 
             commonTests('RemoveDir', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    RemoveDir('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "RemoveDir" is missing required property "RemovePaths".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Test', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .TestExecutable = 'MyString'
+                .TestOutput = 'MyString'
             `;
 
             commonTests('Test', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Test('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Test" is missing required properties "TestExecutable", "TestOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('TextFile', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .TextFileOutput = 'MyString'
+                .TextFileInputStrings = 'MyString'
             `;
 
             commonTests('TextFile', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    TextFile('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "TextFile" is missing required properties "TextFileOutput", "TextFileInputStrings".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('Unity', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .UnityOutputPath = 'MyString'
             `;
 
             commonTests('Unity', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    Unity('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "Unity" is missing required property "UnityOutputPath".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('VCXProject', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .ProjectOutput = 'MyString'
             `;
 
             commonTests('VCXProject', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    VCXProject('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "VCXProject" is missing required property "ProjectOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('VSProjectExternal', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .ExternalProjectPath = 'MyString'
             `;
 
             commonTests('VSProjectExternal', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    VSProjectExternal('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "VSProjectExternal" is missing required property "ExternalProjectPath".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('VSSolution', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .SolutionOutput = 'MyString'
             `;
 
             commonTests('VSSolution', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    VSSolution('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "VSSolution" is missing required property "SolutionOutput".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
 
         describe('XCodeProject', () => {
             const propertyInput = `
-                .Todo = 'MyString'
+                .ProjectOutput = 'MyString'
+                .ProjectConfigs = 'MyString'
             `;
 
             commonTests('XCodeProject', propertyInput);
 
             it('non-fatally errors when missing required properties', () => {
-                // TODO
+                const input = `
+                    XCodeProject('MyTargetName')
+                    {
+                    }
+                `;
+                assertNonFatalError(
+                    input,
+                    'Call to function "XCodeProject" is missing required properties "ProjectOutput", "ProjectConfigs".',
+                    createRange(1, 20, 1, 41),
+                    []
+                );
             });
         });
     });
