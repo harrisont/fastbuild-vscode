@@ -1776,7 +1776,7 @@ function evaluateStatementDefine(statement: ParsedStatementDefine, context: Eval
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementUndefine(statement: ParsedStatementUndefine, context: EvaluationContext): Error | null {
+function evaluateStatementUndefine(statement: ParsedStatementUndefine, context: EvaluationContext): EvaluationError | null {
     const symbol = statement.symbol;
     const sourceRange = new SourceRange(context.thisFbuildUri, statement.range);
     if (symbol === getPlatformSpecificDefineSymbol()) {
@@ -1790,7 +1790,7 @@ function evaluateStatementUndefine(statement: ParsedStatementUndefine, context: 
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementImportEnvVar(statement: ParsedStatementImportEnvVar, context: EvaluationContext): Error | null {
+function evaluateStatementImportEnvVar(statement: ParsedStatementImportEnvVar, context: EvaluationContext): EvaluationError | null {
     // Read an environment variable and store the value in a variable with the same name as the environment variable.
     const symbolName = statement.symbol;
     const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
