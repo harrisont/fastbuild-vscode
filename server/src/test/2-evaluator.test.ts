@@ -55,7 +55,9 @@ class MockFileSystem implements IFileSystem {
     }
 }
 
-function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange {
+// Assumes the ending line is the same as the starting line.
+function createRange(startLine: number, startCharacter: number, endCharacter: number): SourceRange {
+    const endLine = startLine;
     return createFileRange('file:///dummy.bff', startLine, startCharacter, endLine, endCharacter);
 }
 
@@ -584,9 +586,9 @@ describe('evaluator', () => {
                     .MyStr = 'Hello world!'
                 ]
             `;
-            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 27), name: 'MyBool' };
-            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 26), name: 'MyInt' };
-            const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyStr' };
+            const myVarMyBoolDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 27), name: 'MyBool' };
+            const myVarMyIntDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 26), name: 'MyInt' };
+            const myVarMyStrDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 26), name: 'MyStr' };
             assertEvaluatedVariablesValueEqual(input, [
                 true,
                 123,
@@ -606,7 +608,7 @@ describe('evaluator', () => {
                     .A = .B
                 ]
             `;
-            const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'A' };
+            const myVarADefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 22), name: 'A' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 1,
@@ -626,8 +628,8 @@ describe('evaluator', () => {
                     .A2 = .B2
                 ]
             `;
-            const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 23), name: 'A1' };
-            const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 23), name: 'A2' };
+            const myVarA1Definition: VariableDefinition = { id: 3, range: createRange(4, 20, 23), name: 'A1' };
+            const myVarA2Definition: VariableDefinition = { id: 4, range: createRange(5, 20, 23), name: 'A2' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 2,
@@ -648,7 +650,7 @@ describe('evaluator', () => {
                     .MyArray = {'a', 'b', 'c'}
                 ]
             `;
-            const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 28), name: 'MyArray' };
+            const myVarMyArrayDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 28), name: 'MyArray' };
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 Struct.from(Object.entries({
@@ -665,8 +667,8 @@ describe('evaluator', () => {
                     ]
                 ]
             `;
-            const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 3, 30), name: 'MyInt' };
-            const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 2, 29), name: 'MyStruct' };
+            const myVarMyStructMyIntDefinition: VariableDefinition = { id: 1, range: createRange(3, 24, 30), name: 'MyInt' };
+            const myVarMyStructDefinition: VariableDefinition = { id: 2, range: createRange(2, 20, 29), name: 'MyStruct' };
             const expectedMyStructValue = Struct.from(Object.entries({
                 MyInt: new StructMember(1, [myVarMyStructMyIntDefinition]),
             }));
@@ -688,8 +690,8 @@ describe('evaluator', () => {
                     .Struct2
                 }
             `;
-            const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 1, 34), name: 'MyInt' };
-            const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 2, 34), name: 'MyInt' };
+            const struct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(1, 28, 34), name: 'MyInt' };
+            const struct2MyIntDefinition: VariableDefinition = { id: 3, range: createRange(2, 28, 34), name: 'MyInt' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 Struct.from(Object.entries({
@@ -1095,7 +1097,7 @@ describe('evaluator', () => {
                 ]
                 Print( .MyMessage )
             `;
-            const myStructMyMessageDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 30), name: 'MyMessage' };
+            const myStructMyMessageDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 30), name: 'MyMessage' };
             assertEvaluatedVariablesValueEqual(input, [
                 'hello',
                 'hello world',
@@ -1182,14 +1184,14 @@ describe('evaluator', () => {
                 ]
                 .MyVar = .Struct1 + .Struct2
             `;
-            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
-            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 22), name: 'B' };
+            const struct1ADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 22), name: 'A' };
+            const struct1BDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 22), name: 'B' };
             const struct1 = Struct.from(Object.entries({
                 A: new StructMember(0, [struct1ADefinition]),
                 B: new StructMember(2, [struct1BDefinition]),
             }));
-            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 6, 22), name: 'A' };
-            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 7, 22), name: 'C' };
+            const struct2ADefinition: VariableDefinition = { id: 4, range: createRange(6, 20, 22), name: 'A' };
+            const struct2CDefinition: VariableDefinition = { id: 5, range: createRange(7, 20, 22), name: 'C' };
             const struct2 = Struct.from(Object.entries({
                 A: new StructMember(1, [struct2ADefinition]),
                 C: new StructMember(3, [struct2CDefinition]),
@@ -1886,22 +1888,22 @@ describe('evaluator', () => {
                 // MyValue1 definition
                 {
                     value: 'MyValue1',
-                    range: createRange(1, 16, 1, 23),
+                    range: createRange(1, 16, 23),
                 },
                 // MyValue2 definition
                 {
                     value: 'MyValue2',
-                    range: createRange(2, 16, 2, 23),
+                    range: createRange(2, 16, 23),
                 },
                 // MyValue1 reference
                 {
                     value: 'MyValue1',
-                    range: createRange(3, 28, 3, 36),
+                    range: createRange(3, 28, 36),
                 },
                 // MyValue2 reference
                 {
                     value: 'MyValue2',
-                    range: createRange(3, 37, 3, 45),
+                    range: createRange(3, 37, 45),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -1919,12 +1921,12 @@ describe('evaluator', () => {
                 // MyValue definition
                 {
                     value: 'MyValue',
-                    range: createRange(1, 16, 1, 22),
+                    range: createRange(1, 16, 22),
                 },
                 // MyValue reference
                 {
                     value: 'MyValue',
-                    range: createRange(2, 23, 2, 29),
+                    range: createRange(2, 23, 29),
                 }
             ];
             assert.deepStrictEqual(result.evaluatedVariables, expectedEvaluatedVariables);
@@ -1943,7 +1945,7 @@ describe('evaluator', () => {
             const expectedDefinitions: VariableDefinition[] = [
                 {
                     id: 1,
-                    range: createRange(1, 16, 1, 22),
+                    range: createRange(1, 16, 22),
                     name: 'MyVar'
                 }
             ];
@@ -1963,10 +1965,10 @@ describe('evaluator', () => {
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 22),
+                        range: createRange(1, 16, 22),
                         name: 'MyVar',
                     }],
-                    range: createRange(1, 16, 1, 22),
+                    range: createRange(1, 16, 22),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -1984,18 +1986,18 @@ describe('evaluator', () => {
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 22),
+                        range: createRange(1, 16, 22),
                         name: 'MyVar',
                     }],
-                    range: createRange(1, 16, 1, 22),
+                    range: createRange(1, 16, 22),
                 },
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 22),
+                        range: createRange(1, 16, 22),
                         name: 'MyVar',
                     }],
-                    range: createRange(2, 16, 2, 22),
+                    range: createRange(2, 16, 22),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2013,26 +2015,26 @@ describe('evaluator', () => {
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 23),
+                        range: createRange(1, 16, 23),
                         name: 'MyVar1',
                     }],
-                    range: createRange(1, 16, 1, 23),
+                    range: createRange(1, 16, 23),
                 },
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 23),
+                        range: createRange(1, 16, 23),
                         name: 'MyVar1',
                     }],
-                    range: createRange(2, 26, 2, 33),
+                    range: createRange(2, 26, 33),
                 },
                 {
                     definitions: [{
                         id: 2,
-                        range: createRange(2, 16, 2, 23),
+                        range: createRange(2, 16, 23),
                         name: 'MyVar2',
                     }],
-                    range: createRange(2, 16, 2, 23),
+                    range: createRange(2, 16, 23),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2050,26 +2052,26 @@ describe('evaluator', () => {
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 23),
+                        range: createRange(1, 16, 23),
                         name: 'MyVar1',
                     }],
-                    range: createRange(1, 16, 1, 23),
+                    range: createRange(1, 16, 23),
                 },
                 {
                     definitions: [{
                         id: 1,
-                        range: createRange(1, 16, 1, 23),
+                        range: createRange(1, 16, 23),
                         name: 'MyVar1',
                     }],
-                    range: createRange(2, 27, 2, 35),
+                    range: createRange(2, 27, 35),
                 },
                 {
                     definitions: [{
                         id: 2,
-                        range: createRange(2, 16, 2, 23),
+                        range: createRange(2, 16, 23),
                         name: 'MyVar2',
                     }],
-                    range: createRange(2, 16, 2, 23),
+                    range: createRange(2, 16, 23),
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2090,9 +2092,9 @@ describe('evaluator', () => {
                 Print( .MyInt )
                 Print( .MyString )
             `;
-            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
-            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
-            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 27), name: 'MyBool' };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 26), name: 'MyInt' };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 29), name: 'MyString' };
             const myStruct = Struct.from(Object.entries({
                 MyBool: new StructMember(true, [myStructMyBoolDefinition]),
                 MyInt: new StructMember(1, [myStructMyIntDefinition]),
@@ -2124,11 +2126,11 @@ describe('evaluator', () => {
                     Using(.MyStruct)
                 ]
             `;
-            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 3, 27), name: 'MyBool' };
-            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 4, 26), name: 'MyInt' };
-            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 5, 29), name: 'MyString' };
-            const myStructMyEvaluatedVarDefinition: VariableDefinition = { id: 5, range: createRange(6, 20, 6, 35), name: 'MyEvaluatedVar' };
-            const usingMyStructRange = createRange(9, 20, 9, 36);
+            const myStructMyBoolDefinition: VariableDefinition = { id: 2, range: createRange(3, 20, 27), name: 'MyBool' };
+            const myStructMyIntDefinition: VariableDefinition = { id: 3, range: createRange(4, 20, 26), name: 'MyInt' };
+            const myStructMyStringDefinition: VariableDefinition = { id: 4, range: createRange(5, 20, 29), name: 'MyString' };
+            const myStructMyEvaluatedVarDefinition: VariableDefinition = { id: 5, range: createRange(6, 20, 35), name: 'MyEvaluatedVar' };
+            const usingMyStructRange = createRange(9, 20, 36);
             const usingMyStructMyBoolDefinition: VariableDefinition = { id: 7, range: usingMyStructRange, name: 'MyBool' };
             const usingMyStructMyIntDefinition: VariableDefinition = { id: 8, range: usingMyStructRange, name: 'MyInt' };
             const usingMyStructMyStringDefinition: VariableDefinition = { id: 9, range: usingMyStructRange, name: 'MyString' };
@@ -2178,12 +2180,12 @@ describe('evaluator', () => {
             const result = evaluateInput(input, true /*enableDiagnostics*/);
             assert.deepStrictEqual(result.nonFatalErrors, []);
 
-            const rangeMyVar1 = createRange(1, 16, 1, 23);
-            const rangeMyStructMyVar1 = createRange(3, 20, 3, 27);
-            const rangeMyStructMyVar2 = createRange(4, 20, 4, 27);
-            const rangeMyStruct = createRange(2, 16, 2, 25);
-            const rangeUsingStatement = createRange(6, 16, 6, 34);
-            const rangeUsingStructVar = createRange(6, 23, 6, 32);
+            const rangeMyVar1 = createRange(1, 16, 23);
+            const rangeMyStructMyVar1 = createRange(3, 20, 27);
+            const rangeMyStructMyVar2 = createRange(4, 20, 27);
+            const rangeMyStruct = createRange(2, 16, 25);
+            const rangeUsingStatement = createRange(6, 16, 34);
+            const rangeUsingStructVar = createRange(6, 23, 32);
 
             const definitionMyVar1 = { id: 1, range:  rangeMyVar1, name: 'MyVar1' };  // MyVar1
             const definitionMyStructMyVar1 = { id: 2, range: rangeMyStructMyVar1, name: 'MyVar1' };  // MyStruct's MyVar1
@@ -2237,9 +2239,9 @@ describe('evaluator', () => {
                     Using( .MyStruct2 )
                 ]
             `;
-            const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 26), name: 'MyInt' };
-            const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 5, 39), name: 'MyInt' };
-            const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 8, 39), name: 'MyInt' };
+            const myStruct1MyIntDefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 26), name: 'MyInt' };
+            const usingMyStruct1MyIntDefinition: VariableDefinition = { id: 3, range: createRange(5, 20, 39), name: 'MyInt' };
+            const usingMyStruct2MyIntDefinition: VariableDefinition = { id: 5, range: createRange(8, 20, 39), name: 'MyInt' };
             const myStruct1 = Struct.from(Object.entries({
                 MyInt: new StructMember(1, [myStruct1MyIntDefinition]),
             }));
@@ -2285,7 +2287,7 @@ describe('evaluator', () => {
 
                 Using( .MyStruct )
             `;
-            const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 3, 31), name: 'StructVar1' };
+            const myStructStructVar1Definition: VariableDefinition = { id: 1, range: createRange(3, 20, 31), name: 'StructVar1' };
             const myStruct = Struct.from(Object.entries({
                 StructVar1: new StructMember(1, [myStructStructVar1Definition])
             }));
@@ -2362,8 +2364,8 @@ describe('evaluator', () => {
                     Print( .Item )
                 }
             `;
-            const myStruct1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 1, 37), name: 'Value' };
-            const myStruct2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 2, 37), name: 'Value' };
+            const myStruct1ValueDefinition: VariableDefinition = { id: 1, range: createRange(1, 31, 37), name: 'Value' };
+            const myStruct2ValueDefinition: VariableDefinition = { id: 3, range: createRange(2, 31, 37), name: 'Value' };
             const myStruct1 = Struct.from(Object.entries({
                 Value: new StructMember(1, [myStruct1ValueDefinition])
             }));
@@ -2527,14 +2529,14 @@ describe('evaluator', () => {
             // `.MyArray = {'a', 'b'}`
             const expectedDefinitionMyArray: VariableDefinition = {
                 id: 1,
-                range: createRange(1, 16, 1, 24),
+                range: createRange(1, 16, 24),
                 name: 'MyArray',
             };
 
             // `ForEach( .Item...`
             const expectedDefinitionItem: VariableDefinition = {
                 id: 2,
-                range: createRange(2, 25, 2, 30),
+                range: createRange(2, 25, 30),
                 name: 'Item',
             };
 
@@ -2552,7 +2554,7 @@ describe('evaluator', () => {
                 // `...in .MyArray`
                 {
                     definitions: [expectedDefinitionMyArray],
-                    range: createRange(2, 34, 2, 42),
+                    range: createRange(2, 34, 42),
                 },
                 // // `ForEach( .Item...`
                 {
@@ -2562,12 +2564,12 @@ describe('evaluator', () => {
                 // `Print( .Item )` for the 1st loop iteration
                 {
                     definitions: [expectedDefinitionItem],
-                    range: createRange(4, 27, 4, 32),
+                    range: createRange(4, 27, 32),
                 },
                 // `Print( .Item )` for the 2nd loop iteration
                 {
                     definitions: [expectedDefinitionItem],
-                    range: createRange(4, 27, 4, 32),
+                    range: createRange(4, 27, 32),
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2656,15 +2658,15 @@ describe('evaluator', () => {
 
                 const expectedDefinitionMyTarget1: TargetDefinition = {
                     id: 1,
-                    range: createRange(2, 25 + functionName.length, 2, 36 + functionName.length),
+                    range: createRange(2, 25 + functionName.length, 36 + functionName.length),
                 };
                 const expectedDefinitionMyTarget2: TargetDefinition = {
                     id: 2 + numProperties,
-                    range: createRange(6 + numPropertyInputLines, 30, 6 + numPropertyInputLines, 41),
+                    range: createRange(6 + numPropertyInputLines, 30, 41),
                 };
                 const expectedDefinitionMyTarget3: TargetDefinition = {
                     id: 4 + numProperties,
-                    range: createRange(14 + numPropertyInputLines, 30, 14 + numPropertyInputLines, 41),
+                    range: createRange(14 + numPropertyInputLines, 30, 41),
                 };
 
                 const expectedTargetDefinitions = new Map<string, TargetDefinition>([
@@ -2678,27 +2680,27 @@ describe('evaluator', () => {
                     // MyTarget1's definition's reference
                     {
                         definition: expectedDefinitionMyTarget1,
-                        range: createRange(2, 25 + functionName.length, 2, 36 + functionName.length),
+                        range: createRange(2, 25 + functionName.length, 36 + functionName.length),
                     },
                     // MyTarget2's definition's reference
                     {
                         definition: expectedDefinitionMyTarget2,
-                        range: createRange(6 + numPropertyInputLines, 30, 6 + numPropertyInputLines, 41),
+                        range: createRange(6 + numPropertyInputLines, 30, 41),
                     },
                     // MyTarget2's reference to MyTarget1
                     {
                         definition: expectedDefinitionMyTarget1,
-                        range: createRange(8 + numPropertyInputLines, 28, 8 + numPropertyInputLines, 36),
+                        range: createRange(8 + numPropertyInputLines, 28, 36),
                     },
                     // MyTarget3's definition's reference
                     {
                         definition: expectedDefinitionMyTarget3,
-                        range: createRange(14 + numPropertyInputLines, 30, 14 + numPropertyInputLines, 41),
+                        range: createRange(14 + numPropertyInputLines, 30, 41),
                     },
                     // MyTarget3's reference to MyTarget1
                     {
                         definition: expectedDefinitionMyTarget1,
-                        range: createRange(16 + numPropertyInputLines, 28, 16 + numPropertyInputLines, 36),
+                        range: createRange(16 + numPropertyInputLines, 28, 36),
                     },
                 ];
                 assert.deepStrictEqual(result.targetReferences, expectedReferences);
@@ -2734,14 +2736,14 @@ describe('evaluator', () => {
                     }
                 `;
                 const relatedInfo: ErrorRelatedInformation = {
-                    range: createRange(1, 21 + functionName.length, 1, 35 + functionName.length),
+                    range: createRange(1, 21 + functionName.length, 35 + functionName.length),
                     message: 'Defined here',
                 };
                 const secondFunctionCallLine = 3 + propertyInput.split('\n').length;
                 assertNonFatalError(
                     input,
                     'Target name "MyTargetName" already exists',
-                    createRange(secondFunctionCallLine, 21 + functionName.length, secondFunctionCallLine, 35 + functionName.length),
+                    createRange(secondFunctionCallLine, 21 + functionName.length, 35 + functionName.length),
                     [relatedInfo]
                 );
             });
@@ -2792,7 +2794,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Alias" is missing required property "Targets".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 41),
                     []
                 );
             });
@@ -2814,7 +2816,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Compiler" is missing required property "Executable".',
-                    createRange(1, 20, 1, 44),
+                    createRange(1, 20, 44),
                     []
                 );
             });
@@ -2837,7 +2839,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Copy" is missing required properties "Source", "Dest".',
-                    createRange(1, 20, 1, 40),
+                    createRange(1, 20, 40),
                     []
                 );
             });
@@ -2860,7 +2862,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "CopyDir" is missing required properties "SourcePaths", "Dest".',
-                    createRange(1, 20, 1, 43),
+                    createRange(1, 20, 43),
                     []
                 );
             });
@@ -2884,7 +2886,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "CSAssembly" is missing required properties "Compiler", "CompilerOptions", "CompilerOutput".',
-                    createRange(1, 20, 1, 46),
+                    createRange(1, 20, 46),
                     []
                 );
             });
@@ -2909,7 +2911,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "DLL" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries".',
-                    createRange(1, 20, 1, 39),
+                    createRange(1, 20, 39),
                     []
                 );
             });
@@ -2932,7 +2934,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Exec" is missing required properties "ExecExecutable", "ExecOutput".',
-                    createRange(1, 20, 1, 40),
+                    createRange(1, 20, 40),
                     []
                 );
             });
@@ -2957,7 +2959,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Executable" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries".',
-                    createRange(1, 20, 1, 46),
+                    createRange(1, 20, 46),
                     []
                 );
             });
@@ -2983,7 +2985,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Library" is missing required properties "Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput".',
-                    createRange(1, 20, 1, 43),
+                    createRange(1, 20, 43),
                     []
                 );
             });
@@ -3006,7 +3008,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "ListDependencies" is missing required properties "Source", "Dest".',
-                    createRange(1, 20, 1, 52),
+                    createRange(1, 20, 52),
                     []
                 );
             });
@@ -3029,7 +3031,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "ObjectList" is missing required properties "Compiler", "CompilerOptions".',
-                    createRange(1, 20, 1, 46),
+                    createRange(1, 20, 46),
                     []
                 );
             });
@@ -3051,7 +3053,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "RemoveDir" is missing required property "RemovePaths".',
-                    createRange(1, 20, 1, 45),
+                    createRange(1, 20, 45),
                     []
                 );
             });
@@ -3074,7 +3076,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Test" is missing required properties "TestExecutable", "TestOutput".',
-                    createRange(1, 20, 1, 40),
+                    createRange(1, 20, 40),
                     []
                 );
             });
@@ -3097,7 +3099,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "TextFile" is missing required properties "TextFileOutput", "TextFileInputStrings".',
-                    createRange(1, 20, 1, 44),
+                    createRange(1, 20, 44),
                     []
                 );
             });
@@ -3119,7 +3121,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "Unity" is missing required property "UnityOutputPath".',
-                    createRange(1, 20, 1, 41),
+                    createRange(1, 20, 41),
                     []
                 );
             });
@@ -3141,7 +3143,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VCXProject" is missing required property "ProjectOutput".',
-                    createRange(1, 20, 1, 46),
+                    createRange(1, 20, 46),
                     []
                 );
             });
@@ -3163,7 +3165,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VSProjectExternal" is missing required property "ExternalProjectPath".',
-                    createRange(1, 20, 1, 53),
+                    createRange(1, 20, 53),
                     []
                 );
             });
@@ -3185,7 +3187,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "VSSolution" is missing required property "SolutionOutput".',
-                    createRange(1, 20, 1, 46),
+                    createRange(1, 20, 46),
                     []
                 );
             });
@@ -3208,7 +3210,7 @@ describe('evaluator', () => {
                 assertNonFatalError(
                     input,
                     'Call to function "XCodeProject" is missing required properties "ProjectOutput", "ProjectConfigs".',
-                    createRange(1, 20, 1, 48),
+                    createRange(1, 20, 48),
                     []
                 );
             });
@@ -4805,7 +4807,7 @@ Expecting to see the following:
                 assertNonFatalError(
                     input,
                     'Cannot use function name "true" because it is reserved.',
-                    createRange(1, 29, 1, 33),
+                    createRange(1, 29, 33),
                     []
                 );
             });
@@ -4819,13 +4821,13 @@ Expecting to see the following:
                     }
                 `;
                 const relatedInfo: ErrorRelatedInformation = {
-                    range: createRange(1, 29, 1, 33),
+                    range: createRange(1, 29, 33),
                     message: 'Defined here',
                 };
                 assertNonFatalError(
                     input,
                     'Cannot use function name "Func" because it is already used by another user function. Functions must be uniquely named.',
-                    createRange(3, 29, 3, 33),
+                    createRange(3, 29, 33),
                     [relatedInfo]
                 );
             });
@@ -4887,7 +4889,7 @@ Expecting to see one of the following:
                 assertNonFatalError(
                     input,
                     'User-function argument names must be unique.',
-                    createRange(1, 40, 1, 44),
+                    createRange(1, 40, 44),
                     []
                 );
             });
@@ -5605,9 +5607,9 @@ Expecting to see the following:
                 ]
             `;
 
-            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 2, 22), name: 'A' };
-            const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 4, 26), name: 'B' };
-            const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 8, 22), name: 'C' };
+            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 22), name: 'A' };
+            const myVarBDefinition: VariableDefinition = { id: 2, range: createRange(4, 24, 26), name: 'B' };
+            const myVarCDefinition: VariableDefinition = { id: 3, range: createRange(8, 20, 22), name: 'C' };
             assertEvaluatedVariablesValueEqual(input, [
                 1,
                 2,
@@ -5822,14 +5824,14 @@ Expecting to see the following:
             // #define MY_DEFINE
             const expectedDefinitionMyDefine: VariableDefinition = {
                 id: 1,
-                range: createRange(1, 16, 1, 33),
+                range: createRange(1, 16, 33),
                 name: 'MY_DEFINE'
             };
 
             // .Result = true
             const expectedDefinitionResult: VariableDefinition = {
                 id: 2,
-                range: createRange(3, 20, 3, 27),
+                range: createRange(3, 20, 27),
                 name: 'Result'
             };
 
@@ -5847,7 +5849,7 @@ Expecting to see the following:
                 // #if MY_DEFINE
                 {
                     definitions: [expectedDefinitionMyDefine],
-                    range: createRange(2, 20, 2, 29),
+                    range: createRange(2, 20, 29),
                 },
                 // .Result = true
                 {
@@ -5864,13 +5866,13 @@ Expecting to see the following:
                 #define MY_DEFINE
             `;
             const relatedInfo: ErrorRelatedInformation = {
-                range: createRange(1, 16, 1, 33),
+                range: createRange(1, 16, 33),
                 message: 'Defined here',
             };
             assertNonFatalError(
                 input,
                 `Cannot #define already defined symbol "MY_DEFINE".`,
-                createRange(2, 16, 2, 33),
+                createRange(2, 16, 33),
                 [relatedInfo]
             );
         });
@@ -5900,7 +5902,7 @@ Expecting to see the following:
             // #define MY_DEFINE
             const expectedDefinitionMyDefine: VariableDefinition = {
                 id: 1,
-                range: createRange(1, 16, 1, 33),
+                range: createRange(1, 16, 33),
                 name: 'MY_DEFINE'
             };
 
@@ -5912,7 +5914,7 @@ Expecting to see the following:
                 // #define MY_DEFINE
                 {
                     definitions: [expectedDefinitionMyDefine],
-                    range: createRange(1, 16, 1, 33),
+                    range: createRange(1, 16, 33),
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -5949,7 +5951,7 @@ Expecting to see the following:
             const expectedDefinition: VariableDefinition =
             {
                 id: 1,
-                range: createRange(1, 16, 1, 24 + builtInEnvVar.length),
+                range: createRange(1, 16, 24 + builtInEnvVar.length),
                 name: builtInEnvVar
             };
             assert.deepStrictEqual(result.variableDefinitions, [expectedDefinition]);
@@ -5958,12 +5960,12 @@ Expecting to see the following:
                 // #import ${builtInEnvVar}
                 {
                     definitions: [expectedDefinition],
-                    range: createRange(1, 16, 1, 24 + builtInEnvVar.length),
+                    range: createRange(1, 16, 24 + builtInEnvVar.length),
                 },
                 // Print( .${builtInEnvVar} )
                 {
                     definitions: [expectedDefinition],
-                    range: createRange(2, 23, 2, 24 + builtInEnvVar.length),
+                    range: createRange(2, 23, 24 + builtInEnvVar.length),
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
