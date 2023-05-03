@@ -2928,7 +2928,6 @@ describe('evaluator', () => {
             const propertyInput = `
                 .Compiler = 'MyString'
                 .CompilerOptions = 'MyString'
-                .CompilerOutputPath = 'MyString'
                 .Librarian = 'MyString'
                 .LibrarianOptions = 'MyString'
                 .LibrarianOutput = 'MyString'
@@ -2944,7 +2943,7 @@ describe('evaluator', () => {
                 `;
                 assertNonFatalError(
                     input,
-                    'Call to function "Library" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath", "Librarian", "LibrarianOptions", "LibrarianOutput".',
+                    'Call to function "Library" is missing required properties "Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput".',
                     createRange(1, 20, 1, 43),
                     []
                 );
@@ -2978,7 +2977,6 @@ describe('evaluator', () => {
             const propertyInput = `
                 .Compiler = 'MyString'
                 .CompilerOptions = 'MyString'
-                .CompilerOutputPath = 'MyString'
             `;
 
             commonTests('ObjectList', propertyInput);
@@ -2991,7 +2989,7 @@ describe('evaluator', () => {
                 `;
                 assertNonFatalError(
                     input,
-                    'Call to function "ObjectList" is missing required properties "Compiler", "CompilerOptions", "CompilerOutputPath".',
+                    'Call to function "ObjectList" is missing required properties "Compiler", "CompilerOptions".',
                     createRange(1, 20, 1, 46),
                     []
                 );

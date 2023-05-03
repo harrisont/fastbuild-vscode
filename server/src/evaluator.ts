@@ -53,13 +53,13 @@ const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<string, GenericFunctionMetadat
         requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
     }],
     [ 'Library', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutputPath", "Librarian", "LibrarianOptions", "LibrarianOutput"],
+        requiredPropertyNames: ["Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput"],
     }],
     [ 'ListDependencies', {
         requiredPropertyNames: ["Source", "Dest"],
     }],
     [ 'ObjectList', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutputPath"],
+        requiredPropertyNames: ["Compiler", "CompilerOptions"],
     }],
     [ 'RemoveDir', {
         requiredPropertyNames: ["RemovePaths"],
