@@ -23,6 +23,70 @@ import * as vscodeUri from 'vscode-uri';
 
 const MAX_SCOPE_STACK_DEPTH = 128;
 
+interface GenericFunctionMetadata {
+    requiredPropertyNames: string[];
+}
+
+const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<string, GenericFunctionMetadata>([
+    [ 'Alias', {
+        requiredPropertyNames: ['Targets'],
+    }],
+    [ 'Compiler', {
+        requiredPropertyNames: ["Executable"],
+    }],
+    [ 'Copy', {
+        requiredPropertyNames: ["Source", "Dest"],
+    }],
+    [ 'CopyDir', {
+        requiredPropertyNames: ["SourcePaths", "Dest"],
+    }],
+    [ 'CSAssembly', {
+        requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutput"],
+    }],
+    [ 'DLL', {
+        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+    }],
+    [ 'Exec', {
+        requiredPropertyNames: ["ExecExecutable", "ExecOutput"],
+    }],
+    [ 'Executable', {
+        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+    }],
+    [ 'Library', {
+        requiredPropertyNames: ["Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput"],
+    }],
+    [ 'ListDependencies', {
+        requiredPropertyNames: ["Source", "Dest"],
+    }],
+    [ 'ObjectList', {
+        requiredPropertyNames: ["Compiler", "CompilerOptions"],
+    }],
+    [ 'RemoveDir', {
+        requiredPropertyNames: ["RemovePaths"],
+    }],
+    [ 'Test', {
+        requiredPropertyNames: ["TestExecutable", "TestOutput"],
+    }],
+    [ 'TextFile', {
+        requiredPropertyNames: ["TextFileOutput", "TextFileInputStrings"],
+    }],
+    [ 'Unity', {
+        requiredPropertyNames: ["UnityOutputPath"],
+    }],
+    [ 'VCXProject', {
+        requiredPropertyNames: ["ProjectOutput"],
+    }],
+    [ 'VSProjectExternal', {
+        requiredPropertyNames: ["ExternalProjectPath"],
+    }],
+    [ 'VSSolution', {
+        requiredPropertyNames: ["SolutionOutput"],
+    }],
+    [ 'XCodeProject', {
+        requiredPropertyNames: ["ProjectOutput", "ProjectConfigs"],
+    }],
+]);
+
 export interface ErrorRelatedInformation {
     range: SourceRange;
     message: string;
@@ -1430,6 +1494,33 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
     context.scopeStack.withScope(() => {
         error = evaluateStatements(statement.statements, context);
         if (error !== null) {
+            return;
+        }
+
+        // Ensure that all required properties are set.
+        const functionMetadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(statement.functionName);
+        if (functionMetadata === undefined) {
+            error = new InternalEvaluationError(
+                new SourceRange(context.thisFbuildUri, statement.range),
+                `Missing metadata for function ${statement.functionName}`
+            );
+            return;
+        }
+        const missingPropertyNames = [];
+        for (const requiredPropertyName of functionMetadata.requiredPropertyNames) {
+            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(requiredPropertyName);
+            if (propertyVariable === null) {
+                missingPropertyNames.push(requiredPropertyName);
+            }
+        }
+        if (missingPropertyNames.length > 0) {
+            const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
+            const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
+            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                new SourceRange(context.thisFbuildUri, statement.range),
+                `Call to function "${statement.functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
+                []
+            ));
             return;
         }
     });

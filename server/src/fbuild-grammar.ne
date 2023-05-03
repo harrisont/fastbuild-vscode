@@ -214,7 +214,7 @@ statement ->
   | functionPrint                    {% ([value]) => [ value, new ParseContext() ] %}
   | functionSettings                 {% ([value]) => [ value, new ParseContext() ] %}
   | functionUsing                    {% ([value]) => [ value, new ParseContext() ] %}
-  | genericFunctionWithTargetName         {% ([value]) => [ value, new ParseContext() ] %}
+  | genericFunctionWithTargetName    {% ([value]) => [ value, new ParseContext() ] %}
   | userFunctionDeclaration          {% ([value]) => [ value, new ParseContext() ] %}
   | userFunctionCall                 {% ([value]) => [ value, new ParseContext() ] %}
   | directiveInclude                 {% ([value]) => [ value, new ParseContext() ] %}

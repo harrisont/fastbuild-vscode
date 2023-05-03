@@ -1,3 +1,9 @@
+# v0.12.0
+
+## New Features
+
+* ([#62](https://github.com/harrisont/fastbuild-vscode/issues/62)) Error when missing a required function property.
+
 # v0.11.0
 
 ## New Features
