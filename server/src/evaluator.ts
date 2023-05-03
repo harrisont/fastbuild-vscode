@@ -44,13 +44,13 @@ const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<string, GenericFunctionMetadat
         requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutput"],
     }],
     [ 'DLL', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2"],
+        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
     }],
     [ 'Exec', {
         requiredPropertyNames: ["ExecExecutable", "ExecOutput"],
     }],
     [ 'Executable', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2"],
+        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
     }],
     [ 'Library', {
         requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutputPath", "Librarian", "LibrarianOptions", "LibrarianOutput"],

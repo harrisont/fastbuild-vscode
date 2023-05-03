@@ -2857,7 +2857,6 @@ describe('evaluator', () => {
                 .LinkerOutput = 'MyString'
                 .LinkerOptions = 'MyString'
                 .Libraries = 'MyString'
-                .Libraries2 = 'MyString'
             `;
 
             commonTests('DLL', propertyInput);
@@ -2870,7 +2869,7 @@ describe('evaluator', () => {
                 `;
                 assertNonFatalError(
                     input,
-                    'Call to function "DLL" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
+                    'Call to function "DLL" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries".',
                     createRange(1, 20, 1, 39),
                     []
                 );
@@ -2906,7 +2905,6 @@ describe('evaluator', () => {
                 .LinkerOutput = 'MyString'
                 .LinkerOptions = 'MyString'
                 .Libraries = 'MyString'
-                .Libraries2 = 'MyString'
             `;
 
             commonTests('Executable', propertyInput);
@@ -2919,7 +2917,7 @@ describe('evaluator', () => {
                 `;
                 assertNonFatalError(
                     input,
-                    'Call to function "Executable" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries", "Libraries2".',
+                    'Call to function "Executable" is missing required properties "Linker", "LinkerOutput", "LinkerOptions", "Libraries".',
                     createRange(1, 20, 1, 46),
                     []
                 );
