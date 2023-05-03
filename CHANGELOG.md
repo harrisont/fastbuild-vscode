@@ -1,8 +1,38 @@
-# v0.11.0
+# v0.14.0
 
 ## New Features
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
+
+# v0.13.0
+
+## New Features
+
+* Add basic syntax highlighting for user function definitions. Note that this does not support syntax highlighting for user function calls.
+
+# v0.12.0
+
+## New Features
+
+* ([#62](https://github.com/harrisont/fastbuild-vscode/issues/62)) Error when missing a required function property.
+
+# v0.11.0
+
+## New Features
+
+* ([#64](https://github.com/harrisont/fastbuild-vscode/issues/64)) Support jumping to the existing definition for redefinition errors. Supports `#define`s, target aliases, and user-function names.
+
+# v0.10.2
+
+## Performance improvements
+
+* ([#59](https://github.com/harrisont/fastbuild-vscode/issues/59)) Stop unnecessarily re-parsing and re-evaluating when holding `Ctrl`  (the go-to-definition hotkey) and hovering over a variable/include whose definition is in an unopened file. This significantly improves performance in these scenarios.
+
+# v0.10.1
+
+## Bug Fixes
+
+* ([#58](https://github.com/harrisont/fastbuild-vscode/issues/58)) Fix "go to references" bug where it errored when there are no references. This bug was introduced in [v0.10.0](#v0100) in [commit 8cfa091](https://github.com/harrisont/fastbuild-vscode/commit/8cfa091e1634e01d8e8f5e058bbbab6910cf8329).
 
 # v0.10.0
 

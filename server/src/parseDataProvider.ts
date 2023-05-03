@@ -15,26 +15,47 @@ import {
 
 export type UriStr = string;
 
+interface CachedParseData {
+    data: ParseData;
+
+    // The file content used to generate the cached parse data.
+    // This is important to save so that we can know if we can re-use the cached data or need to re-calculate it.
+    //
+    // Alternatively, we could choose to store a hash of the content.
+    // This has the advantage of taking less memory, but has the disadvantage of taking more compute.
+    fileContent: string;
+}
+
 // Calculates and caches parse data.
 export class ParseDataProvider {
-    private data = new Map<UriStr, ParseData>();
+    private data = new Map<UriStr, CachedParseData>();
 
     constructor(private readonly fileContentProvider: IFileSystem, private readonly parseOptions: ParseOptions) {
     }
 
-    // Calculates the parse data for a URI, caches it, and returns it.
+    // Reads the URI's file content, calculates the parse data, caches it, and returns it.
     //
     // Returns |Error| on failing to read the file contents.
     // Returns |ParseError| on failing to parse the file contents.
     updateParseData(uri: vscodeUri.URI): Maybe<ParseData> {
-        const maybeText = this.fileContentProvider.getFileContents(uri);
-        if (maybeText.hasError) {
-            return Maybe.error(maybeText.getError());
+        const maybeContent = this.fileContentProvider.getFileContents(uri);
+        if (maybeContent.hasError) {
+            return Maybe.error(maybeContent.getError());
         }
-        const text = maybeText.getValue();
+        const content = maybeContent.getValue();
+        return this.updateParseDataWithContent(uri, content);
+    }
+
+    // Calculates the parse data for the given URI and content, caches it, and returns it.
+    //
+    // Returns |ParseError| on failing to parse the file contents.
+    updateParseDataWithContent(uri: vscodeUri.URI, content: string): Maybe<ParseData>  {
         try {
-            const parseData = parse(text, uri.toString(), this.parseOptions);
-            this.data.set(uri.toString(), parseData);
+            const parseData = parse(content, uri.toString(), this.parseOptions);
+            this.data.set(uri.toString(), {
+                data: parseData,
+                fileContent: content,
+            });
             return Maybe.ok(parseData);
         } catch (error) {
             if (error instanceof Error) {
@@ -59,7 +80,17 @@ export class ParseDataProvider {
         if (cachedData === undefined) {
             return this.updateParseData(uri);
         } else {
-            return Maybe.ok(cachedData);
+            return Maybe.ok(cachedData.data);
+        }
+    }
+
+    // Returns the cached content for a URI if it exists, or `null` otherwise.
+    getCachedDocumentContent(uri: vscodeUri.URI): string | null {
+        const cachedData = this.data.get(uri.toString());
+        if (cachedData === undefined) {
+            return null;
+        } else {
+            return cachedData.fileContent;
         }
     }
 }
