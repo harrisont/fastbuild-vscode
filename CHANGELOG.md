@@ -1,3 +1,9 @@
+# v0.13.0
+
+## New Features
+
+* Add basic syntax highlighting for user function definitions. Note that this does not support syntax highlighting for user function calls.
+
 # v0.12.0
 
 ## New Features
