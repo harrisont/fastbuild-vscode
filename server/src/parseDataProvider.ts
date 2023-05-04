@@ -58,6 +58,7 @@ export class ParseDataProvider {
             });
             return Maybe.ok(parseData);
         } catch (error) {
+            this.data.delete(uri.toString());
             if (error instanceof Error) {
                 return Maybe.error(error);
             } else {
