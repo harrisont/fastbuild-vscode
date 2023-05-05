@@ -4,6 +4,18 @@
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
 
+# v0.13.2
+
+## Bug Fixes
+
+* ([#69](https://github.com/harrisont/fastbuild-vscode/issues/69)) Fix the `ForEach` loop variable to only be defined within the loop. Previously it was incorrectly defined in its parent scope, so it was still defined after the `ForEach` call.
+
+# v0.13.1
+
+## Bug Fixes
+
+* ([#67](https://github.com/harrisont/fastbuild-vscode/issues/67)) Fix the errors not updated when changing a file to introduce a parse error and then undoing that change.
+
 # v0.13.0
 
 ## New Features
