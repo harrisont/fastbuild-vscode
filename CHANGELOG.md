@@ -8,7 +8,7 @@
 
 ## Bug Fixes
 
-* ([#67](https://github.com/harrisont/fastbuild-vscode/issues/67)) Fix the errors not updated when changing a file to introduce a parse error and then undoing that change.
+* ([#67](https://github.com/harrisont/fastbuild-vscode/issues/67)) Fix the errors not updating when changing a file to introduce a parse error and then undoing that change.
 
 # v0.13.0
 
