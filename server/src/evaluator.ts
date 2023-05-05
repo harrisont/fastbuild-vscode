@@ -23,67 +23,338 @@ import * as vscodeUri from 'vscode-uri';
 
 const MAX_SCOPE_STACK_DEPTH = 128;
 
-interface GenericFunctionMetadata {
-    requiredPropertyNames: string[];
+enum ValueType {
+    Boolean,
+    Number,
+    String,
+    Struct,
+    ArrayOfStrings,
+    ArrayOfStructs,
 }
 
-const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<string, GenericFunctionMetadata>([
+interface PropertyAttributes {
+    possibleTypes: Set<ValueType>;
+    isRequired: boolean;
+    isTargetReference: boolean;
+    isTargetDefinition: boolean;
+}
+
+type PropertyName = string;
+
+interface GenericFunctionMetadata {
+    properties: Map<PropertyName, PropertyAttributes>;
+}
+
+const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<PropertyName, GenericFunctionMetadata>([
     [ 'Alias', {
-        requiredPropertyNames: ['Targets'],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Targets', {
+                possibleTypes: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                isRequired: true,
+                isTargetReference: true,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Compiler', {
-        requiredPropertyNames: ["Executable"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Executable', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Copy', {
-        requiredPropertyNames: ["Source", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Source', {
+                possibleTypes: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+            ['Dest', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'CopyDir', {
-        requiredPropertyNames: ["SourcePaths", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['SourcePaths', {
+                possibleTypes: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['Dest', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'CSAssembly', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['CompilerOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['CompilerOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'DLL', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Linker', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['LinkerOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+            ['LinkerOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['Libraries', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Exec', {
-        requiredPropertyNames: ["ExecExecutable", "ExecOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ExecExecutable', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+            ['ExecOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'Executable', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Linker', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['LinkerOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+            ['LinkerOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['Libraries', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Library', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['CompilerOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['Librarian', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['LibrarianOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['LibrarianOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'ListDependencies', {
-        requiredPropertyNames: ["Source", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Source', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+            ['Dest', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'ObjectList', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+            ['CompilerOptions', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'RemoveDir', {
-        requiredPropertyNames: ["RemovePaths"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['RemovePaths', {
+                possibleTypes: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Test', {
-        requiredPropertyNames: ["TestExecutable", "TestOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['TestExecutable', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,  // TODO: set to true after verification
+                isTargetDefinition: false,
+            }],
+            ['TestOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'TextFile', {
-        requiredPropertyNames: ["TextFileOutput", "TextFileInputStrings"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['TextFileOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+            ['TextFileInputStrings', {
+                possibleTypes: new Set<ValueType>([ValueType.ArrayOfStrings]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'Unity', {
-        requiredPropertyNames: ["UnityOutputPath"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['UnityOutputPath', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'VCXProject', {
-        requiredPropertyNames: ["ProjectOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ProjectOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'VSProjectExternal', {
-        requiredPropertyNames: ["ExternalProjectPath"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ExternalProjectPath', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
     [ 'VSSolution', {
-        requiredPropertyNames: ["SolutionOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['SolutionOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+        ]),
     }],
     [ 'XCodeProject', {
-        requiredPropertyNames: ["ProjectOutput", "ProjectConfigs"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ProjectOutput', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: true,
+            }],
+            ['ProjectConfigs', {
+                possibleTypes: new Set<ValueType>([ValueType.String]),
+                isRequired: true,
+                isTargetReference: false,
+                isTargetDefinition: false,
+            }],
+        ]),
     }],
 ]);
 
@@ -1509,10 +1780,46 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
             return;
         }
         const missingPropertyNames = [];
-        for (const requiredPropertyName of functionMetadata.requiredPropertyNames) {
-            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(requiredPropertyName);
-            if (propertyVariable === null) {
-                missingPropertyNames.push(requiredPropertyName);
+        for (const [propertyName, property] of functionMetadata.properties) {
+            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
+
+            if (property.isRequired) {
+                if (propertyVariable === null) {
+                    missingPropertyNames.push(propertyName);
+                    continue;
+                }
+            }
+
+            if (property.isTargetReference && propertyVariable !== null) {
+                // Create a reference for the targets.
+                const targets: Value[] = (propertyVariable.value instanceof Array) ? propertyVariable.value : [propertyVariable.value];
+                for (const target of targets) {
+                    if (typeof target !== 'string') {
+                        error = new EvaluationError(
+                            propertyVariable.definitions[0].range,
+                            `Function "${functionName}"'s property "${propertyName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(propertyVariable.value)}.`,
+                            []
+                        );
+                        return;
+                    }
+
+                    // TODO: use the actual range of the refererence (the array item) instead of variable definition.
+                    const targetReferenceRange = propertyVariable.definitions[0].range;
+
+                    // TODO: support looking up a target by the target's output-file.
+                    // TODO: change targetDefinitions to a map for faster lookups.
+                    const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
+                    if (targetDefinition === undefined) {
+                        // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
+                        //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
+                        return;
+                    }
+                    const targetReference: TargetReference = {
+                        definition: targetDefinition,
+                        range: targetReferenceRange,
+                    };
+                    context.evaluatedData.targetReferences.push(targetReference);
+                }
             }
         }
         if (missingPropertyNames.length > 0) {
@@ -1524,47 +1831,6 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
                 []
             ));
             return;
-        }
-
-        // TODO: don't hard-code 'Alias' and 'Targets', and extend to work with other functions and varables that refrence targets.
-        // Handle `Alias`'s `Targets`.
-        if (functionName == 'Alias') {
-            const targetsVariableName = 'Targets';
-            const targetsVariable = context.scopeStack.getVariableStartingFromCurrentScope(targetsVariableName);
-            // We know it won't be null because of the above check for required properties, but check anyways to ensure that TypeScipt is happy.
-            if (targetsVariable === null) {
-                return;
-            }
-
-            // Create a reference for the targets.
-            const targets: Value[] = (targetsVariable.value instanceof Array) ? targetsVariable.value : [targetsVariable.value];
-            for (const target of targets) {
-                if (typeof target !== 'string') {
-                    error = new EvaluationError(
-                        targetsVariable.definitions[0].range,
-                        `Function "${functionName}"'s variable "${targetsVariableName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(targetsVariable.value)}.`,
-                        []
-                    );
-                    return;
-                }
-
-                // TODO: use the actual range of the refererence (the array item) instead of variable definition.
-                const targetReferenceRange = targetsVariable.definitions[0].range;
-
-                // TODO: support looking up a target by the target's output-file.
-                // TODO: change targetDefinitions to a map for faster lookups.
-                const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
-                if (targetDefinition === undefined) {
-                    // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
-                    //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
-                    return;
-                }
-                const targetReference: TargetReference = {
-                    definition: targetDefinition,
-                    range: targetReferenceRange,
-                };
-                context.evaluatedData.targetReferences.push(targetReference);
-            }
         }
     });
     return error;
