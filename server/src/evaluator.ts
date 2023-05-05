@@ -1724,8 +1724,6 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
 
 // Returns `Error` on fatal error, or `null` otherwise.
 function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
-    const functionName = statement.functionName;
-
     // Evaluate the target name.
     const maybeEvaluatedTargetNameName = evaluateRValue(statement.targetName, context);
     if (maybeEvaluatedTargetNameName.hasError) {
@@ -1770,70 +1768,80 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
             return;
         }
 
-        // Ensure that all required properties are set.
-        const functionMetadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(functionName);
-        if (functionMetadata === undefined) {
-            error = new InternalEvaluationError(
-                new SourceRange(context.thisFbuildUri, statement.range),
-                `Missing metadata for function ${functionName}`
-            );
-            return;
-        }
-        const missingPropertyNames = [];
-        for (const [propertyName, property] of functionMetadata.properties) {
-            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
-
-            if (property.isRequired) {
-                if (propertyVariable === null) {
-                    missingPropertyNames.push(propertyName);
-                    continue;
-                }
-            }
-
-            if (property.isTargetReference && propertyVariable !== null) {
-                // Create a reference for the targets.
-                const targets: Value[] = (propertyVariable.value instanceof Array) ? propertyVariable.value : [propertyVariable.value];
-                for (const target of targets) {
-                    if (typeof target !== 'string') {
-                        error = new EvaluationError(
-                            propertyVariable.definitions[0].range,
-                            `Function "${functionName}"'s property "${propertyName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(propertyVariable.value)}.`,
-                            []
-                        );
-                        return;
-                    }
-
-                    // TODO: use the actual range of the refererence (the array item) instead of variable definition.
-                    const targetReferenceRange = propertyVariable.definitions[0].range;
-
-                    // TODO: support looking up a target by the target's output-file.
-                    // TODO: change targetDefinitions to a map for faster lookups.
-                    const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
-                    if (targetDefinition === undefined) {
-                        // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
-                        //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
-                        return;
-                    }
-                    const targetReference: TargetReference = {
-                        definition: targetDefinition,
-                        range: targetReferenceRange,
-                    };
-                    context.evaluatedData.targetReferences.push(targetReference);
-                }
-            }
-        }
-        if (missingPropertyNames.length > 0) {
-            const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
-            const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
-            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                new SourceRange(context.thisFbuildUri, statement.range),
-                `Call to function "${functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
-                []
-            ));
-            return;
-        }
+        error = evaluateGenericFunctionProperties(statement, context);
     });
     return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
+    const functionName = statement.functionName;
+
+    const functionMetadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(functionName);
+    if (functionMetadata === undefined) {
+        return new InternalEvaluationError(
+            new SourceRange(context.thisFbuildUri, statement.range),
+            `Missing metadata for function ${functionName}`
+        );
+    }
+
+    const missingPropertyNames = [];
+    propertyLoop:
+    for (const [propertyName, property] of functionMetadata.properties) {
+        const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
+
+        if (property.isRequired) {
+            if (propertyVariable === null) {
+                missingPropertyNames.push(propertyName);
+                continue;
+            }
+        }
+
+        if (property.isTargetReference && propertyVariable !== null) {
+            // Create a reference for the targets.
+            const targets: Value[] = (propertyVariable.value instanceof Array) ? propertyVariable.value : [propertyVariable.value];
+            for (const target of targets) {
+                if (typeof target !== 'string') {
+                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                        propertyVariable.definitions[0].range,
+                        `Function "${functionName}"'s property "${propertyName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(propertyVariable.value)}.`,
+                        []
+                    ));
+                    continue propertyLoop;
+                }
+
+                // TODO: use the actual range of the refererence (the array item) instead of variable definition.
+                const targetReferenceRange = propertyVariable.definitions[0].range;
+
+                // TODO: support looking up a target by the target's output-file.
+                // TODO: change targetDefinitions to a map for faster lookups.
+                const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
+                if (targetDefinition === undefined) {
+                    // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
+                    //error = new EvaluationError(referenceRange, `Target "${target}" does not exist.`);
+                    continue;
+                }
+                const targetReference: TargetReference = {
+                    definition: targetDefinition,
+                    range: targetReferenceRange,
+                };
+                context.evaluatedData.targetReferences.push(targetReference);
+            }
+        }
+    }
+
+    // Ensure that all required properties are set.
+    if (missingPropertyNames.length > 0) {
+        const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
+        const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            new SourceRange(context.thisFbuildUri, statement.range),
+            `Call to function "${functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
+            []
+        ));
+    }
+
+    return null;
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
