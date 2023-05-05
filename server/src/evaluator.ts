@@ -1814,7 +1814,6 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
                 const targetReferenceRange = propertyVariable.definitions[0].range;
 
                 // TODO: support looking up a target by the target's output-file.
-                // TODO: change targetDefinitions to a map for faster lookups.
                 const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
                 if (targetDefinition === undefined) {
                     // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
