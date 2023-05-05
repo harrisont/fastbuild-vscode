@@ -1,3 +1,9 @@
+# v0.13.2
+
+## Bug Fixes
+
+* ([#69](https://github.com/harrisont/fastbuild-vscode/issues/69)) Fix the `ForEach` loop variable to only be defined within the loop. Previously it was incorrectly defined in its parent scope, so it was still defined after the `ForEach` call.
+
 # v0.13.1
 
 ## Bug Fixes

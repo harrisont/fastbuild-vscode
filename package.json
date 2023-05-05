@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.13.1",
+	"version": "0.13.2",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {

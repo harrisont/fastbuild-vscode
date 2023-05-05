@@ -2514,6 +2514,16 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 34, 2, 42));
         });
 
+        it('errors when trying to access the loop variable outside of the ForEach', () => {
+            const input = `
+                .MyVar = { 'a' }
+                ForEach(.Item in .MyVar) {}
+                Print(.Item)
+            `;
+            const expectedErrorMessage = 'Referencing variable "Item" that is not defined in the current scope or any of the parent scopes.';
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 22, 3, 27));
+        });
+
         it('has the expected variable definitions and references', () => {
             const input = `
                 .MyArray = {'a', 'b'}
@@ -2533,16 +2543,24 @@ describe('evaluator', () => {
                 name: 'MyArray',
             };
 
-            // `ForEach( .Item...`
-            const expectedDefinitionItem: VariableDefinition = {
+            // `ForEach( .Item...` for the 1st loop iteration
+            const expectedDefinitionItem1: VariableDefinition = {
                 id: 2,
+                range: createRange(2, 25, 30),
+                name: 'Item',
+            };
+
+            // `ForEach( .Item...` for the 2nd loop iteration
+            const expectedDefinitionItem2: VariableDefinition = {
+                id: 3,
                 range: createRange(2, 25, 30),
                 name: 'Item',
             };
 
             assert.deepStrictEqual(result.variableDefinitions, [
                 expectedDefinitionMyArray,
-                expectedDefinitionItem,
+                expectedDefinitionItem1,
+                expectedDefinitionItem2,
             ]);
 
             const expectedReferences: VariableReference[] = [
@@ -2556,19 +2574,24 @@ describe('evaluator', () => {
                     definitions: [expectedDefinitionMyArray],
                     range: createRange(2, 34, 42),
                 },
-                // // `ForEach( .Item...`
+                // `ForEach( .Item...` for the 1st loop iteration
                 {
-                    definitions: [expectedDefinitionItem],
-                    range: expectedDefinitionItem.range,
+                    definitions: [expectedDefinitionItem1],
+                    range: expectedDefinitionItem1.range,
                 },
                 // `Print( .Item )` for the 1st loop iteration
                 {
-                    definitions: [expectedDefinitionItem],
+                    definitions: [expectedDefinitionItem1],
                     range: createRange(4, 27, 32),
+                },
+                // `ForEach( .Item...` for the 2nd loop iteration
+                {
+                    definitions: [expectedDefinitionItem2],
+                    range: expectedDefinitionItem2.range,
                 },
                 // `Print( .Item )` for the 2nd loop iteration
                 {
-                    definitions: [expectedDefinitionItem],
+                    definitions: [expectedDefinitionItem2],
                     range: createRange(4, 27, 32),
                 },
             ];
