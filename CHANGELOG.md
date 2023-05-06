@@ -1,3 +1,9 @@
+# v0.13.3
+
+## Bug Fixes
+
+* ([#70](https://github.com/harrisont/fastbuild-vscode/issues/70)) Fix the bug where a `;` or `//` (start-of-comment characters) in a string would cause the rest of the line to be treated as a comment and would create a parse error.
+
 # v0.13.2
 
 ## Bug Fixes
