@@ -16,6 +16,7 @@ import {
 } from '../parser';
 
 import {
+    ArrayItem,
     ErrorRelatedInformation,
     evaluate,
     EvaluatedData,
@@ -27,6 +28,7 @@ import {
     TargetDefinition,
     TargetReference,
     Value,
+    ValueWithRange,
     VariableDefinition,
     VariableReference,
 } from '../evaluator';
@@ -102,12 +104,30 @@ export function evaluateInput(input: FileContents, enableDiagnostics: boolean): 
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.
-function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues: Value[]): void {
+function assertEvaluatedVariablesValueWithRangeEqual(input: FileContents, expectedValues: ValueWithRange[]): void {
     const result = evaluateInput(input, true /*enableDiagnostics*/);
     const actualValues = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
     assert.deepStrictEqual(actualValues, expectedValues);
 
     assert.deepStrictEqual(result.nonFatalErrors, []);
+}
+
+// Compares the parsed evaluatedVariables, but only the value, not the range.
+function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues: Value[]): void {
+    const result = evaluateInput(input, true /*enableDiagnostics*/);
+    const actualValueWithRanges = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
+    const actualValues = actualValueWithRanges.map(item => convertToValue(item));
+    assert.deepStrictEqual(actualValues, expectedValues);
+
+    assert.deepStrictEqual(result.nonFatalErrors, []);
+}
+
+function convertToValue(valueWithRange: ValueWithRange): Value {
+    if (valueWithRange instanceof Array) {
+        return valueWithRange.map(item => convertToValue(item.value));
+    } else {
+        return valueWithRange;
+    }
 }
 
 function getParseSourceRangeString(range: ParseSourceRange): string {
@@ -387,9 +407,13 @@ describe('evaluator', () => {
                 }
                 Print(.MyVar)
             `;
-            assertEvaluatedVariablesValueEqual(input, [
-                ['thing1', 'thing2'],
-                ['thing1', 'thing2'],
+            const expectedValueMyVar = [
+                new ArrayItem('thing1', createParseRange(2, 20, 2, 28)),
+                new ArrayItem('thing2', createParseRange(3, 20, 3, 28)),
+            ];
+            assertEvaluatedVariablesValueWithRangeEqual(input, [
+                expectedValueMyVar,
+                expectedValueMyVar,
             ]);
         });
 
@@ -469,7 +493,7 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 25, 2, 26));
         });
 
-        it('assigning a String an ArrayOfStructs errors', () => {
+        it('assigning a String to an ArrayOfStructs errors', () => {
             const input = `
                 .MyStruct = []
                 .MyVar = { .MyStruct }
@@ -654,7 +678,13 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [
                 ['a', 'b', 'c'],
                 Struct.from(Object.entries({
-                    MyArray: new StructMember(['a', 'b', 'c'], [myVarMyArrayDefinition]),
+                    MyArray: new StructMember(
+                        [
+                            new ArrayItem('a', createParseRange(2, 32, 2, 35)),
+                            new ArrayItem('b', createParseRange(2, 37, 2, 40)),
+                            new ArrayItem('c', createParseRange(2, 42, 2, 45)),
+                        ],
+                        [myVarMyArrayDefinition]),
                 }))
             ]);
         });
@@ -1114,10 +1144,12 @@ describe('evaluator', () => {
                 .MyVar + 'cow'
                 .MyVar + 'moo'
             `;
-            assertEvaluatedVariablesValueEqual(input, [
+            const expectedValueCow = new ArrayItem('cow', createParseRange(2, 25, 2, 30));
+            const expectedValueMoo = new ArrayItem('moo', createParseRange(3, 25, 3, 30));
+            assertEvaluatedVariablesValueWithRangeEqual(input, [
                 [],
-                ['cow'],
-                ['cow', 'moo'],
+                [expectedValueCow],
+                [expectedValueCow, expectedValueMoo],
             ]);
         });
 
@@ -1125,7 +1157,8 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {} + 'cow'
             `;
-            assertEvaluatedVariablesValueEqual(input, [['cow']]);
+            const expectedValueCow = new ArrayItem('cow', createParseRange(1, 30, 1, 35));
+            assertEvaluatedVariablesValueWithRangeEqual(input, [[expectedValueCow]]);
         });
 
         it('should work on adding an array to an array', () => {
@@ -1133,9 +1166,11 @@ describe('evaluator', () => {
                 .MyVar = {'a'}
                 .MyVar + {'b'}
             `;
-            assertEvaluatedVariablesValueEqual(input, [
-                ['a'],
-                ['a', 'b']
+            const expectedValueA = new ArrayItem('a', createParseRange(1, 26, 1, 29));
+            const expectedValueB = new ArrayItem('b', createParseRange(2, 26, 2, 29));
+            assertEvaluatedVariablesValueWithRangeEqual(input, [
+                [expectedValueA],
+                [expectedValueA, expectedValueB]
             ]);
         });
 
@@ -1143,7 +1178,10 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = {'a'} + {'b'} + {'c'}
             `;
-            assertEvaluatedVariablesValueEqual(input, [['a', 'b', 'c']]);
+            const expectedValueA = new ArrayItem('a', createParseRange(1, 26, 1, 29));
+            const expectedValueB = new ArrayItem('b', createParseRange(1, 34, 1, 37));
+            const expectedValueC = new ArrayItem('c', createParseRange(1, 42, 1, 45));
+            assertEvaluatedVariablesValueWithRangeEqual(input, [[expectedValueA, expectedValueB, expectedValueC]]);
         });
 
         it('should work on adding an array with an evaluated variable to an array', () => {
@@ -2713,7 +2751,7 @@ describe('evaluator', () => {
                     // MyTarget2's reference to MyTarget1
                     {
                         definition: expectedDefinitionMyTarget1,
-                        range: createRange(8 + numPropertyInputLines, 28, 36),
+                        range: createRange(8 + numPropertyInputLines, 41, 52),
                     },
                     // MyTarget3's definition's reference
                     {
@@ -2723,7 +2761,7 @@ describe('evaluator', () => {
                     // MyTarget3's reference to MyTarget1
                     {
                         definition: expectedDefinitionMyTarget1,
-                        range: createRange(16 + numPropertyInputLines, 28, 36),
+                        range: createRange(16 + numPropertyInputLines, 41, 52),
                     },
                 ];
                 assert.deepStrictEqual(result.targetReferences, expectedReferences);

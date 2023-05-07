@@ -388,12 +388,20 @@ export class DataAndMaybeError<T> {
 
 type ValueTypeName = 'Boolean' | 'Integer' | 'String' | 'Array' | 'Struct';
 
+export class ArrayItem {
+    constructor(readonly value: ValueWithRange, readonly range: ParseSourceRange) {
+    }
+}
+
 export type Value = boolean | number | string | Value[] | Struct;
+
+// Same as `Value` but with `ArrayItem[]` instead of `Value[]` in order to track array item ranges.
+export type ValueWithRange = boolean | number | string | ArrayItem[] | Struct;
 
 export type VariableName = string;
 
 export class StructMember {
-    constructor(readonly value: Value, readonly definitions: AtLeast1VariableDefinition) {
+    constructor(readonly value: ValueWithRange, readonly definitions: AtLeast1VariableDefinition) {
     }
 }
 
@@ -454,7 +462,7 @@ export class SourceRange {
 }
 
 export interface EvaluatedVariable {
-    value: Value;
+    value: ValueWithRange;
     range: SourceRange;
 }
 
@@ -950,7 +958,7 @@ function isParsedStatementImportEnvVar(obj: Record<string, any>): obj is ParsedS
 }
 
 interface EvaluatedRValue {
-    value: Value;
+    value: ValueWithRange;
     range: ParseSourceRange;
 }
 
@@ -973,7 +981,7 @@ interface UserFunction {
 }
 
 interface ScopeVariable {
-    value: Value;
+    value: ValueWithRange;
     definitions: AtLeast1VariableDefinition;
 }
 
@@ -1096,7 +1104,7 @@ class ScopeStack {
         }
     }
 
-    setVariableInCurrentScope(name: string, value: Value, definitions: AtLeast1VariableDefinition): ScopeVariable {
+    setVariableInCurrentScope(name: string, value: ValueWithRange, definitions: AtLeast1VariableDefinition): ScopeVariable {
         const currentScope = this.getCurrentScope();
         const existingVariable = currentScope.variables.get(name);
         if (existingVariable === undefined) {
@@ -1376,7 +1384,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
     }
 
     let variable: ScopeVariable | null = null;
-    let existingValue: Value | null = null;
+    let existingValue: ValueWithRange | null = null;
     // Copy the RHS value so that future modifications to the value do not modify the RHS value.
     const value = deepCopyValue(evaluatedRhs.value);
     if (lhs.scope === 'current') {
@@ -1412,7 +1420,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
             }
         } else {
             // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
-            const lhsFirstItem = existingValue[0];
+            const lhsFirstItem = existingValue[0].value;
             if ((typeof lhsFirstItem === 'string' && typeof value !== 'string')
                 || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
             {
@@ -1420,7 +1428,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
                 return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []));
             }
         }
-        variable.value = [value];
+        variable.value = [new ArrayItem(value, evaluatedRhs.range)];
     }
 
     // The definition's LHS is a variable reference.
@@ -1484,7 +1492,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
     const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, lhs.range.start, evaluatedRhs.range.end);
-    let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+    let inPlaceBinaryOperatorFunc: (existingValue: ValueWithRange, summand: EvaluatedRValue, range: SourceRange) => Maybe<ValueWithRange>;
     switch (statement.operator) {
         case '+':
             inPlaceBinaryOperatorFunc = inPlaceAdd;
@@ -1493,7 +1501,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
             inPlaceBinaryOperatorFunc = inPlaceSubtract;
             break;
     }
-    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
+    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs, binaryOperatorRange);
     if (maybeOperatorResult.hasError) {
         return Maybe.error(maybeOperatorResult.getError());
     }
@@ -1535,7 +1543,7 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
     const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
-    let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+    let inPlaceBinaryOperatorFunc: (existingValue: ValueWithRange, summand: EvaluatedRValue, range: SourceRange) => Maybe<ValueWithRange>;
     switch (statement.operator) {
         case '+':
             inPlaceBinaryOperatorFunc = inPlaceAdd;
@@ -1544,7 +1552,7 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
             inPlaceBinaryOperatorFunc = inPlaceSubtract;
             break;
     }
-    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
+    const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs, binaryOperatorRange);
     if (maybeOperatorResult.hasError) {
         return Maybe.error(maybeOperatorResult.getError());
     }
@@ -1640,7 +1648,7 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
     interface ForEachIterator {
         loopVariableName: string;
         loopVariableRange: SourceRange;
-        arrayItems: Value[];
+        arrayItems: ArrayItem[];
     }
     const iterators: ForEachIterator[] = [];
     for (const iterator of statement.iterators) {
@@ -1702,10 +1710,10 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
 
                 // Set a variable in the current scope for each iterator's loop variable.
                 const arrayItem = iterator.arrayItems[arrayItemIndex];
-                context.scopeStack.setVariableInCurrentScope(iterator.loopVariableName, arrayItem, [loopVarDefinition]);
+                context.scopeStack.setVariableInCurrentScope(iterator.loopVariableName, arrayItem.value, [loopVarDefinition]);
 
                 context.evaluatedData.evaluatedVariables.push({
-                    value: arrayItem,
+                    value: arrayItem.value,
                     range: iterator.loopVariableRange,
                 });
             }
@@ -1796,9 +1804,11 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
 
         if (property.isTargetReference && propertyVariable !== null) {
             // Create a reference for the targets.
-            const targets: Value[] = (propertyVariable.value instanceof Array) ? propertyVariable.value : [propertyVariable.value];
+            const targets: ArrayItem[] = (propertyVariable.value instanceof Array)
+                ? propertyVariable.value
+                : [new ArrayItem(propertyVariable.value, propertyVariable.definitions[0].range)];
             for (const target of targets) {
-                if (typeof target !== 'string') {
+                if (typeof target.value !== 'string') {
                     context.evaluatedData.nonFatalErrors.push(new EvaluationError(
                         propertyVariable.definitions[0].range,
                         `Function "${functionName}"'s property "${propertyName}" must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(propertyVariable.value)}.`,
@@ -1807,11 +1817,10 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
                     continue propertyLoop;
                 }
 
-                // TODO: use the actual range of the refererence (the array item) instead of variable definition.
-                const targetReferenceRange = propertyVariable.definitions[0].range;
+                const targetReferenceRange = new SourceRange(context.thisFbuildUri, target.range);
 
                 // TODO: support looking up a target by the target's output-file.
-                const targetDefinition = context.evaluatedData.targetDefinitions.get(target);
+                const targetDefinition = context.evaluatedData.targetDefinitions.get(target.value);
                 if (targetDefinition === undefined) {
                     // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
                     // context.evaluatedData.nonFatalErrors.push(new EvaluationError(
@@ -2013,7 +2022,7 @@ function evaluateStatementUserFunctionCall(
 
     // Evaluate the call-parameters' values.
     // Note that we evaluate the call's parameter in the current context, not the function call context.
-    const paramValues: Value[] = new Array(call.parameters.length);
+    const paramValues: ValueWithRange[] = new Array(call.parameters.length);
     for (const [i, callParam] of call.parameters.entries()) {
         const maybeEvaluatedValue = evaluateRValue(callParam.value, context);
         if (maybeEvaluatedValue.hasError) {
@@ -2332,7 +2341,7 @@ function evaluateRValueArray(
                     }
                 }
 
-                result.value.push(evaluated.value);
+                result.value.push(new ArrayItem(evaluated.value, evaluated.range));
             }
         }
     }
@@ -2446,7 +2455,7 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<Evaluate
         }
         const evaluatedSummand = maybeEvaluatedSummand.getValue();
         const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, previousSummandValue.range.start, evaluatedSummand.range.end);
-        let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
+        let inPlaceBinaryOperatorFunc: (existingValue: ValueWithRange, summand: EvaluatedRValue, range: SourceRange) => Maybe<ValueWithRange>;
         switch (summand.operator) {
             case '+':
                 inPlaceBinaryOperatorFunc = inPlaceAdd;
@@ -2455,7 +2464,7 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<Evaluate
                 inPlaceBinaryOperatorFunc = inPlaceSubtract;
                 break;
         }
-        const maybeSum = inPlaceBinaryOperatorFunc(result.value, evaluatedSummand.value, binaryOperatorRange);
+        const maybeSum = inPlaceBinaryOperatorFunc(result.value, evaluatedSummand, binaryOperatorRange);
         if (maybeSum.hasError) {
             return Maybe.error(maybeSum.getError());
         }
@@ -2467,78 +2476,78 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<Evaluate
 }
 
 // In-place add summand to existingValue, and return it.
-function inPlaceAdd(existingValue: Value, summand: Value, additionRange: SourceRange): Maybe<Value> {
+function inPlaceAdd(existingValue: ValueWithRange, summand: EvaluatedRValue, additionRange: SourceRange): Maybe<ValueWithRange> {
     if (existingValue instanceof Array) {
-        if (summand instanceof Array) {
-            existingValue.push(...summand);
+        if (summand.value instanceof Array) {
+            existingValue.push(...summand.value);
         } else {
-            existingValue.push(summand);
+            existingValue.push(new ArrayItem(summand.value, summand.range));
         }
     } else if (existingValue instanceof Struct) {
-        if (summand instanceof Struct) {
-            for (const [structMemberName, structMember] of summand.members) {
+        if (summand.value instanceof Struct) {
+            for (const [structMemberName, structMember] of summand.value.members) {
                 existingValue.members.set(structMemberName, structMember);
             }
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a Struct. Can only add a Struct.`, []));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand.value)} to a Struct. Can only add a Struct.`, []));
         }
     } else if (typeof existingValue === 'string') {
-        if (typeof summand === 'string') {
-            existingValue += summand;
+        if (typeof summand.value === 'string') {
+            existingValue += summand.value;
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to a String. Can only add a String.`, []));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand.value)} to a String. Can only add a String.`, []));
         }
     } else if (typeof existingValue === 'number') {
-        if (typeof summand === 'number') {
-            existingValue += summand;
+        if (typeof summand.value === 'number') {
+            existingValue += summand.value;
         } else {
-            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to an Integer. Can only add an Integer.`, []));
+            return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand.value)} to an Integer. Can only add an Integer.`, []));
         }
     } else if (typeof existingValue === 'boolean') {
         return Maybe.error(new EvaluationError(additionRange, `Cannot add to a Boolean.`, []));
     } else {
-        return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand)} to ${getValueTypeNameA(existingValue)}.`, []));
+        return Maybe.error(new EvaluationError(additionRange, `Cannot add ${getValueTypeNameA(summand.value)} to ${getValueTypeNameA(existingValue)}.`, []));
     }
 
     return Maybe.ok(existingValue);
 }
 
 // In-place subtract valueToSubtract from existingValue, and return it.
-function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtractionRange: SourceRange): Maybe<Value> {
+function inPlaceSubtract(existingValue: ValueWithRange, valueToSubtract: EvaluatedRValue, subtractionRange: SourceRange): Maybe<ValueWithRange> {
     if (existingValue instanceof Array) {
         if (existingValue.length > 0) {
-            if (typeof existingValue[0] === 'string') {
-                if (typeof valueToSubtract === 'string') {
+            if (typeof existingValue[0].value === 'string') {
+                if (typeof valueToSubtract.value === 'string') {
                     // Remove all occurrences of |valueToSubtract|.
-                    existingValue = existingValue.filter(value => value != valueToSubtract);
+                    existingValue = existingValue.filter(arrayItem => arrayItem.value != valueToSubtract.value);
                 } else {
-                    return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Array of Strings. Can only subtract a String.`, []));
+                    return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract.value)} from an Array of Strings. Can only subtract a String.`, []));
                 }
             } else {
-                return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from an Array of ${getValueTypeName(existingValue[0])}s. Can only subtract from an Array if it is an Array of Strings.`, []));
+                return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from an Array of ${getValueTypeName(existingValue[0].value)}s. Can only subtract from an Array if it is an Array of Strings.`, []));
             }
         }
     } else if (existingValue instanceof Struct) {
         return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Struct.`, []));
     } else if (typeof existingValue === 'string') {
-        if (typeof valueToSubtract === 'string') {
+        if (typeof valueToSubtract.value === 'string') {
             // Remove all substrings of |valueToSubtract|.
-            // This code can be refactored to use replaceAll once on Node version 15+: existingValue.replaceAll(valueToSubtract, '')
-            const escapedValueToSubtract = valueToSubtract.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
+            // This code can be refactored to use replaceAll once on Node version 15+: existingValue.replaceAll(valueToSubtract.value, '')
+            const escapedValueToSubtract = valueToSubtract.value.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
             existingValue = existingValue.replace(new RegExp(escapedValueToSubtract, 'g'), '');
         } else {
-            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from a String. Can only subtract a String.`, []));
+            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract.value)} from a String. Can only subtract a String.`, []));
         }
     } else if (typeof existingValue === 'number') {
-        if (typeof valueToSubtract === 'number') {
-            existingValue -= valueToSubtract;
+        if (typeof valueToSubtract.value === 'number') {
+            existingValue -= valueToSubtract.value;
         } else {
-            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from an Integer. Can only subtract an Integer.`, []));
+            return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract.value)} from an Integer. Can only subtract an Integer.`, []));
         }
     } else if (typeof existingValue === 'boolean') {
         return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Boolean.`, []));
     } else {
-        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract)} from ${getValueTypeNameA(existingValue)}.`, []));
+        return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract ${getValueTypeNameA(valueToSubtract.value)} from ${getValueTypeNameA(existingValue)}.`, []));
     }
 
     return Maybe.ok(existingValue);
@@ -2666,10 +2675,11 @@ function evaluateIfCondition(
 
         if (evaluatedRhsValue.length === 0) {
             isPresent = false;
-        } else if (typeof evaluatedRhsValue[0] === 'string') {
+        } else if (typeof evaluatedRhsValue[0].value === 'string') {
+            const evaluatedRhsValueValues = evaluatedRhsValue.map(item => <string>item.value);
             const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
             if (typeof evaluatedLhsValue === 'string') {
-                isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
+                isPresent = evaluatedRhsValueValues.includes(evaluatedLhsValue);
             } else if (evaluatedLhsValue instanceof Array) {
                 if (!isParsedEvaluatedVariable(lhs)) {
                     return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
@@ -2677,16 +2687,17 @@ function evaluateIfCondition(
 
                 if (evaluatedLhsValue.length === 0) {
                     isPresent = false;
-                } else if (typeof evaluatedLhsValue[0] === 'string') {
-                    isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
+                } else if (typeof evaluatedLhsValue[0].value === 'string') {
+                    const evaluatedLhsValueValues = evaluatedLhsValue.map(item => <string>item.value);
+                    isPresent = evaluatedLhsValueValues.some(searchString => evaluatedRhsValueValues.includes(searchString));
                 } else {
-                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`, []));
+                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0].value)}s`, []));
                 }
             } else {
                 return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`, []));
             }
         } else {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`, []));
+            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0].value)}s`, []));
         }
 
         const result: EvaluatedCondition = {
@@ -2794,7 +2805,7 @@ function evaluateDirectiveIfCondition(
     return Maybe.ok(result);
 }
 
-function getValueTypeName(value: Value): ValueTypeName {
+function getValueTypeName(value: ValueWithRange): ValueTypeName {
     if (value instanceof Array) {
         return 'Array';
     } else if (value instanceof Struct) {
@@ -2812,7 +2823,7 @@ function getValueTypeName(value: Value): ValueTypeName {
 }
 
 // Same as getValueTypeName but prefixed with either "a " or "an ".
-function getValueTypeNameA(value: Value): string {
+function getValueTypeNameA(value: ValueWithRange): string {
     if (value instanceof Struct) {
         return 'a Struct';
     } else if (value instanceof Array) {
@@ -2829,11 +2840,12 @@ function getValueTypeNameA(value: Value): string {
     }
 }
 
-function deepCopyValue(value: Value): Value {
+function deepCopyValue(value: ValueWithRange): ValueWithRange {
     if (value instanceof Array) {
         const copy = [];
         for (let i = 0, len = value.length; i < len; i++) {
-            copy[i] = deepCopyValue(value[i]);
+            const copiedValue = deepCopyValue(value[i].value);
+            copy[i] = new ArrayItem(copiedValue, value[i].range);
         }
         return copy;
     } else if (value instanceof Struct) {

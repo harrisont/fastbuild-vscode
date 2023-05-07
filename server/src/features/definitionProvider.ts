@@ -25,6 +25,10 @@ export function getDefinition(params: DefinitionParams, evaluatedData: Evaluated
     //
     // Check for a matching target definition.
     //
+
+    // Map JSON.stringify(SourceRange) to the definition in order to deduplicate definitions.
+    const targetResults = new Map<string, DefinitionLink>();
+
     for (let i = 0; i < evaluatedData.targetReferences.length; i++) {
         const reference = evaluatedData.targetReferences[i];
         if (uri == reference.range.uri
@@ -39,8 +43,12 @@ export function getDefinition(params: DefinitionParams, evaluatedData: Evaluated
                 targetRange: definitionRange,
                 targetSelectionRange: definitionRange,
             };
-            return [definitionLink];
+            targetResults.set(JSON.stringify(definition.range), definitionLink);
         }
+    }
+
+    if (targetResults.size > 0) {
+        return [...targetResults.values()];
     }
 
     //

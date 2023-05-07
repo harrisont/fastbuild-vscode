@@ -12,7 +12,7 @@ import {
     EvaluatedData,
     EvaluatedVariable,
     Struct,
-    Value,
+    ValueWithRange,
 } from '../evaluator';
 
 const FASTBUILD_LANGUAGE_ID = 'fastbuild';
@@ -25,7 +25,7 @@ const HOVER_TEXT_SUFFIX = '\n```';
 const MAX_HOVER_TEXT_LENGTH = 100000;
 const MAX_HOVER_TEXT_VALUE_LENGTH = MAX_HOVER_TEXT_LENGTH - HOVER_TEXT_PREFIX.length - HOVER_TEXT_SUFFIX.length - '…'.length;
 
-export function valueToString(value: Value, indentation = ''): string {
+export function valueToString(value: ValueWithRange, indentation = ''): string {
     if (value instanceof Struct) {
         if (value.members.size === 0) {
             return '[]';
@@ -47,7 +47,7 @@ export function valueToString(value: Value, indentation = ''): string {
         } else {
             const itemIndentation = indentation + INDENTATION;
             const items = value.map(
-                (itemValue) => `${itemIndentation}${valueToString(itemValue, itemIndentation)}`
+                (itemValue) => `${itemIndentation}${valueToString(itemValue.value, itemIndentation)}`
             );
             const lines = [
                 '{',
@@ -65,15 +65,15 @@ export function valueToString(value: Value, indentation = ''): string {
     }
 }
 
-export function getHoverText(possibleValues: Value[]): string {
+export function getHoverText(possibleValues: ValueWithRange[]): string {
     // Deduplicate values.
-    const possibleValuesMap = new Map<string, Value>(
+    const possibleValuesMap = new Map<string, ValueWithRange>(
         possibleValues.map(value => [JSON.stringify(value), value])
     );
 
     let valueStr = '';
     if (possibleValuesMap.size === 1) {
-        const value = possibleValues.values().next().value;
+        const value: ValueWithRange = possibleValuesMap.values().next().value;
         valueStr = valueToString(value);
         if (valueStr.length > MAX_HOVER_TEXT_VALUE_LENGTH) {
             valueStr = valueStr.substring(0, MAX_HOVER_TEXT_VALUE_LENGTH) + '…';
@@ -99,7 +99,7 @@ export function getHover(params: HoverParams, evaluatedData: EvaluatedData): Hov
     const uri = params.textDocument.uri;
     const position = params.position;
 
-    const possibleValues: Value[] = [];
+    const possibleValues: ValueWithRange[] = [];
     let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
     // Potential optmization: use a different data structure to allow for a more efficient search.
