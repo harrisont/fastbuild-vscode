@@ -4,6 +4,12 @@
 
 * [#5](https://github.com/harrisont/fastbuild-vscode/issues/5) Support "go to definition" and "find references" for target names.
 
+# v0.13.3
+
+## Bug Fixes
+
+* ([#70](https://github.com/harrisont/fastbuild-vscode/issues/70)) Fix the bug where a `;` or `//` (start-of-comment characters) in a string would cause the rest of the line to be treated as a comment and would create a parse error.
+
 # v0.13.2
 
 ## Bug Fixes
@@ -14,7 +20,7 @@
 
 ## Bug Fixes
 
-* ([#67](https://github.com/harrisont/fastbuild-vscode/issues/67)) Fix the errors not updated when changing a file to introduce a parse error and then undoing that change.
+* ([#67](https://github.com/harrisont/fastbuild-vscode/issues/67)) Fix the errors not updating when changing a file to introduce a parse error and then undoing that change.
 
 # v0.13.0
 

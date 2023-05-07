@@ -416,6 +416,52 @@ describe('parser', () => {
         ]);
     });
 
+    it('should work on assigning a string literal with single quotes with an escaped single quote and a comment character (";") inside', () => {
+        const input = `.MyVar = '^';'`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: {
+                    type: 'string',
+                    value: "';",
+                    range: createRange(0, 9, 0, 14)
+                }
+            }
+        ]);
+    });
+
+    it('should work on assigning a string literal with single quotes with an escaped single quote and a comment character ("//") inside', () => {
+        const input = `.MyVar = '^'//'`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: {
+                    type: 'string',
+                    value: "'//",
+                    range: createRange(0, 9, 0, 15)
+                }
+            }
+        ]);
+    });
+
     it('should work on assigning a string literal with double quotes with an escaped double quote inside', () => {
         const input = `.MyVar = "h^"i"`;
         assertParseResultsEqual(input, [
@@ -433,6 +479,52 @@ describe('parser', () => {
                 rhs: {
                     type: 'string',
                     value: 'h"i',
+                    range: createRange(0, 9, 0, 15)
+                }
+            }
+        ]);
+    });
+
+    it('should work on assigning a string literal with double quotes with an escaped double quote and a comment character (";") inside', () => {
+        const input = `.MyVar = "^";"`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: {
+                    type: 'string',
+                    value: '";',
+                    range: createRange(0, 9, 0, 14)
+                }
+            }
+        ]);
+    });
+
+    it('should work on assigning a string literal with double quotes with an escaped double quote and a comment character ("//") inside', () => {
+        const input = `.MyVar = "^"//"`;
+        assertParseResultsEqual(input, [
+            {
+                type: 'variableDefinition',
+                lhs: {
+                    name: {
+                        type: 'string',
+                        value: 'MyVar',
+                        range: createRange(0, 1, 0, 6)
+                    },
+                    scope: 'current',
+                    range: createRange(0, 0, 0, 6),
+                },
+                rhs: {
+                    type: 'string',
+                    value: '"//',
                     range: createRange(0, 9, 0, 15)
                 }
             }

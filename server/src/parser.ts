@@ -343,23 +343,30 @@ function removeComments(input: string): string {
     for (const line of lines) {
         let inSingleQuotedString = false;
         let inDoubleQuotedString = false;
+        let escapeNextChar = false;
         let lineWithCommentRemoved = line;
 
         for (let i = 0, lastNonSpaceIndex = -1; i < line.length; ++i) {
             const char = line[i];
 
-            if (char === "'" && !inDoubleQuotedString) {
-                inSingleQuotedString = !inSingleQuotedString;
-            } else if (char === '"' && !inSingleQuotedString) {
-                inDoubleQuotedString = !inDoubleQuotedString;
-            } else if (!inSingleQuotedString
-                    && !inDoubleQuotedString
-                    && ((char === ';')
-                        || ((char === '/') && (i + 1 < line.length) && (line[i + 1] === '/'))))
-            {
-                // Comment. Strip the rest of the line.
-                lineWithCommentRemoved = line.substring(0, lastNonSpaceIndex + 1);
-                break;
+            if (char === '^') {
+                escapeNextChar = true;
+            } else if (escapeNextChar) {
+                escapeNextChar = false;
+            } else {
+                if (char === "'" && !inDoubleQuotedString) {
+                    inSingleQuotedString = !inSingleQuotedString;
+                } else if (char === '"' && !inSingleQuotedString) {
+                    inDoubleQuotedString = !inDoubleQuotedString;
+                } else if (!inSingleQuotedString
+                        && !inDoubleQuotedString
+                        && ((char === ';')
+                            || ((char === '/') && (i + 1 < line.length) && (line[i + 1] === '/'))))
+                {
+                    // Comment. Strip the rest of the line.
+                    lineWithCommentRemoved = line.substring(0, lastNonSpaceIndex + 1);
+                    break;
+                }
             }
 
             if (char !== ' ') {
