@@ -17,6 +17,7 @@ import {
 
 import {
     ArrayItem,
+    convertValueWithRangeToValue,
     ErrorRelatedInformation,
     evaluate,
     EvaluatedData,
@@ -116,18 +117,10 @@ function assertEvaluatedVariablesValueWithRangeEqual(input: FileContents, expect
 function assertEvaluatedVariablesValueEqual(input: FileContents, expectedValues: Value[]): void {
     const result = evaluateInput(input, true /*enableDiagnostics*/);
     const actualValueWithRanges = result.evaluatedVariables.map(evaluatedVariable => evaluatedVariable.value);
-    const actualValues = actualValueWithRanges.map(item => convertToValue(item));
+    const actualValues = actualValueWithRanges.map(item => convertValueWithRangeToValue(item));
     assert.deepStrictEqual(actualValues, expectedValues);
 
     assert.deepStrictEqual(result.nonFatalErrors, []);
-}
-
-function convertToValue(valueWithRange: ValueWithRange): Value {
-    if (valueWithRange instanceof Array) {
-        return valueWithRange.map(item => convertToValue(item.value));
-    } else {
-        return valueWithRange;
-    }
 }
 
 function getParseSourceRangeString(range: ParseSourceRange): string {
@@ -679,11 +672,7 @@ describe('evaluator', () => {
                 ['a', 'b', 'c'],
                 Struct.from(Object.entries({
                     MyArray: new StructMember(
-                        [
-                            new ArrayItem('a', createParseRange(2, 32, 2, 35)),
-                            new ArrayItem('b', createParseRange(2, 37, 2, 40)),
-                            new ArrayItem('c', createParseRange(2, 42, 2, 45)),
-                        ],
+                        ['a', 'b', 'c'],
                         [myVarMyArrayDefinition]),
                 }))
             ]);

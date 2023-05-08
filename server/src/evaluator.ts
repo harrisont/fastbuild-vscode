@@ -396,11 +396,16 @@ export class ArrayItem {
 export type Value = boolean | number | string | Value[] | Struct;
 
 // Same as `Value` but with `ArrayItem[]` instead of `Value[]` in order to track array item ranges.
-export type ValueWithRange = boolean | number | string | ArrayItem[] | Struct;
+export type ValueWithRange = boolean | number | string | ArrayItem[] | StructWithRange;
 
 export type VariableName = string;
 
 export class StructMember {
+    constructor(readonly value: Value, readonly definitions: AtLeast1VariableDefinition) {
+    }
+}
+
+export class StructMemberWithRange {
     constructor(readonly value: ValueWithRange, readonly definitions: AtLeast1VariableDefinition) {
     }
 }
@@ -411,6 +416,26 @@ export class Struct {
 
     static from(iterable: Iterable<readonly [VariableName, StructMember]>): Struct {
         return new Struct(new Map<VariableName, StructMember>(iterable));
+    }
+
+    toJSON(): string {
+        if (this.members.size === 0) {
+            return '[]';
+        } else {
+            const items = Array.from(this.members,
+                ([structMemberName, structMember]) => `${structMemberName}=${JSON.stringify(structMember.value)}`
+            );
+            return `{${items.join(',')}}`;
+        }
+    }
+}
+
+export class StructWithRange {
+    constructor(readonly members=new Map<VariableName, StructMemberWithRange>()) {
+    }
+
+    static from(iterable: Iterable<readonly [VariableName, StructMemberWithRange]>): StructWithRange {
+        return new StructWithRange(new Map<VariableName, StructMemberWithRange>(iterable));
     }
 
     toJSON(): string {
@@ -1414,7 +1439,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
     if (existingValue !== null && existingValue instanceof Array && !(value instanceof Array)) {
         if (existingValue.length === 0) {
             // Assignment to an empty Array: the RHS can be any valid Array.
-            if (typeof value !== 'string' && !(value instanceof Struct)) {
+            if (typeof value !== 'string' && !(value instanceof StructWithRange)) {
                 const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
                 return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []));
             }
@@ -1422,7 +1447,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
             // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
             const lhsFirstItem = existingValue[0].value;
             if ((typeof lhsFirstItem === 'string' && typeof value !== 'string')
-                || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
+                || (lhsFirstItem instanceof StructWithRange && !(value instanceof StructWithRange)))
             {
                 const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
                 return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []));
@@ -1591,7 +1616,7 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
 
     const structVariable = evaluated.valueScopeVariable;
     const struct = structVariable.value;
-    if (!(struct instanceof Struct)) {
+    if (!(struct instanceof StructWithRange)) {
         return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []);
     }
 
@@ -2331,7 +2356,7 @@ function evaluateRValueArray(
                         || typeof evaluated.value === 'number')
                     {
                         return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`, []));
-                    } else if (evaluated.value instanceof Struct && !isParsedEvaluatedVariable(item)) {
+                    } else if (evaluated.value instanceof StructWithRange && !isParsedEvaluatedVariable(item)) {
                         return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`, []));
                     }
                 } else {
@@ -2419,11 +2444,11 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Maybe
         return Maybe.error(error);
     }
 
-    const structMembers = new Map<VariableName, StructMember>();
+    const structMembers = new Map<VariableName, StructMemberWithRange>();
     for (const [name, variable] of structScope.variables) {
-        structMembers.set(name, new StructMember(variable.value, variable.definitions));
+        structMembers.set(name, new StructMemberWithRange(variable.value, variable.definitions));
     }
-    const evaluatedValue = new Struct(structMembers);
+    const evaluatedValue = new StructWithRange(structMembers);
 
     const result: EvaluatedRValue = {
         value: evaluatedValue,
@@ -2483,8 +2508,8 @@ function inPlaceAdd(existingValue: ValueWithRange, summand: EvaluatedRValue, add
         } else {
             existingValue.push(new ArrayItem(summand.value, summand.range));
         }
-    } else if (existingValue instanceof Struct) {
-        if (summand.value instanceof Struct) {
+    } else if (existingValue instanceof StructWithRange) {
+        if (summand.value instanceof StructWithRange) {
             for (const [structMemberName, structMember] of summand.value.members) {
                 existingValue.members.set(structMemberName, structMember);
             }
@@ -2527,7 +2552,7 @@ function inPlaceSubtract(existingValue: ValueWithRange, valueToSubtract: Evaluat
                 return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from an Array of ${getValueTypeName(existingValue[0].value)}s. Can only subtract from an Array if it is an Array of Strings.`, []));
             }
         }
-    } else if (existingValue instanceof Struct) {
+    } else if (existingValue instanceof StructWithRange) {
         return Maybe.error(new EvaluationError(subtractionRange, `Cannot subtract from a Struct.`, []));
     } else if (typeof existingValue === 'string') {
         if (typeof valueToSubtract.value === 'string') {
@@ -2808,7 +2833,7 @@ function evaluateDirectiveIfCondition(
 function getValueTypeName(value: ValueWithRange): ValueTypeName {
     if (value instanceof Array) {
         return 'Array';
-    } else if (value instanceof Struct) {
+    } else if (value instanceof StructWithRange) {
         return 'Struct';
     } else if (typeof value === 'string') {
         return 'String';
@@ -2824,7 +2849,7 @@ function getValueTypeName(value: ValueWithRange): ValueTypeName {
 
 // Same as getValueTypeName but prefixed with either "a " or "an ".
 function getValueTypeNameA(value: ValueWithRange): string {
-    if (value instanceof Struct) {
+    if (value instanceof StructWithRange) {
         return 'a Struct';
     } else if (value instanceof Array) {
         return 'an Array';
@@ -2848,14 +2873,29 @@ function deepCopyValue(value: ValueWithRange): ValueWithRange {
             copy[i] = new ArrayItem(copiedValue, value[i].range);
         }
         return copy;
-    } else if (value instanceof Struct) {
-        const structMembers = new Map<VariableName, StructMember>(
+    } else if (value instanceof StructWithRange) {
+        const structMembers = new Map<VariableName, StructMemberWithRange>(
             Array.from(
                 value.members,
-                ([memberName, member]) => [memberName, new StructMember(deepCopyValue(member.value), member.definitions)]));
-        return new Struct(structMembers);
+                ([memberName, member]) => [memberName, new StructMemberWithRange(deepCopyValue(member.value), member.definitions)]));
+        return new StructWithRange(structMembers);
     } else {
         return value;
+    }
+}
+
+export function convertValueWithRangeToValue(valueWithRange: ValueWithRange): Value {
+    if (valueWithRange instanceof Array) {
+        return valueWithRange.map(item => convertValueWithRangeToValue(item.value));
+    } else if (valueWithRange instanceof StructWithRange) {
+        return Struct.from([...valueWithRange.members.entries()].map(
+            ([memberName, member]) => [
+                memberName,
+                new StructMember(convertValueWithRangeToValue(member.value), member.definitions)
+            ]
+        ));
+    } else {
+        return valueWithRange;
     }
 }
 

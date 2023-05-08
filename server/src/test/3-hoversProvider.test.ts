@@ -1,16 +1,10 @@
 import * as assert from 'assert';
 
 import {
-    createRange as createParseRange,
-} from '../parser';
-
-import {
-    ArrayItem,
     SourceRange,
     Struct,
     StructMember,
     Value,
-    ValueWithRange,
     VariableDefinition,
 } from '../evaluator';
 
@@ -41,59 +35,36 @@ function createDummyRange(): SourceRange {
     return createRange('file:///dummy.bff', 0, 0, 0, 0);
 }
 
-function convertValueWithDummyRange(value: Value): ValueWithRange {
-    if (value instanceof Array) {
-        return value.map(item => new ArrayItem(
-            convertValueWithDummyRange(item),
-            createParseRange(0, 0, 0, 0)
-        ));
-    } else {
-        return value;
-    }
-}
-
-// Convenience to avoid needing to create ranges for each test.
-function valueWithoutRangeToString(value: Value): string {
-    const valueWithRange = convertValueWithDummyRange(value);
-    return valueToString(valueWithRange);
-}
-
-// Convenience to avoid needing to create ranges for each test.
-function getHoverTextWithoutRange(possibleValues: Value[]): string {
-    const possibleValuesWithRange = possibleValues.map(value => convertValueWithDummyRange(value));
-    return getHoverText(possibleValuesWithRange);
-}
-
 describe('hoversProvider', () => {
     describe('valueToString', () => {
         it('works for an integer', () => {
-            const str = valueWithoutRangeToString(1);
+            const str = valueToString(1);
             assert.strictEqual('1', str);
         });
 
         it('works for a boolean', () => {
-            const str = valueWithoutRangeToString(true);
+            const str = valueToString(true);
             assert.strictEqual('true', str);
         });
 
         it('works for a string', () => {
-            const str = valueWithoutRangeToString('Hello world');
+            const str = valueToString('Hello world');
             assert.strictEqual("'Hello world'", str);
         });
 
         it('works for a string with quotes', () => {
-            const str = valueWithoutRangeToString('\'Hello\' "world"');
+            const str = valueToString('\'Hello\' "world"');
             assert.strictEqual("'^'Hello^' \"world\"'", str);
         });
 
         it('works for a string with backslash characters', () => {
-            const str = valueWithoutRangeToString('a \\ b');
+            const str = valueToString('a \\ b');
             assert.strictEqual("'a \\ b'", str);
         });
 
         it('works for an empty array', () => {
             const value: Value = [];
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(
                 `{}`,
                 str);
@@ -101,7 +72,7 @@ describe('hoversProvider', () => {
 
         it('works for an array of primitives', () => {
             const value = ['Hello', 'world'];
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(
                 `{
     'Hello'
@@ -121,7 +92,7 @@ describe('hoversProvider', () => {
                     'bye',
                 ]
             ];
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(`{
     {
         'a'
@@ -136,7 +107,7 @@ describe('hoversProvider', () => {
 
         it('works for an empty struct', () => {
             const value = new Struct();
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(
                 `[]`,
                 str);
@@ -148,7 +119,7 @@ describe('hoversProvider', () => {
                 A: new StructMember(1, [dummyDefinition]),
                 B: new StructMember(2, [dummyDefinition]),
             }));
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(
                 `[
     .A = 1
@@ -169,7 +140,7 @@ describe('hoversProvider', () => {
                     B2: new StructMember(2, [dummyDefinition]),
                 })), [dummyDefinition]),
             }));
-            const str = valueWithoutRangeToString(value);
+            const str = valueToString(value);
             assert.strictEqual(
                 `[
     .A = [
@@ -185,12 +156,12 @@ describe('hoversProvider', () => {
         });
     });
 
-    describe('getHoverTextWithoutRange', () => {
+    describe('getHoverText', () => {
         it('works for a single value', () => {
             const possibleValues = [
                 'a',
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 'a'
 \`\`\``;
@@ -202,7 +173,7 @@ describe('hoversProvider', () => {
                 'a',
                 'b',
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
 'a'
@@ -216,7 +187,7 @@ Values:
                 'a',
                 'a',
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 'a'
 \`\`\``;
@@ -228,7 +199,7 @@ Values:
                 ['a', 'b'],
                 ['a', 'b'],
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 {
     'a'
@@ -248,7 +219,7 @@ Values:
                 value,
                 value,
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 [
     .A = 1
@@ -262,7 +233,7 @@ Values:
             const possibleValues = [
                 strWithLengthOverLimit,
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
 
             // Need extra characters for the prefix, ellipsis, and the suffix.
             const expectedHoverTextWithoutValue = `\`\`\`fastbuild
@@ -285,7 +256,7 @@ Values:
                 strWithLengthHalfOfLimit1,
                 strWithLengthHalfOfLimit2,
             ];
-            const actualHoverText = getHoverTextWithoutRange(possibleValues);
+            const actualHoverText = getHoverText(possibleValues);
             const expectedHoverText = `\`\`\`fastbuild
 Values:
 '${strWithLengthHalfOfLimit1}'
