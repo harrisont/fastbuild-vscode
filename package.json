@@ -86,7 +86,7 @@
 	},
 	"scripts": {
 		"build-grammar": "node server/node_modules/nearley/bin/nearleyc.js server/src/fbuild-grammar.ne --out server/src/fbuild-grammar.ts",
-		"lint": "node ./node_modules/eslint/bin/eslint.js . --max-warnings 0",
+		"lint": "node ./node_modules/eslint/bin/eslint.js . --cache --max-warnings 0",
 		"build": "tsc --build",
 		"watch-build": "tsc --build --watch",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
