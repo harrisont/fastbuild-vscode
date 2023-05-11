@@ -21,6 +21,8 @@ import { ParseDataProvider, UriStr } from './parseDataProvider';
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
+import * as fuzzy from 'fuzzy';
+
 const MAX_SCOPE_STACK_DEPTH = 128;
 
 enum ValueType {
@@ -1848,10 +1850,28 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
                 const targetDefinition = context.evaluatedData.targetDefinitions.get(target.value);
                 if (targetDefinition === undefined) {
                     // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
+
+                    // See if there is a similar target, in case there was a typo.
+                    const errorRelatedInfo: ErrorRelatedInformation[] = [];
+                    const allTargetNames = [...context.evaluatedData.targetDefinitions.keys()];
+                    const matches = fuzzy.filter(target.value, allTargetNames);
+                    if (matches.length > 0) {
+                        const bestMatch = matches.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+                        const bestMatchTargetName = bestMatch.string;
+                        const bestMatchTargetDefinition = context.evaluatedData.targetDefinitions.get(bestMatchTargetName);
+                        if (bestMatchTargetDefinition !== undefined) {
+                            const bestMatchRelatedInfo: ErrorRelatedInformation = {
+                                range: bestMatchTargetDefinition.range,
+                                message: `Did you mean target "${bestMatchTargetName}"?`,
+                            };
+                            errorRelatedInfo.push(bestMatchRelatedInfo);
+                        }
+                    }
+
                     context.evaluatedData.nonFatalErrors.push(new EvaluationError(
                         targetReferenceRange,
                         `Target "${target.value}" does not exist.`,
-                        []
+                        errorRelatedInfo
                     ));
                     continue;
                 }
