@@ -1848,11 +1848,11 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
                 const targetDefinition = context.evaluatedData.targetDefinitions.get(target.value);
                 if (targetDefinition === undefined) {
                     // TODO: Figure out why FASTBuild does not error on existing code that references non-existent targets (e.g. targets that exist for one platform, behind an `If`, but not another).
-                    // context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                    //     targetReferenceRange,
-                    //     `Target "${target}" does not exist.`,
-                    //     []
-                    // ));
+                    context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+                        targetReferenceRange,
+                        `Target "${target.value}" does not exist.`,
+                        []
+                    ));
                     continue;
                 }
                 const targetReference: TargetReference = {
