@@ -1,5 +1,6 @@
 .vscode-test
 .npmrc
+.eslintcache
 out
 node_modules
 client/server
