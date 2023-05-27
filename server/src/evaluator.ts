@@ -23,67 +23,209 @@ import * as vscodeUri from 'vscode-uri';
 
 const MAX_SCOPE_STACK_DEPTH = 128;
 
-interface GenericFunctionMetadata {
-    requiredPropertyNames: string[];
+interface PropertyAttributes {
+    isRequired: boolean;
 }
 
-const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<string, GenericFunctionMetadata>([
+type PropertyName = string;
+
+interface GenericFunctionMetadata {
+    properties: Map<PropertyName, PropertyAttributes>;
+}
+
+const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<PropertyName, GenericFunctionMetadata>([
     [ 'Alias', {
-        requiredPropertyNames: ['Targets'],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Targets', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Compiler', {
-        requiredPropertyNames: ["Executable"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Executable', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Copy', {
-        requiredPropertyNames: ["Source", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Source', {
+                isRequired: true,
+            }],
+            ['Dest', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'CopyDir', {
-        requiredPropertyNames: ["SourcePaths", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['SourcePaths', {
+                isRequired: true,
+            }],
+            ['Dest', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'CSAssembly', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "CompilerOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                isRequired: true,
+            }],
+            ['CompilerOptions', {
+                isRequired: true,
+            }],
+            ['CompilerOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'DLL', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Linker', {
+                isRequired: true,
+            }],
+            ['LinkerOutput', {
+                isRequired: true,
+            }],
+            ['LinkerOptions', {
+                isRequired: true,
+            }],
+            ['Libraries', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Exec', {
-        requiredPropertyNames: ["ExecExecutable", "ExecOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ExecExecutable', {
+                isRequired: true,
+            }],
+            ['ExecOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Executable', {
-        requiredPropertyNames: ["Linker", "LinkerOutput", "LinkerOptions", "Libraries"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Linker', {
+                isRequired: true,
+            }],
+            ['LinkerOutput', {
+                isRequired: true,
+            }],
+            ['LinkerOptions', {
+                isRequired: true,
+            }],
+            ['Libraries', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Library', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions", "Librarian", "LibrarianOptions", "LibrarianOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                isRequired: true,
+            }],
+            ['CompilerOptions', {
+                isRequired: true,
+            }],
+            ['Librarian', {
+                isRequired: true,
+            }],
+            ['LibrarianOptions', {
+                isRequired: true,
+            }],
+            ['LibrarianOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'ListDependencies', {
-        requiredPropertyNames: ["Source", "Dest"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Source', {
+                isRequired: true,
+            }],
+            ['Dest', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'ObjectList', {
-        requiredPropertyNames: ["Compiler", "CompilerOptions"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['Compiler', {
+                isRequired: true,
+            }],
+            ['CompilerOptions', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'RemoveDir', {
-        requiredPropertyNames: ["RemovePaths"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['RemovePaths', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Test', {
-        requiredPropertyNames: ["TestExecutable", "TestOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['TestExecutable', {
+                isRequired: true,
+            }],
+            ['TestOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'TextFile', {
-        requiredPropertyNames: ["TextFileOutput", "TextFileInputStrings"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['TextFileOutput', {
+                isRequired: true,
+            }],
+            ['TextFileInputStrings', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'Unity', {
-        requiredPropertyNames: ["UnityOutputPath"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['UnityOutputPath', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'VCXProject', {
-        requiredPropertyNames: ["ProjectOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ProjectOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'VSProjectExternal', {
-        requiredPropertyNames: ["ExternalProjectPath"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ExternalProjectPath', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'VSSolution', {
-        requiredPropertyNames: ["SolutionOutput"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['SolutionOutput', {
+                isRequired: true,
+            }],
+        ]),
     }],
     [ 'XCodeProject', {
-        requiredPropertyNames: ["ProjectOutput", "ProjectConfigs"],
+        properties: new Map<PropertyName, PropertyAttributes>([
+            ['ProjectOutput', {
+                isRequired: true,
+            }],
+            ['ProjectConfigs', {
+                isRequired: true,
+            }],
+        ]),
     }],
 ]);
 
@@ -1494,34 +1636,46 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
             return;
         }
 
-        // Ensure that all required properties are set.
-        const functionMetadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(statement.functionName);
-        if (functionMetadata === undefined) {
-            error = new InternalEvaluationError(
-                new SourceRange(context.thisFbuildUri, statement.range),
-                `Missing metadata for function ${statement.functionName}`
-            );
-            return;
-        }
-        const missingPropertyNames = [];
-        for (const requiredPropertyName of functionMetadata.requiredPropertyNames) {
-            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(requiredPropertyName);
-            if (propertyVariable === null) {
-                missingPropertyNames.push(requiredPropertyName);
-            }
-        }
-        if (missingPropertyNames.length > 0) {
-            const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
-            const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
-            context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-                new SourceRange(context.thisFbuildUri, statement.range),
-                `Call to function "${statement.functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
-                []
-            ));
-            return;
-        }
+        error = evaluateGenericFunctionProperties(statement, context);
     });
     return error;
+}
+
+// Returns `Error` on fatal error, or `null` otherwise.
+function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
+    const functionName = statement.functionName;
+
+    const functionMetadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(functionName);
+    if (functionMetadata === undefined) {
+        return new InternalEvaluationError(
+            new SourceRange(context.thisFbuildUri, statement.range),
+            `Missing metadata for function ${functionName}`
+        );
+    }
+
+    const missingPropertyNames = [];
+    for (const [propertyName, property] of functionMetadata.properties) {
+        if (property.isRequired) {
+            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
+            if (propertyVariable === null) {
+                missingPropertyNames.push(propertyName);
+                continue;
+            }
+        }
+    }
+
+    // Ensure that all required properties are set.
+    if (missingPropertyNames.length > 0) {
+        const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
+        const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
+        context.evaluatedData.nonFatalErrors.push(new EvaluationError(
+            new SourceRange(context.thisFbuildUri, statement.range),
+            `Call to function "${functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
+            []
+        ));
+    }
+
+    return null;
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.

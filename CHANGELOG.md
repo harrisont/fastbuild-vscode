@@ -1,3 +1,9 @@
+# v0.14.0
+
+## New Features
+
+* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for variables
+
 # v0.13.3
 
 ## Bug Fixes
