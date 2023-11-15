@@ -1,4 +1,6 @@
 import {
+    CompletionItem,
+    CompletionParams,
     createConnection,
     DefinitionParams,
     DidChangeConfigurationNotification,
@@ -169,6 +171,9 @@ state.connection.onInitialize((params: InitializeParams) => {
             documentSymbolProvider: true,
             workspaceSymbolProvider: true,
             // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
+            completionProvider: {
+                triggerCharacters: [ '.', '^', '$' ],
+            },
         }
     };
 
@@ -235,6 +240,35 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
     flushQueuedDocumentUpdates();
 
     return symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
+});
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+    // TODO: Lookup the completions based on the URI and position.
+    //       This will require adding support for tracking the AST, which we don't currently have.
+    //params.textDocument.uri
+    //params.position
+
+    const completions: CompletionItem[] = [
+        // {
+        //     label: 'Completion1',
+        //     kind: CompletionItemKind.Variable,
+        //     detail: 'Completion 1 details',
+        //     documentation: {
+        //         kind: MarkupKind.Markdown,
+        //         value: '# heading\n* value 1\n* value 2',
+        //     },
+        //     //data: 1,
+        // },
+        // {
+        //     label: 'Completion2',
+        //     kind: CompletionItemKind.Variable,
+        //     detail: 'Completion 2 details',
+        //     documentation: 'more docs',
+        //     //data: 2,
+        // },
+    ];
+    return completions;
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
