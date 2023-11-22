@@ -4,7 +4,7 @@ import {
 } from 'vscode-languageserver-protocol';
 import * as completionProvider from '../features/completionProvider';
 import { evaluateInputs } from './2-evaluator.test';
-import { CompletionItem, CompletionItemKind, CompletionParams, MarkupKind } from 'vscode-languageserver';
+import { CompletionItem, CompletionItemKind, CompletionParams } from 'vscode-languageserver';
 
 type UriStr = string;
 type FileContents = string;
@@ -17,7 +17,12 @@ function getCompletionsMultiFile(thisFbuildUriStr: UriStr, inputs: Map<UriStr, F
         },
         position,
     };
-    return completionProvider.getCompletions(completionParams, evaluatedData);
+    const completions = completionProvider.getCompletions(completionParams, evaluatedData);
+    // Remove the documentation property, since it's tedious to keep the tests for the documentation in sync with the actual documentation.
+    for (const completion of completions) {
+        delete completion.documentation;
+    }
+    return completions;
 }
 
 function getCompletions(input: string, position: Position): CompletionItem[] {
@@ -64,11 +69,6 @@ Alias('MyTargetName')
                 {
                     label: '.Targets',
                     kind: CompletionItemKind.Variable,
-                    detail: 'Required: true',
-                    documentation: {
-                        kind: MarkupKind.Markdown,
-                        value: '# heading\n* value 1\n* value 2',
-                    },
                 },
             ];
             assert.deepStrictEqual(actualCompletions1, expectedCompletions);
@@ -97,11 +97,6 @@ Alias('MyTarget2')
                 {
                     label: '.Targets',
                     kind: CompletionItemKind.Variable,
-                    detail: 'Required: true',
-                    documentation: {
-                        kind: MarkupKind.Markdown,
-                        value: '# heading\n* value 1\n* value 2',
-                    },
                 },
             ];
             assert.deepStrictEqual(actualCompletions1, expectedCompletions1);
@@ -113,11 +108,6 @@ Alias('MyTarget2')
                 {
                     label: '.Targets',
                     kind: CompletionItemKind.Variable,
-                    detail: 'Required: true',
-                    documentation: {
-                        kind: MarkupKind.Markdown,
-                        value: '# heading\n* value 1\n* value 2',
-                    },
                 },
             ];
             assert.deepStrictEqual(actualCompletions2, expectedCompletions2);
