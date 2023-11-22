@@ -12,222 +12,19 @@ import {
     RESERVED_SYMBOL_NAMES,
     SourcePosition,
     Statement,
+    createRange,
 } from './parser';
 
 import { IFileSystem } from './fileSystem';
 
 import { ParseDataProvider, UriStr } from './parseDataProvider';
 
+import { GENERIC_FUNCTION_METADATA_BY_NAME } from './genericFunctions';
+
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
 const MAX_SCOPE_STACK_DEPTH = 128;
-
-interface PropertyAttributes {
-    isRequired: boolean;
-}
-
-type PropertyName = string;
-
-interface GenericFunctionMetadata {
-    properties: Map<PropertyName, PropertyAttributes>;
-}
-
-const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<PropertyName, GenericFunctionMetadata>([
-    [ 'Alias', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Targets', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Compiler', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Executable', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Copy', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Source', {
-                isRequired: true,
-            }],
-            ['Dest', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'CopyDir', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['SourcePaths', {
-                isRequired: true,
-            }],
-            ['Dest', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'CSAssembly', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Compiler', {
-                isRequired: true,
-            }],
-            ['CompilerOptions', {
-                isRequired: true,
-            }],
-            ['CompilerOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'DLL', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Linker', {
-                isRequired: true,
-            }],
-            ['LinkerOutput', {
-                isRequired: true,
-            }],
-            ['LinkerOptions', {
-                isRequired: true,
-            }],
-            ['Libraries', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Exec', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['ExecExecutable', {
-                isRequired: true,
-            }],
-            ['ExecOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Executable', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Linker', {
-                isRequired: true,
-            }],
-            ['LinkerOutput', {
-                isRequired: true,
-            }],
-            ['LinkerOptions', {
-                isRequired: true,
-            }],
-            ['Libraries', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Library', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Compiler', {
-                isRequired: true,
-            }],
-            ['CompilerOptions', {
-                isRequired: true,
-            }],
-            ['Librarian', {
-                isRequired: true,
-            }],
-            ['LibrarianOptions', {
-                isRequired: true,
-            }],
-            ['LibrarianOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'ListDependencies', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Source', {
-                isRequired: true,
-            }],
-            ['Dest', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'ObjectList', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['Compiler', {
-                isRequired: true,
-            }],
-            ['CompilerOptions', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'RemoveDir', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['RemovePaths', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Test', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['TestExecutable', {
-                isRequired: true,
-            }],
-            ['TestOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'TextFile', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['TextFileOutput', {
-                isRequired: true,
-            }],
-            ['TextFileInputStrings', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'Unity', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['UnityOutputPath', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'VCXProject', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['ProjectOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'VSProjectExternal', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['ExternalProjectPath', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'VSSolution', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['SolutionOutput', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-    [ 'XCodeProject', {
-        properties: new Map<PropertyName, PropertyAttributes>([
-            ['ProjectOutput', {
-                isRequired: true,
-            }],
-            ['ProjectConfigs', {
-                isRequired: true,
-            }],
-        ]),
-    }],
-]);
 
 export interface ErrorRelatedInformation {
     range: SourceRange;
@@ -357,6 +154,13 @@ export interface IncludeReference {
     range: SourceRange;
 }
 
+export interface GenericFunction {
+    functionName: string;
+
+    // Range of the body, without the braces.
+    bodyRangeWithoutBraces: SourceRange;
+}
+
 export class EvaluatedData {
     evaluatedVariables: EvaluatedVariable[] = [];
 
@@ -372,6 +176,9 @@ export class EvaluatedData {
     includeDefinitions = new Set<UriStr>();
 
     includeReferences: IncludeReference[] = [];
+
+    // Maps a file URI to the functions called in that file.
+    genericFunctions = new Map<UriStr, GenericFunction[]>();
 
     nonFatalErrors: EvaluationError[] = [];
 }
@@ -546,7 +353,10 @@ function isParsedStatementForEach(obj: Record<string, any>): obj is ParsedStatem
 
 interface ParsedStatementGenericFunction {
     type: 'genericFunction';
+    // Range of the function call, not including the body.
     range: ParseSourceRange;
+    // Range of the function body, including the braces.
+    bodyRange: ParseSourceRange;
     functionName: string;
     targetName: any;
     statements: Statement[];
@@ -1627,6 +1437,29 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
     };
     context.evaluatedData.targetDefinitions.set(evaluatedTargetName.value, targetNameDefinition);
     context.evaluatedData.targetReferences.push(targetNameReference);
+
+    // Create a new range for the body that excludes the braces.
+    const bodyRangeWithoutBraces = new SourceRange(
+        context.thisFbuildUri,
+        createRange(
+            statement.bodyRange.start.line,
+            statement.bodyRange.start.character + 1,
+            statement.bodyRange.end.line,
+            statement.bodyRange.end.character - 1,
+        ),
+    );
+
+    const functionData: GenericFunction = {
+        functionName: statement.functionName,
+        bodyRangeWithoutBraces,
+    };
+
+    let functionsInFile = context.evaluatedData.genericFunctions.get(context.thisFbuildUri);
+    if (functionsInFile === undefined) {
+        functionsInFile = [];
+        context.evaluatedData.genericFunctions.set(context.thisFbuildUri, functionsInFile);
+    }
+    functionsInFile.push(functionData);
 
     // Evaluate the function body.
     let error: Error | null = null;

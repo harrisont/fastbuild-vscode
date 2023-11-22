@@ -38,6 +38,7 @@ import * as definitionProvider from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
 import * as referenceProvider from './features/referenceProvider';
 import * as symbolProvider from './features/symbolProvider';
+import * as completionProvider from './features/completionProvider';
 import { DiskFileSystem } from './fileSystem';
 import { ParseDataProvider } from './parseDataProvider';
 
@@ -244,31 +245,14 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
-    // TODO: Lookup the completions based on the URI and position.
-    //       This will require adding support for tracking the AST, which we don't currently have.
-    //params.textDocument.uri
-    //params.position
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
 
-    const completions: CompletionItem[] = [
-        // {
-        //     label: 'Completion1',
-        //     kind: CompletionItemKind.Variable,
-        //     detail: 'Completion 1 details',
-        //     documentation: {
-        //         kind: MarkupKind.Markdown,
-        //         value: '# heading\n* value 1\n* value 2',
-        //     },
-        //     //data: 1,
-        // },
-        // {
-        //     label: 'Completion2',
-        //     kind: CompletionItemKind.Variable,
-        //     detail: 'Completion 2 details',
-        //     documentation: 'more docs',
-        //     //data: 2,
-        // },
-    ];
-    return completions;
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return [];
+    }
+    return completionProvider.getCompletions(params, evaluatedData);
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.

@@ -173,14 +173,15 @@ lines ->
   | statement %optionalWhitespaceAndMandatoryNewline lines  {% ([[firstStatement, firstStatementContext], space, rest]) => { callOnNextToken(firstStatementContext, space); return [firstStatement, ...rest]; } %}
 
 # Like `lines` but has a scope end, which can come before the newline.
+# Returns [lines, closeBraceToken]
 linesWithScopeEnd ->
-    %scopeOrArrayEnd  {% () => [] %}
-  | whitespaceOrNewline linesWithScopeEnd  {% ([space, lines]) => lines %}
+    %scopeOrArrayEnd  {% ([closeBrace]) => [[], closeBrace] %}
+  | whitespaceOrNewline linesWithScopeEnd  {% ([space, linesWithScopeEndResult]) => linesWithScopeEndResult %}
   # Statement with scope end.
-  | statement             %scopeOrArrayEnd  {% ([[statement, context],        closeBrace]) => { callOnNextToken(context, closeBrace); return [statement]; } %}
-  | statement %whitespace %scopeOrArrayEnd  {% ([[statement, context], space, closeBrace]) => { callOnNextToken(context, space    ); return [statement]; } %}
+  | statement             %scopeOrArrayEnd  {% ([[statement, context],        closeBrace]) => { callOnNextToken(context, closeBrace); return [[statement], closeBrace]; } %}
+  | statement %whitespace %scopeOrArrayEnd  {% ([[statement, context], space, closeBrace]) => { callOnNextToken(context, space    ); return [[statement], closeBrace]; } %}
   # Multiple statements.
-  | statement %optionalWhitespaceAndMandatoryNewline linesWithScopeEnd  {% ([[firstStatement, firstStatementContext], space, rest]) => { callOnNextToken(firstStatementContext, space); return [firstStatement, ...rest]; } %}
+  | statement %optionalWhitespaceAndMandatoryNewline linesWithScopeEnd  {% ([[firstStatement, firstStatementContext], space, [rest, closeBrace]]) => { callOnNextToken(firstStatementContext, space); return [[firstStatement, ...rest], closeBrace]; } %}
 
 @{%
 
@@ -224,7 +225,7 @@ statement ->
   | directiveUndefine                {% ([valueWithContext]) => valueWithContext %}
   | directiveImport                  {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart linesWithScopeEnd  {% ([braceOpen, statements]) => { return { type: 'scopedStatements', statements }; } %}
+scopedStatements -> %scopeOrArrayStart linesWithScopeEnd  {% ([braceOpen, [statements, closeBrace]]) => { return { type: 'scopedStatements', statements }; } %}
 
 @{%
 
@@ -588,8 +589,8 @@ function createForEach(iterators: object[], statements: Record<string, any>, sta
 %}
 
 functionForEach ->
-    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createForEach(iterators, statements, functionName, braceClose); } %}
-  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createForEach(iterators, statements, functionName, braceClose); } %}
+    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createForEach(iterators, statements, functionName, braceClose); } %}
+  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return createForEach(iterators, statements, functionName, braceClose); } %}
 
 forEachIterators ->
     # Single loop variable
@@ -605,17 +606,27 @@ forEachLoopVar ->
     %variableReferenceCurrentScope variableName                     %keywordIn  {% ([scope, [varName, varNameContext],        keywordIn]) => { return { name: varName, range: createRange(scope, keywordIn) }; } %}
   | %variableReferenceCurrentScope variableName whitespaceOrNewline %keywordIn  {% ([scope, [varName, varNameContext], space, keywordIn]) => { return { name: varName, range: createRange(scope, space)     }; } %}
 
+# Returns [statements, openBraceToken, closeBraceToken]
 functionBody ->
-    optionalWhitespaceOrNewline %scopeOrArrayStart linesWithScopeEnd  {% ([space, braceOpen, statements]) => statements %}
+    optionalWhitespaceOrNewline %scopeOrArrayStart linesWithScopeEnd  {% ([space, openBrace, [statements, closeBrace]]) => [statements, openBrace, closeBrace] %}
 
 @{%
 
-function createGenericFunction(functionName: string, targetName: any, statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createGenericFunction(
+    functionName: string,
+    targetName: any,
+    statements: Record<string, any>,
+    headerStartToken: Token,
+    headerEndToken: Token,
+    statementsStartToken: Token,
+    statementsEndToken: Token
+) {
     return {
         type: 'genericFunction',
         functionName,
         targetName,
-        range: createRangeEndInclusive(statementStartToken, statementEndToken),
+        range: createRangeEndInclusive(headerStartToken, headerEndToken),
+        bodyRange: createRangeEndInclusive(statementsStartToken, statementsEndToken),
         statements
     };
 }
@@ -624,8 +635,8 @@ function createGenericFunction(functionName: string, targetName: any, statements
 
 # Functions that we don't care about handling except for the function's target-name parameter.
 genericFunctionWithTargetName ->
-    genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose); } %}
-  | genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose); } %}
+    genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose, bodyBraceOpen, bodyBraceClose); } %}
+  | genericFunctionNameWithTargetName optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline targetName whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [targetName, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return createGenericFunction(functionName.value, targetName, statements, functionName, braceClose, bodyBraceOpen, bodyBraceClose); } %}
 
 # Function names of functions that we don't care about handling except for the function's target-name parameter.
 genericFunctionNameWithTargetName ->
@@ -713,8 +724,8 @@ function createUserFunctionCallParameter(value: Record<string, any>) {
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, [parameters, context], braceClose, statements]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, braceOpen, parameters, statements); } %}
-  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, [parameters, context], braceClose, statements]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, space2,    parameters, statements); } %}
+    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, braceOpen, parameters, statements); } %}
+  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, space2,    parameters, statements); } %}
 
 userFunctionDeclarationParams ->
     # Empty
@@ -765,11 +776,11 @@ functionPrint ->
   | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                             %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context],         braceClose]) => { callOnNextToken(context, braceClose); return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
   | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline         %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context], space3, braceClose]) => { callOnNextToken(context, space3);     return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
-functionSettings -> %keywordSettings functionBody  {% ([functionName, statements]) => { return { type: 'settings', statements }; } %}
+functionSettings -> %keywordSettings functionBody  {% ([functionName, [statements, bodyBraceOpen, bodyBraceClose]]) => { return { type: 'settings', statements }; } %}
 
 functionIf ->
-    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, statements]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
-  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, statements]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+    %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+  | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
 # Note on grouping (with `(...)`): grouping is always optional for boolean expressions (single booleans),
 # but is required for comparisions and presence-in-ArrayOfStrings when they are part of a compound expression.
