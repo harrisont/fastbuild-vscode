@@ -54,6 +54,17 @@ Alias('MyTargetName')
             });
         });
 
+        const expectedCompletions: CompletionItem[] = [
+            {
+                label: '.Targets',
+                kind: CompletionItemKind.Variable,
+            },
+            {
+                label: '.Hidden',
+                kind: CompletionItemKind.Variable,
+            },
+        ];
+
         it('single function', () => {
             // Uses `Alias` as an example, but this test isn't meant to specifically test that function.
             const input = `
@@ -65,12 +76,6 @@ Alias('MyTargetName')
             // The position just after the body's opening brace
             const lookupPosition1 = Position.create(2, 1);
             const actualCompletions1 = getCompletions(input, lookupPosition1);
-            const expectedCompletions: CompletionItem[] = [
-                {
-                    label: '.Targets',
-                    kind: CompletionItemKind.Variable,
-                },
-            ];
             assert.deepStrictEqual(actualCompletions1, expectedCompletions);
 
             // The position just before the body's closing brace
@@ -93,24 +98,12 @@ Alias('MyTarget2')
             // A position inside MyTarget1's body
             const lookupPosition1 = Position.create(2, 1);
             const actualCompletions1 = getCompletions(input, lookupPosition1);
-            const expectedCompletions1: CompletionItem[] = [
-                {
-                    label: '.Targets',
-                    kind: CompletionItemKind.Variable,
-                },
-            ];
-            assert.deepStrictEqual(actualCompletions1, expectedCompletions1);
+            assert.deepStrictEqual(actualCompletions1, expectedCompletions);
 
             // A position inside MyTarget2's body
             const lookupPosition2 = Position.create(7, 0);
             const actualCompletions2 = getCompletions(input, lookupPosition2);
-            const expectedCompletions2: CompletionItem[] = [
-                {
-                    label: '.Targets',
-                    kind: CompletionItemKind.Variable,
-                },
-            ];
-            assert.deepStrictEqual(actualCompletions2, expectedCompletions2);
+            assert.deepStrictEqual(actualCompletions2, expectedCompletions);
         });
 
         it('multiple files', () => {
@@ -119,22 +112,36 @@ Alias('MyTarget2')
                     'file:///fbuild.bff',
                     `
 #include 'helper.bff'
+
+Alias('MyTarget1')
+{
+}
                     `
                 ],
                 [
                     'file:///helper.bff',
                     `
+Alias('MyTarget2')
+{
+}
                     `
                 ]
             ]);
-            // The position of the first `'` in `#include 'helper.bff'`
-            const lookupPosition = Position.create(1, 17);
-            const actualCompletions = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition);
 
-            const expectedCompletions: CompletionItem[] = [
-            ];
+            // Inside the body of MyTarget1
+            const lookupPosition1 = Position.create(4, 1);
+            const actualCompletions1 = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition1);
+            assert.deepStrictEqual(actualCompletions1, expectedCompletions);
 
-            assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            // Inside the body of MyTarget2
+            const lookupPosition2 = Position.create(2, 1);
+            const actualCompletions2 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition2);
+            assert.deepStrictEqual(actualCompletions2, expectedCompletions);
+
+            // The same position as inside the body of MyTarget1, but in a different file
+            const lookupPosition3 = Position.create(4, 1);
+            const actualCompletions3 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition3);
+            assert.deepStrictEqual(actualCompletions3, []);
         });
     });
 });
