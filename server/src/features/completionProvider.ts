@@ -21,6 +21,10 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
     const uri = params.textDocument.uri;
     const position = params.position;
 
+    // If a scope was specified, use it instead of including a scope in the completion.
+    // Otherwise, use '.' as the scope.
+    const scopeCharacter = (params.context?.triggerCharacter !== undefined) ? '' : '.';
+
     //
     // Check for a function that encloses this position.
     // Return the possible function properties (i.e. the parameter variables).
@@ -38,12 +42,13 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
             const completions: CompletionItem[] = [];
             for (const [propertyName, propertyAttributes] of metadata.properties) {
                 const completion: CompletionItem = {
-                    label: `.${propertyName}`,
+                    label: `${scopeCharacter}${propertyName}`,
                     kind: CompletionItemKind.Variable,
-                    detail: `Required: ${propertyAttributes.isRequired ? 'true' : 'false'}`,
                     documentation: {
                         kind: MarkupKind.Markdown,
-                        value: '# heading\n* value 1\n* value 2',
+                        value: `**(${propertyAttributes.isRequired ? 'Required' : 'Optional'})** ${propertyAttributes.documentation}
+
+[Function documentation](${metadata.documentationUrl})`,
                     },
                 };
                 completions.push(completion);

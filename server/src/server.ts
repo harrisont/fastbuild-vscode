@@ -173,7 +173,7 @@ state.connection.onInitialize((params: InitializeParams) => {
             workspaceSymbolProvider: true,
             // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
             completionProvider: {
-                triggerCharacters: [ '.', '^', '$' ],
+                triggerCharacters: [ '.' ],
             },
         }
     };
