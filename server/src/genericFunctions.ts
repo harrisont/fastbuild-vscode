@@ -27,9 +27,14 @@ Example:
 .Targets = { 'Library-Alias'                         // A previously defined Alias()
         'tmp/Libraries/X64/Release/Core.dll'    // A previously defined DLL()
         'External/SDK/VS2012/libs/libcmt.lib' } // An external DLL import library
-\`\`\`
-`,
+\`\`\``,
             }],
+            ['Hidden', {
+                isRequired: false,
+                documentation: `Boolean (default false)
+
+Hide a target from -showtargets`,
+            }]
         ]),
     }],
     [ 'Compiler', {
