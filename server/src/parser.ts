@@ -128,10 +128,21 @@ export interface ParseSourceRange {
 }
 
 export function isPositionInRange(position: SourcePosition, range: ParseSourceRange): boolean {
-    return position.line >= range.start.line
-        && position.line <= range.end.line
-        && position.character >= range.start.character
-        && position.character <= range.end.character;
+    if (position.line < range.start.line
+        || position.line > range.end.line)
+    {
+        return false;
+    } else if (position.line == range.start.line
+        && position.character < range.start.character)
+    {
+        return false;
+    } else if (position.line == range.end.line
+        && position.character > range.end.character)
+    {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 export function createPosition(line: number, character: number): SourcePosition {
@@ -141,6 +152,7 @@ export function createPosition(line: number, character: number): SourcePosition 
     };
 }
 
+// Note: the range is inclusive of the last character.
 export function createRange(startLine: number, startCharacter: number, endLine: number, endCharacter: number): ParseSourceRange {
     return {
         start: createPosition(startLine, startCharacter),
