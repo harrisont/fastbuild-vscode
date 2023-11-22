@@ -19,7 +19,13 @@ import {
 
 export function getCompletions(params: CompletionParams, evaluatedData: EvaluatedData): CompletionItem[] {
     const uri = params.textDocument.uri;
+
+    // If a trigger character was used, then the evaluated data will be out of date because the uncompleted item will have evaluation errors.
+    // Account for this by adjusting the position left one, as if the trigger character were not used.
     const position = params.position;
+    if (params.context?.triggerCharacter !== undefined) {
+        position.character -= 1;
+    }
 
     // If a scope was specified, use it instead of including a scope in the completion.
     // Otherwise, use '.' as the scope.
@@ -48,7 +54,7 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
                         kind: MarkupKind.Markdown,
                         value: `**(${propertyAttributes.isRequired ? 'Required' : 'Optional'})** ${propertyAttributes.documentation}
 
-[Function documentation](${metadata.documentationUrl})`,
+[Function documentation website](${metadata.documentationUrl})`,
                     },
                 };
                 completions.push(completion);
