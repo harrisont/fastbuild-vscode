@@ -182,6 +182,14 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['MyValue', 'MyValue']);
         });
 
+        it('should be detected in a string with a variable whose name contains a period', () => {
+            const input = `
+                .'My.Var' = 'MyValue'
+                Print('pre-$My.Var$-post')
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['MyValue', 'MyValue']);
+        });
+
         it('should be detected in a string with multiple variables', () => {
             const input = `
                 .MyVar1 = 'MyValue1'

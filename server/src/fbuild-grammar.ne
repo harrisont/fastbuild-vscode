@@ -120,7 +120,7 @@ const lexer = moo.states({
     },
     templatedVariable: {
         endTemplatedVariable: { match: '$', pop: 1 },
-        variableName: /[a-zA-Z_][a-zA-Z0-9_]*/,
+        variableName: /[a-zA-Z_.][a-zA-Z0-9_.]*/,
     },
     variableReferenceName: {
         // Literal variable name
