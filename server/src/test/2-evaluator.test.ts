@@ -741,6 +741,21 @@ describe('evaluator', () => {
             ]);
         });
 
+        it('should evaluate dynamic variable names with periods in them on the RHS in the current scope', () => {
+            const input = `
+                .A_B_C = 'foo'
+                .'Mid.dle' = 'B'
+                .MyVar = ."A_$Mid.dle$_C"
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'foo',
+                'B',
+                'B',
+                'foo',
+                'foo',
+            ]);
+        });
+
         it('should evaluate dynamic variable names on the RHS in the parent scope', () => {
             const input = `
                 .A_B_C = 'foo'
