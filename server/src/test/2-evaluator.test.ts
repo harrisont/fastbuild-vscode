@@ -207,6 +207,14 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
         });
 
+        it('should be detected in the RHS when assigning the value of another variable whose name contains a period', () => {
+            const input = `
+                .'My.Var' = 1
+                .Copy = .'My.Var'
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
+        });
+
         it('should be detected in the RHS when assigning the value of another variable in the parent scope', () => {
             const input = `
                 .MyVar = 1
