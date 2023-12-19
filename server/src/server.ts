@@ -243,7 +243,6 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
     return symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
     // Wait for any queued updates, so that we don't return stale data.
     flushQueuedDocumentUpdates();

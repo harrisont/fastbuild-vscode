@@ -8,6 +8,7 @@ import {
 
 import {
     GENERIC_FUNCTION_METADATA_BY_NAME,
+    ValueType,
 } from '../genericFunctions';
 
 import {
@@ -47,12 +48,18 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
 
             const completions: CompletionItem[] = [];
             for (const [propertyName, propertyAttributes] of metadata.properties) {
+                const requiredHeader = propertyAttributes.isRequired ?
+                    'Required'
+                    : `Optional ${propertyAttributes.defaultDescription ? ' (default `' + propertyAttributes.defaultDescription + '`)' : ''}`;
+
+                const typeHeader = Array.from(propertyAttributes.types.values()).map(type => ValueType[type]).join('/');
+
                 const completion: CompletionItem = {
                     label: `${scopeCharacter}${propertyName}`,
                     kind: CompletionItemKind.Variable,
                     documentation: {
                         kind: MarkupKind.Markdown,
-                        value: `**(${propertyAttributes.isRequired ? 'Required' : 'Optional'})** ${propertyAttributes.documentation}
+                        value: `**${typeHeader} (${requiredHeader})**\n\n${propertyAttributes.documentation}
 
 [Function documentation website](${metadata.documentationUrl})`,
                     },

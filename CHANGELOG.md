@@ -2,7 +2,7 @@
 
 ## New Features
 
-* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for variables
+* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties.
 
 # v0.13.3
 
