@@ -4,6 +4,12 @@
 
 * ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties.
 
+# v0.13.4
+
+## Bug Fixes
+
+* ([#71](https://github.com/harrisont/fastbuild-vscode/issues/71)) Fix the bug where a period in a variable name generates a syntax error when using it in a string template.
+
 # v0.13.3
 
 ## Bug Fixes

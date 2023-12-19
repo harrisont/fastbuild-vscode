@@ -182,6 +182,14 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['MyValue', 'MyValue']);
         });
 
+        it('should be detected in a string with a variable whose name contains a period', () => {
+            const input = `
+                .'My.Var' = 'MyValue'
+                Print('pre-$My.Var$-post')
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['MyValue', 'MyValue']);
+        });
+
         it('should be detected in a string with multiple variables', () => {
             const input = `
                 .MyVar1 = 'MyValue1'
@@ -195,6 +203,14 @@ describe('evaluator', () => {
             const input = `
                 .MyVar = 1
                 .Copy = .MyVar
+            `;
+            assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
+        });
+
+        it('should be detected in the RHS when assigning the value of another variable whose name contains a period', () => {
+            const input = `
+                .'My.Var' = 1
+                .Copy = .'My.Var'
             `;
             assertEvaluatedVariablesValueEqual(input, [1, 1, 1]);
         });
@@ -731,6 +747,21 @@ describe('evaluator', () => {
                 .A_B_C = 'foo'
                 .Middle = 'B'
                 .MyVar = ."A_$Middle$_C"
+            `;
+            assertEvaluatedVariablesValueEqual(input, [
+                'foo',
+                'B',
+                'B',
+                'foo',
+                'foo',
+            ]);
+        });
+
+        it('should evaluate dynamic variable names with periods in them on the RHS in the current scope', () => {
+            const input = `
+                .A_B_C = 'foo'
+                .'Mid.dle' = 'B'
+                .MyVar = ."A_$Mid.dle$_C"
             `;
             assertEvaluatedVariablesValueEqual(input, [
                 'foo',
