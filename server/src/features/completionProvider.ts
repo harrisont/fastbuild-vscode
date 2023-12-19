@@ -50,7 +50,7 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
             for (const [propertyName, propertyAttributes] of metadata.properties) {
                 const requiredHeader = propertyAttributes.isRequired ?
                     'Required'
-                    : `Optional ${propertyAttributes.defaultDescription ? ' (default `' + propertyAttributes.defaultDescription + '`)' : ''}`;
+                    : `Optional${propertyAttributes.defaultDescription ? ', defaults to `' + propertyAttributes.defaultDescription + '`' : ''}`;
 
                 const typeHeader = Array.from(propertyAttributes.types.values()).map(type => ValueType[type]).join('/');
 

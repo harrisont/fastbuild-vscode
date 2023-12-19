@@ -62,7 +62,7 @@ Example:
             }],
             ['ExtraFiles', {
                 isRequired: false,
-                defaultDescription: 'none',
+                defaultDescription: '{}',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Additional files (usually dlls) required by the compiler.
 
@@ -90,12 +90,12 @@ By default, FASTBuild will detect the compiler type based on the executable name
 
 The following values are supported:
 
-| Value | Notes                                                   |
-|-------|---------------------------------------------------------|
+| Value | Notes                                                       |
+|:------|:------------------------------------------------------------|
 | auto  | **(default)** Auto detect compiler based on executable path |
 
 | Value            | Notes                              |
-|------------------|------------------------------------|
+|:-----------------|:-----------------------------------|
 | msvc             | Microsoft and compatible compilers |
 | clang            | Clang and compatible compilers     |
 | clang-cl         | Clang in MSVC cl-compatible mode   |
@@ -110,7 +110,7 @@ The following values are supported:
 | csharp           | C# compiler                        |
 
 | Value  | Notes                                                                                                                                                                                                                   |
-|--------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|:-------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | custom | Any custom compiler. NOTE: Only primary input and output dependencies will be tracked. No additional dependencies will be tracked as FASTBuild has no way to extract dependency information from arbitrary executables. |`,
             }],
             ['AllowDistribution', {
@@ -137,7 +137,7 @@ FASTbuild supports distributed compilation for certain compilers that it explici
             }],
             ['CustomEnvironmentVariables', {
                 isRequired: false,
-                defaultDescription: 'none',
+                defaultDescription: '{}',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Environment variables to set on remote host
 
