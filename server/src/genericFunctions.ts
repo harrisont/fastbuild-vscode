@@ -1089,6 +1089,18 @@ If not set, librarian uses .Environment from your Settings node`,
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Destination filename where dependent files list will be exported`,
             }],
+            ['SourcePattern', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `String, or array of strings, to filter exported dependencies`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this ListDependencies (Rarely needed)`,
+            }],
         ]),
     }],
     [ 'ObjectList', {
@@ -1105,6 +1117,156 @@ If not set, librarian uses .Environment from your Settings node`,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Options for compiler`,
+            }],
+            ['CompilerOutputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Path to store intermediate objects`,
+            }],
+            ['CompilerOutputExtension', {
+                isRequired: false,
+                defaultDescription: '".obj" on Windows, ".o" otherwise',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify the file extension for generated objects`,
+            }],
+            ['CompilerOutputKeepBaseExtension', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Append extension instead of replacing it`,
+            }],
+            ['CompilerOutputPrefix', {
+                isRequired: false,
+                defaultDescription: '""',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify a prefix for generated objects`,
+            }],
+            ['CompilerInputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path to find files in`,
+            }],
+            ['CompilerInputPattern', {
+                isRequired: false,
+                defaultDescription: '"*.cpp"',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to use when finding files`,
+            }],
+            ['CompilerInputPathRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into dirs when finding files`,
+            }],
+            ['CompilerInputExcludePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path(s) to exclude from compilation`,
+            }],
+            ['CompilerInputExcludedFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File(s) to exclude from compilation (partial, root-relative of full path)`,
+            }],
+            ['CompilerInputExcludePattern', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to exclude from compilation`,
+            }],
+            ['CompilerInputFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Explicit array of files to build`,
+            }],
+            ['CompilerInputFilesRoot', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Root path to use for .obj path generation for explicitly listed files`,
+            }],
+            ['CompilerInputUnity', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Unity to build (or Unities)`,
+            }],
+            ['CompilerInputAllowNoFiles', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Don't fail if no inputs are found`,
+            }],
+            ['CompilerInputObjectLists', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `ObjectList(s) whos output should be used as an input`,
+            }],
+            ['AllowCaching', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Allow caching of compiled objects if available`,
+            }],
+            ['AllowDistribution', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Allow distributed compilation if available`,
+            }],
+            ['Preprocessor', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Compiler to use for preprocessing`,
+            }],
+            ['PreprocessorOptions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Args to pass to compiler if using custom preprocessor`,
+            }],
+            ['CompilerForceUsing', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `List of objects to be used with /FU`,
+            }],
+            ['PCHInputFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Precompiled header (.cpp) file to compile`,
+            }],
+            ['PCHOutputFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Precompiled header compilation output`,
+            }],
+            ['PCHOptions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Options for compiler for precompiled header`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this ObjectList (Rarely needed, but useful when a ObjectList relies on generated code).`,
+            }],
+            ['Hidden', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Hide a target from -showtargets`,
             }],
         ]),
     }],
@@ -1126,6 +1288,88 @@ Example:
 Or:
 \`\`\`FASTBuild
 .RemovePaths = { 'folderA\\', 'folderB\\' }
+\`\`\``,
+            }],
+            ['RemovePathsRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into sub-directories?
+                
+Directories are scanned recursively by default. Recursion can be disabled.
+
+Example:
+\`\`\`FASTBuild
+.RemovePathsRecurse = false
+\`\`\``,
+            }],
+            ['RemovePatterns', {
+                isRequired: false,
+                defaultDescription: '"*"',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Wildcards of contents to delete
+                
+All discovered files will be deleted by default. Deletion can be restricted to certain files or sub-directories by specifying .RemovePatterns wildcards.
+
+Example:
+\`\`\`FASTBuild
+.RemovePatterns = '*.obj' // Delete all *.obj files
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.RemovePatterns = { 'subdir/*.exe',  // Delete *.exe files in "subdir"
+                    'subdir/*.pdb' } // Delete *.pdb files in "subdir"
+\`\`\``,
+            }],
+            ['RemoveExcludePaths', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Directories to ignore if recursing
+
+Specific sub-directories can be ignored during recursion.
+
+Example:
+\`\`\`FASTBuild
+.RemoveExcludePaths = 'folderA/' // Ignore contents of folder
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.RemoveExcludePaths = { 'folderA/',  // Ignore contents of "folderA"
+                        'FolderB/' } // and "folderB"
+\`\`\``,
+            }],
+            ['RemoveExcludeFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Files to ignore if recursing
+                
+Specific files can be ignored during recursion.
+
+Example:
+\`\`\`FASTBuild
+.RemoveExcludeFiles = 'file.txt' // Ignore file.txt
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.RemoveExcludeFiles = { 'fileA.txt',  // Ignore "fileA.txt"
+                        'fileB.txt' } // and "fileB.txt"
+\`\`\``,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this RemoveDir
+                
+One or more nodes which must be built before this node is built.
+
+The .PreBuildDependencies option ensures the specified targets are up-to-date before the RemoveDir() is executed.
+
+Example:
+\`\`\`FASTBuild
+.PreBuildDependencies = 'DoStuff' // A previously defined target
 \`\`\``,
             }],
         ]),
