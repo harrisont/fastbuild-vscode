@@ -80,7 +80,7 @@ Compiler( 'Test' )
             }],
             ['CompilerFamily', {
                 isRequired: false,
-                defaultDescription: 'auto',
+                defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Explicitly specify compiler type
 
@@ -618,7 +618,7 @@ For files which are present before the build starts (i.e. always on disk, or gen
             }],
             ['LinkerType', {
                 isRequired: false,
-                defaultDescription: 'auto',
+                defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Specify the linker type. Valid options include: auto, msvc, gcc, snc-ps3, clang-orbis, greenhills-exlr, codewarrior-ld
 
@@ -823,7 +823,7 @@ If not set, uses .Environment from your Settings node`,
             }],
             ['LinkerType', {
                 isRequired: false,
-                defaultDescription: 'auto',
+                defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Specify the linker type. Valid options include: auto, msvc, gcc, snc-ps3, clang-orbis, greenhills-exlr, codewarrior-ld
 
@@ -891,6 +891,186 @@ If not set, linker uses .Environment from your Settings node`,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Output path for lib file`,
+            }],
+            ['CompilerOutputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Path to store intermediate objects`,
+            }],
+            ['CompilerOutputExtension', {
+                isRequired: false,
+                defaultDescription: '".obj" on Windows, ".o" otherwise',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify the file extension for generated objects`,
+            }],
+            ['CompilerOutputPrefix', {
+                isRequired: false,
+                defaultDescription: '""',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify a prefix for generated objects`,
+            }],
+            ['LibrarianType', {
+                isRequired: false,
+                defaultDescription: '"auto"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify the librarian type. Valid options include: auto, msvc, ar, ar-orbis, greenhills-ax
+                
+Default is 'auto' (use the librarian executable name to detect)`,
+            }],
+            ['LibrarianAdditionalInputs', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.ArrayOfStrings]),
+                documentation: `Additional inputs to merge into library`,
+            }],
+            ['LibrarianAllowResponseFile', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Allow response files to be used if not auto-detected`,
+            }],
+            ['LibrarianForceResponseFile', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Force use of response files`,
+            }],
+            ['CompilerInputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path to find files in`,
+            }],
+            ['CompilerInputPattern', {
+                isRequired: false,
+                defaultDescription: '"*.cpp"',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to use when finding files`,
+            }],
+            ['CompilerInputPathRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into dirs when finding files`,
+            }],
+            ['CompilerInputExcludePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path(s) to exclude from compilation`,
+            }],
+            ['CompilerInputExcludedFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File(s) to exclude from compilation (partial, root-relative of full path)`,
+            }],
+            ['CompilerInputExcludePattern', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to exclude from compilation`,
+            }],
+            ['CompilerInputFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Explicit array of files to build`,
+            }],
+            ['CompilerInputFilesRoot', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Root path to use for .obj path generation for explicitly listed files`,
+            }],
+            ['CompilerInputUnity', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Unity to build (or Unities)`,
+            }],
+            ['CompilerInputAllowNoFiles', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Don't fail if no inputs are found`,
+            }],
+            ['CompilerInputObjectLists', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `ObjectList(s) whos output should be used as an input`,
+            }],
+            ['AllowCaching', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Allow caching of compiled objects if available`,
+            }],
+            ['AllowDistribution', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Allow distributed compilation if available`,
+            }],
+            ['Preprocessor', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Compiler to use for preprocessing`,
+            }],
+            ['PreprocessorOptions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Args to pass to compiler if using custom preprocessor`,
+            }],
+            ['CompilerForceUsing', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `List of objects to be used with /FU`,
+            }],
+            ['PCHInputFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Precompiled header (.cpp) file to compile`,
+            }],
+            ['PCHOutputFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Precompiled header compilation output`,
+            }],
+            ['PCHOptions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Options for compiler for precompiled header`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this library (Rarely needed, but useful when a library relies on generated code).`,
+            }],
+            ['Environment', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.ArrayOfStrings]),
+                documentation: `Environment variables to use for local build
+
+If set, librarian uses this environment
+
+If not set, librarian uses .Environment from your Settings node`,
+            }],
+            ['Hidden', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Hide a target from -showtargets`,
             }],
         ]),
     }],
