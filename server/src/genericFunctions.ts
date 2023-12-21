@@ -647,7 +647,7 @@ Default is 'auto' (use the linker executable name to detect)`,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.ArrayOfStrings]),
                 documentation: `Environment variables to use for local build
-                
+
 If set, linker uses this environment
 
 If not set, linker uses .Environment from your Settings node`,
@@ -759,7 +759,7 @@ If not set, linker uses .Environment from your Settings node`,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.ArrayOfStrings]),
                 documentation: `Environment variables used when running the executable
-                
+
 If not set, uses .Environment from your Settings node`,
             }],
         ]),
@@ -852,7 +852,7 @@ Default is 'auto' (use the linker executable name to detect)`,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.ArrayOfStrings]),
                 documentation: `Environment variables to use for local build
-                
+
 If set, linker uses this environment
 
 If not set, linker uses .Environment from your Settings node`,
@@ -915,7 +915,7 @@ If not set, linker uses .Environment from your Settings node`,
                 defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Specify the librarian type. Valid options include: auto, msvc, ar, ar-orbis, greenhills-ax
-                
+
 Default is 'auto' (use the librarian executable name to detect)`,
             }],
             ['LibrarianAdditionalInputs', {
@@ -1295,7 +1295,7 @@ Or:
                 defaultDescription: 'true',
                 types: new Set<ValueType>([ValueType.Boolean]),
                 documentation: `Recurse into sub-directories?
-                
+
 Directories are scanned recursively by default. Recursion can be disabled.
 
 Example:
@@ -1308,7 +1308,7 @@ Example:
                 defaultDescription: '"*"',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Wildcards of contents to delete
-                
+
 All discovered files will be deleted by default. Deletion can be restricted to certain files or sub-directories by specifying .RemovePatterns wildcards.
 
 Example:
@@ -1344,7 +1344,7 @@ Example:
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Files to ignore if recursing
-                
+
 Specific files can be ignored during recursion.
 
 Example:
@@ -1362,7 +1362,7 @@ Example:
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Force targets to be built before this RemoveDir
-                
+
 One or more nodes which must be built before this node is built.
 
 The .PreBuildDependencies option ensures the specified targets are up-to-date before the RemoveDir() is executed.
@@ -1454,7 +1454,7 @@ When executing tests, FASTBuild will capture standard output channels of the exe
                 defaultDescription: '0',
                 types: new Set<ValueType>([ValueType.Integer]),
                 documentation: `TimeOut (in seconds) for test
-                
+
 The amount of time (in seconds) to wait for a test to finish execution.
 
 The default is 0, which means there is no timeout and FASTBuild will wait until the executable terminates on its own.`,
@@ -1464,7 +1464,7 @@ The default is 0, which means there is no timeout and FASTBuild will wait until 
                 defaultDescription: 'false',
                 types: new Set<ValueType>([ValueType.Boolean]),
                 documentation: `Show output of tests even when they don't fail
-                
+
 The output of a test is normally shown only when the test fails. This option specifies that the output should always be shown.`,
             }],
             ['PreBuildDependencies', {
@@ -1472,7 +1472,7 @@ The output of a test is normally shown only when the test fails. This option spe
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Force targets to be built before this Test (Rarely needed, but useful when Test relies on externally generated files).
-                
+
 One or more nodes which must be built before this test is executed.
 
 The .PreBuildDependencies option ensures the specified targets are up-to-date before the Test() is executed.`,
@@ -1482,7 +1482,7 @@ The .PreBuildDependencies option ensures the specified targets are up-to-date be
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
                 documentation: `Environment variables to use for local build
-                
+
 If set, linker uses this environment
 
 If not set, linker uses .Environment from your Settings node
@@ -1663,6 +1663,720 @@ Example:
 .ProjectOutput = 'tmp/VisualStudio/Library/Library.vcxproj'
 \`\`\``,
             }],
+            ['ProjectInputPaths', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Paths to include in project
+
+Paths(s) to search for files to include in the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPaths  = 'Code/Library/'
+\`\`\`
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPaths  = {
+                        'Code/Library/Folder1/'
+                        'Code/Library/Folder2/'
+                      }
+\`\`\``,
+            }],
+            ['ProjectInputPathsExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Paths to exclude from project
+
+Path(s) to exclude when searching for files to include in the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPathsExclude   = 'Code/Library/SubDir/'
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.ProjectInputPathsExclude   = {
+                                'Code/Library/SubDir1/'
+                                'Code/Library/SubDir2/'
+                              }
+\`\`\``,
+            }],
+            ['ProjectInputPathsRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into project input paths when finding files
+
+Toggles whether to recurse into subdirectories of .ProjectInputPaths when finding files to add to the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPathsRecurse   = false
+\`\`\``,
+            }],
+            ['ProjectPatternToExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) for files to exclude from project
+
+Example:
+\`\`\`FASTBuild
+.ProjectPatternToExclude   = '*/OSX/*'
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.ProjectPatternToExclude   = {
+                                '*/OSX/*'
+                                '*/Linux/*'
+                              }
+\`\`\``,
+            }],
+            ['ProjectAllowedFileExtensions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Extensions to allow in path searches
+
+Filter for file type(s) to include in the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectAllowedFileExtensions   = { '*.cpp', '*.h' }
+\`\`\`
+If not specified, the following filters will be used:
+\`\`\`FASTBuild
+.ProjectAllowedFileExtensions 	= {
+                                  '*.cpp', '*.hpp', '*.cxx', '*.hxx', '*.c',   '*.h',  '*.cc',   '*.hh',
+                                  '*.cp',  '*.hp',  '*.cs',  '*.inl', '*.bff', '*.rc', '*.resx', '*.m',  '*.mm',
+                                  '*.cu',
+                                  '*.asm', '*.s',
+                                  '*.natvis', '*.editorconfig'
+                              }
+\`\`\``,
+            }],
+            ['ProjectFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `List of files to include in project
+
+File(s) to explicitly include in the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectFiles   = {
+                    'Code/Library/SubDir/FileA.cpp'
+                    'Code/Library/SubDir/FileA.h'
+                  }
+\`\`\``,
+            }],
+            ['ProjectFilesToExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `List of files to exclude from project
+
+Files to exclude from the project (filtered from files discovered via ProjectInputPaths).
+
+Example:
+\`\`\`FASTBuild
+.ProjectFilesToExclude  = {
+                            'Code/Library/SubDir/FileB.cpp'
+                            'Code/Library/SubDir/FileB.h'
+                          }
+\`\`\``,
+            }],
+            ['ProjectBasePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Base path(s) for root folder(s) in project
+
+Path(s) to use as base for generation of folder hierarchy within project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectBasePath  = 'Code/Library/'
+\`\`\``,
+            }],
+            ['ProjectFileTypes', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStructs]),
+                documentation: `List of filters to override base file types (see below)
+
+File types can be specified if needed, for example for WinForms header files.
+
+Example:
+\`\`\`FASTBuild
+.ProjectFileType = [
+  .FileType   = 'CppForm'
+  .Pattern    = '*\\Forms\\*.h'
+]
+
+.ProjectFileTypes = { .ProjectFileType }
+\`\`\``,
+            }],
+            ['ProjectConfigs', {
+                isRequired: false,
+                defaultDescription: 'Debug Win32, Release Win32, Debug X64, Release X64',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `List of project configurations, see below for details.
+
+A list of project configuration structures in the following format:
+
+\`\`\`FASTBuild
+.ProjectConfig =
+[
+  // Basic Options
+  .Platform                       // Platform (e.g. Win32, X64, PS3 etc.)
+  .Config                         // Config (e.g. Debug, Release etc.)
+  .Target                         // (optional) Previously defined Build Target
+
+  // Additional configuration options - see ProjectConfig section below
+]
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.DebugConfig      = [ .Platform = 'Win32' .Config = 'Debug' ]
+.ReleaseConfig    = [ .Platform = 'Win32' .Config = 'Release' ]
+.ProjectConfigs   = { .DebugConfig, .ReleaseConfig }
+\`\`\`
+If no configurations are specified, the following defaults will be used:
+\`\`\`FASTBuild
+.X86DebugConfig   = [ .Platform = 'Win32' .Config = 'Debug' ]
+.X86ReleaseConfig = [ .Platform = 'Win32' .Config = 'Release' ]
+.X64DebugConfig   = [ .Platform = 'X64'   .Config = 'Debug' ]
+.X64ReleaseConfig = [ .Platform = 'X64'   .Config = 'Release' ]
+.ProjectConfigs   = {
+                        .X86DebugConfig, .X86ReleaseConfig, .X64DebugConfig, .X64ReleaseConfig
+                    }
+\`\`\`
+The optional .Target option can be used to specify the associated compilation target. This will be used to automatically populate the Intellisense options for Intellisense.
+
+Example:
+\`\`\`FASTBuild
+.Target = 'MyProject-X64-Debug'
+\`\`\``,
+            }],
+            ['ProjectReferences', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `References to assemblies (e.g "System.Core")
+
+References to assemblies can be specified. This may be necessary if mixing C#, Managed C++ and C++ projects.
+
+Example:
+\`\`\`FASTBuild
+.ProjectReferences = 'System.Core'
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.ProjectReferences = {
+                       'System.Core'
+                       'System.Text'
+                     }
+\`\`\``,
+            }],
+            ['ProjectProjectReferences', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `References to projects (e.g. "myproj.csproj|{guid}")
+
+Add explicit references to projects not generated by FASTBuild. If your Visual Studio Solution mixes generated and manually created project files, you can set explicit references to them.
+
+Example:
+\`\`\`FASTBuild
+.ProjectProjectReferences = 'myproj1.csproj|{7cf4dd72-ddb6-4e8d-bc26-ffceb8c415a5}'
+\`\`\`
+Example:
+\`\`\`FASTBuild
+.ProjectProjectReferences = {
+                              'myproj1.csproj|{7cf4dd72-ddb6-4e8d-bc26-ffceb8c415a5}'
+                              'myproj2.csproj|{ffceb8c4-bc26-4932-ddb6-ff7cf4dd72a5}'
+                            }
+\`\`\``,
+            }],
+            ['ProjectProjectImports', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `Array of ProjectImports, see below for details
+
+Additional .targets files can be imported into a Visual Studio project. This can be useful for better integration/debugging of non-native architectures.
+
+Example:
+\`\`\`FASTBuild
+.ProjectImport          = [
+                            .Condition = "'$(ConfigurationType)' == 'Makefile'"
+                            .Project = "$(VCTargetsPath)\\Platforms\\$(Platform)\\Custom.Makefile.targets"
+                          ]
+.ProjectProjectImports  = { .ProjectImport }
+\`\`\`
+NOTE: By default, the following project imports are active.
+\`\`\`FASTBuild
+.ProjectImportPS4       = [
+                            .Condition = "'$(ConfigurationType)' == 'Makefile' and Exists('$(VCTargetsPath)\\Platforms\\$(Platform)\\SCE.Makefile.$(Platform).targets')"
+                            .Project = "$(VCTargetsPath)\\Platforms\\$(Platform)\\SCE.Makefile.$(Platform).targets"
+                          ]
+.ProjectImportAndroid   = [
+                            .Condition = "'$(ConfigurationType)' == 'Makefile' and '$(AndroidAPILevel)' != '' and Exists('$(VCTargetsPath)\\Application Type\\$(ApplicationType)\\$(ApplicationTypeRevision)\\Android.Common.targets')"
+                            .Project = "$(VCTargetsPath)\\Application Type\\$(ApplicationType)\\$(ApplicationTypeRevision)\\Android.Common.targets"
+                          ]
+.ProjectProjectImports  = { .ProjectImportPS4, .ProjectImportAndroid }
+\`\`\``,
+            }],
+            ['ProjectGuid', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Override default generated ProjectGuid
+
+By default, a Guid for a project will be generated automatically. If necessary, a Guid can be explicitly specified instead.
+
+Example:
+\`\`\`FASTBuild
+.ProjectGuid = '{7cf4dd72-ddb6-4e8d-bc26-ffceb8c415a5}'
+\`\`\``,
+            }],
+            ['DefaultLanguage', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Default Language Property (for XboxOne/WinRT)
+
+Set the default language property. This may be necessary for XboxOne and WinRT applications.
+
+Example:
+\`\`\`FASTBuild
+.DefaultLanguage = 'en-US'
+\`\`\``,
+            }],
+            ['ApplicationEnvironment', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Application Environment (for XboxOne/WinRT)
+
+Set the application environment property. This may be necessary for XboxOne and WinRT applications.
+
+Example:
+\`\`\`FASTBuild
+.ApplicationEnvironment = 'title'
+\`\`\``,
+            }],
+            ['ProjectSccEntrySAK', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Project will contain source control binding strings
+
+Specifies if generic source control strings (SAK) should be generated in the project file.
+
+Example:
+\`\`\`FASTBuild
+.ProjectSccEntrySAK = true
+\`\`\``,
+            }],
+            ['ProjectBuildCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Command to launch when "build project" is selected.
+
+Example:
+\`\`\`FASTBuild
+.ProjectBuildCommand = 'fbuild -ide -dist -cache MyProject-X64-Debug'
+\`\`\`
+
+It can be convenient to take advantage of Visual Studio's runtime macro substitution to avoid having to manually specify this for every configuration.
+Example:
+\`\`\`FASTBuild
+.ProjectBuildCommand = 'cd ^$(SolutionDir)\\..\\..\\Code\\ &amp; fbuild -ide -dist -cache ^$(ProjectName)-^$(Configuration)'
+\`\`\``,
+            }],
+            ['ProjectRebuildCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Command to launch when "rebuild project" is selected.
+
+Example:
+\`\`\`FASTBuild
+.ProjectRebuildCommand = 'fbuild -ide -clean -dist -cache MyProject-X64-Debug'
+\`\`\`
+
+It can be convenient to take advantage of Visual Studio's runtime macro substitution to avoid having to manually specify this for every configuration.
+
+Example:
+\`\`\`FASTBuild
+.ProjectRebuildCommand = 'cd ^$(SolutionDir)\\..\\..\\Code\\ &amp; fbuild -ide -clean -dist -cache ^$(ProjectName)-^$(Configuration)'
+\`\`\``,
+            }],
+            ['ProjectCleanCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Command to launch when "clean project" is selected.
+
+Example:
+\`\`\`FASTBuild
+.ProjectCleanCommand = 'fbuild -ide Clean-MyProject-X64-Debug'
+\`\`\`
+
+It can be convenient to take advantage of Visual Studio's runtime macro substitution to avoid having to manually specify this for every configuration.
+
+Example:
+\`\`\`FASTBuild
+.ProjectCleanCommand = 'cd ^$(SolutionDir)\\..\\..\\Code\\ &amp; fbuild -ide Clean-$(ProjectName)-^$(Configuration)'
+\`\`\``,
+            }],
+            ['Output', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Output generated by compilation.
+
+Example:
+\`\`\`FASTBuild
+.Output = 'tmp/Debug/bin/MyExe.exe'
+\`\`\``,
+            }],
+            ['OutputDirectory', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Output directory for Visual Studio.
+
+Example:
+\`\`\`FASTBuild
+.OutputDirectory  = 'tmp/Debug/bin/'
+\`\`\``,
+            }],
+            ['IntermediateDirectory', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Intermediate directory for Visual Studio.
+
+Example:
+\`\`\`FASTBuild
+.IntermediateDirectory = 'tmp/'
+\`\`\``,
+            }],
+            ['BuildLogFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Build log file for Visual Studio.
+
+Example:
+\`\`\`FASTBuild
+.BuildLogFile = 'tmp/^$(ProjectName)-^$(Configuration).log'
+\`\`\``,
+            }],
+            ['LayoutDir', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Directory to prepare Layout (for XboxOne).
+
+Example:
+\`\`\`FASTBuild
+.LayoutDir = 'tmp/Layout/'
+\`\`\``,
+            }],
+            ['LayoutExtensionFilter', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Files to filter from Layout (for XboxOne).
+
+Example:
+\`\`\`FASTBuild
+.LayoutExtensionFilter = '.pdb;.map;'
+\`\`\``,
+            }],
+            ['PreprocessorDefinitions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Preprocessor definitions.
+
+Preprocessor definitions for Intellisense can be manually specified. If the .Target for a configuration is specified, this will be populated automatically by detecting use of /D or -D in the compiler command line. Manual specification will override the automated detection.
+
+Example:
+\`\`\`FASTBuild
+.PreprocessorDefinitions = 'DEBUG;MY_LIB_DEFINE;__WINDOWS__;'
+\`\`\``,
+            }],
+            ['IncludeSearchPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Include search paths.
+
+Include search paths for Intellisense can be manually specified. If the .Target for a configuration is specified, this will be populated automatically by detecting use of /I, -I, -isystem, -isystem-after, /imsvc, -imsvc, -idirafter, -iquote, /external:I or -external:I in the compiler command line. Manual specification will override the automated detection.
+
+Example:
+\`\`\`FASTBuild
+.IncludeSearchPath = 'Code/Core/;Code/Engine/;'
+\`\`\``,
+            }],
+            ['ForcedIncludes', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Force included files.
+
+Force included files for Intellisense can be manually specified.
+
+Example:
+\`\`\`FASTBuild
+.ForcedIncludes = 'forced.h'
+\`\`\``,
+            }],
+            ['AssemblySearchPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Assembly search paths.
+
+Assembly search paths for Intellisense can be manually specified.
+
+Example:
+\`\`\`FASTBuild
+.AssemblySearchPath = '$WindowsSDK$/References/CommonConfiguration/Neutral'
+\`\`\``,
+            }],
+            ['ForcedUsingAssemblies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Forced Using assemblies.
+
+Forced using assemblies for Intellisense can be manually specified.
+
+Example:
+\`\`\`FASTBuild
+.ForcedUsingAssemblies = 'AssemblyName'
+\`\`\``,
+            }],
+            ['AdditionalOptions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Additional compiler options.
+
+Additional compiler options for Intellisense can be manually specified.
+
+Example:
+\`\`\`FASTBuild
+.AdditionalOptions = '/Zm100'
+\`\`\``,
+            }],
+            ['LocalDebuggerCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Executable to launch when debugging.
+
+Explicitly specify the executable to launch when debugging. The LocalDebuggerCommand property of a Visual Studio project is usually set automatically by FASTBuild (extracted from the .Target specified per build configuration), but can be explicitily set via .LocalDebuggerCommand if desired.
+
+Example:
+\`\`\`FASTBuild
+.LocalDebuggerCommand  = 'tmp/bin/MyExe.exe'
+\`\`\``,
+            }],
+            ['LocalDebuggerCommandArguments', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Args passed to executable when debugging.
+
+Example:
+\`\`\`FASTBuild
+.LocalDebuggerCommandArguments = '-runFromVS'
+\`\`\``,
+            }],
+            ['LocalDebuggerWorkingDirectory', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Working Dir for executable when debugging.
+
+Example:
+\`\`\`FASTBuild
+.LocalDebuggerWorkingDirectory = '/tmp/bin/'
+\`\`\``,
+            }],
+            ['LocalDebuggerEnvironment', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Environment variables when debugging.
+
+Example:
+\`\`\`FASTBuild
+.LocalDebuggerEnvironment = '_NO_DEBUG_HEAP=1' // Disable debug heap
+\`\`\``,
+            }],
+            ['RemoteDebuggerCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Executable to launch when debugging remotely.
+
+Specify the executable to launch when debugging remotely, when using the Windows Subsystem for Linux for example.
+
+Example:
+\`\`\`FASTBuild
+.RemoteDebuggerCommand  = '/mnt/c/bin/myexe'
+\`\`\``,
+            }],
+            ['RemoteDebuggerCommandArguments', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Args passed to remote executable when debugging.
+
+Example:
+\`\`\`FASTBuild
+.RemoteDebuggerCommandArguments = '-myArg'
+\`\`\``,
+            }],
+            ['RemoteDebuggerWorkingDirectory', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Working Dir for remote executable when debugging.
+
+Example:
+\`\`\`FASTBuild
+.LocalDebuggerWorkingDirectory = '/mnt/c/bin/'
+\`\`\``,
+            }],
+            ['Xbox360DebuggerCommand', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Debugger command for Xbox360 only.`,
+            }],
+            ['DebuggerFlavor', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Debugger flavor.
+
+Example:
+\`\`\`FASTBuild
+.DebuggerFlavor = 'WindowsLocalDebugger'
+\`\`\``,
+            }],
+            ['AumidOverride', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Aumid override (for XboxOne).`,
+            }],
+            ['Keyword', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Keyword e.g. 'Android'`,
+            }],
+            ['ApplicationType', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `ApplicationType e.g. 'Android'`,
+            }],
+            ['ApplicationTypeRevision', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `ApplicationType e.g. '3.0'`,
+            }],
+            ['TargetLinuxPlatform', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Set the Linux platform type
+
+Example:
+\`\`\`FASTBuild
+.TargetLinuxPlatform = 'Generic'
+\`\`\``,
+            }],
+            ['LinuxProjectType', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Set the project type GUID for Linux
+
+Example:
+\`\`\`FASTBuild
+.LinuxProjectType = '{D51BCBC9-82E9-4017-911E-C93873C4EA2B}'
+\`\`\``,
+            }],
+            ['PackagePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Path to the package to be used for debugging.`,
+            }],
+            ['AdditionalSymbolSearchPaths', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Path to additional symbols to be used when debugging.`,
+            }],
+            ['AndroidApkLocation', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Location of APK for Android Game Development Extension`,
+            }],
+            ['PlatformToolset', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify PlatformToolset.
+
+Example:
+\`\`\`FASTBuild
+.PlatformToolset = 'v120'
+\`\`\``,
+            }],
+            ['DeploymentType', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify deployment type for Xbox360.`,
+            }],
+            ['DeploymentFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Specify files to add to deployment for Xbox360.`,
+            }],
+            ['RootNamespace', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Set RootNamespace for project
+
+Example:
+\`\`\`FASTBuild
+.RootNamespace = 'MyProject'
+\`\`\``,
+            }],
         ]),
     }],
     [ 'VSProjectExternal', {
@@ -1680,6 +2394,72 @@ Example:
 \`\`\`FASTBuild
 .ExternalProjectPath = 'Setup\\Source\\ExtProject\\ExtProject.wixproj'
 \`\`\``,
+            }],
+            ['ProjectGuid', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `(only when avoiding external module) Project Guid
+
+(only if the value parsed by the external [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor) should be preceeded)
+
+The actual project GUID exactly as found in the external, "foreign" .???proj file.
+
+Example:
+\`\`\`FASTBuild
+.ProjectGuid = '{FA3D597E-38E6-4AE6-ACA1-22D2AF16F6A2}'
+\`\`\``,
+            }],
+            ['ProjectTypeGuid', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `(only when avoiding external module) Project Type Guid
+
+(Should not be given if using [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor))
+
+This GUID identifies the project type and can be found in the registry, sometimes also in the project file itself inside the <ProjectTypeGuids> tag, but that is not guaranteed. Basically, every new type of project Visual Studio "learns" about after installing some new project type addon, stores this information in the system, so it is depending on the actual Visual Studio installation (especially its components), therefore if it's not available you can either consult the list your installation supports in the registry under HKCU\\Software\\Microsoft\\VisualStudio\\12.0_Config\\Projects (or similar), or more simple, check what type GUID would be added in a solution file when interactively adding that kind of project to it.
+
+Example:
+\`\`\`FASTBuild
+.ProjectTypeGuid = '{930c7802-8a8c-48f9-8165-68863bccd9dd}' // WiX Toolset project type GUID
+\`\`\``,
+            }],
+            ['ProjectConfigs', {
+                isRequired: false,
+                defaultDescription: 'Debug Win32, Release Win32, Debug X64, Release X64',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `(only when avoiding external module) List of project configurations (see below)
+
+A list of project configuration structures in the following format:
+\`\`\`FASTBuild
+.ProjectConfig =
+[
+  // Basic Options
+  .Platform                       // Platform (e.g. Win32, X64, PS3 etc.)
+  .Config                         // Config (e.g. Debug, Release etc.)
+]
+\`\`\`
+
+Example:
+\`\`\`FASTBuild
+.DebugConfig      = [ .Platform = 'Win32' .Config = 'Debug' ]
+.ReleaseConfig    = [ .Platform = 'Win32' .Config = 'Release' ]
+.ProjectConfigs   = { .DebugConfig, .ReleaseConfig }
+\`\`\`
+
+If no configurations are specified, the following defaults will be used:
+\`\`\`FASTBuild
+.X86DebugConfig   = [ .Platform = 'Win32' .Config = 'Debug' ]
+.X86ReleaseConfig = [ .Platform = 'Win32' .Config = 'Release' ]
+.X64DebugConfig   = [ .Platform = 'X64'   .Config = 'Debug' ]
+.X64ReleaseConfig = [ .Platform = 'X64'   .Config = 'Release' ]
+.ProjectConfigs   = {
+                        .X86DebugConfig, .X86ReleaseConfig, .X64DebugConfig, .X64ReleaseConfig
+                    }
+\`\`\`
+
+If the [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor) DLLs (Windows only) are present in the FASTBuild binary directory or reachable within the PATH environment, all of these Options except .ExternalProjectPath can be empty or not used at all, in order to let the VSProjTypeExtractor module to retrieve them. On the contrary, if despite of having the DLLs in place, some of these options have to be overridden, they should be provided in the BFF. If all are provided, the external project will no longer be parsed.`,
             }],
         ]),
     }],
@@ -1699,6 +2479,175 @@ Example:
 .SolutionOutput = 'tmp/VisualStudio/MySolution.sln'
 \`\`\``,
             }],
+
+            ['SolutionProjects', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Project(s) to include in Solution
+
+The previously defined VCXProject item(s) to include in the solution. Projects will be placed at the root of the Solution, unless a .Folders entry specifies otherwise (see below). Projects which are placed in Solution Folders do not need to be listed in .SolutionProjects.
+
+Example:
+\`\`\`FASTBuild
+.SolutionProjects =
+{
+  'LibraryA-proj' // Previously defined with VCXProject
+  'LibraryB-proj' // Previously defined with VCXProject
+  'Exe-proj'      // Previously defined with VCXProject
+}
+\`\`\``,
+            }],
+            ['SolutionConfigs', {
+                isRequired: false,
+                defaultDescription: 'Win32|Debug, Win32|Release, x64|Debug, x64|Release',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `Solution configurations (see below)
+
+The platform/configuration pairs you wish to appear in Visual Studio can be controlled here. They need to match those specified in your generated projects.
+
+Example:
+\`\`\`FASTBuild
+.Solution_Config_Debug =
+[
+  .Platform = 'Win32'
+  .Config   = 'Debug'
+]
+.Solution_Config_Release =
+[
+  .Platform = 'Win32'
+  .Config   = 'Release'
+]
+.SolutionConfigs = { .Solution_Config_Debug, .Solution_Config_Release }
+\`\`\`
+
+If not specified, a default matrix of Win32|Debug, Win32|Release, x64|Debug and x64|Release configurations is used.
+
+The optional .SolutionConfig and .SolutionPlatform allow custom solution level Configs and Platforms to be defined. This can be useful when the Config/Platform from the Solution and Project don't have a 1:1 relationship.
+
+Example:
+\`\`\`FASTBuild
+.DebugDirectX =
+[
+  .Config           = 'Debug-DirectX'
+  .Platform         = 'Win32'
+  .SolutionConfig   = 'Debug'
+  .SolutionPlatform = 'Win32-DirectX'
+]
+.DebugOpenGL =
+[
+  .Config           = 'Debug-OpenGL'
+  .Platform         = 'Win32'
+  .SolutionConfig   = 'Debug'
+  .SolutionPlatform = 'Win32-OpenGL'
+]
+\`\`\``,
+            }],
+            ['SolutionFolders', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `Folders to organize projects (see below)
+
+Projects and solution items within a Solution can be organized into folders. Folders may contain projects and/or items, or can be empty.
+
+Example:
+\`\`\`FASTBuild
+.FolderA =
+[
+  .Path      = 'Libraries'
+  .Projects  = { 'LibraryA-proj', 'LibraryB-proj' }
+  .Items     = { 'rel_path_to/item_file_1.txt', 'rel_path_to/item_file_2.ext' }
+]
+.FolderB =
+[
+  .Path      = 'Executables'
+  .Projects  = { 'Exe-proj' }
+]
+.SolutionFolders = { .FolderA, .FolderB }
+\`\`\`
+
+Projects not associated with folders will appear at the root of the the Solution.`,
+            }],
+            ['SolutionDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.ArrayOfStructs]),
+                documentation: `Project dependency information (see below)
+
+Projects within a Solution can be specified as depending on other projects within the Solution.
+
+For simple solutions, this option is typically not necessary.
+
+For more complex Solutions, specifying artificial SolutionDependencies may be useful (depending on the desired F5 behaviour). For example, in Solutions with multiple executables, only one of the executables should be listed as a .SolutionBuildProject (to prevent multiple concurrent invocations of FASTBuild). However, (because of what is arguably a bug in Visual Studio) only when this project (the "primary" project) is the active project, will F5 trigger an up-to-date build check on the target automatically before running. If you want this automatic check on other targets (rather than having to manually build the Project or Solution), you have to artificially make any "non-primary" projects depend on the "primary" executable.
+
+Example:
+\`\`\`FASTBuild
+.Deps =
+[
+  .Projects      = { 'Exe1-proj',
+                     'Exe2-proj' } // F5 with either as the active project will perform a Solution Build (via "All")
+  .Dependencies  = { 'All-proj' }
+]
+.SolutionDependencies = { .Deps }
+\`\`\``,
+            }],
+            ['SolutionVisualStudioVersion', {
+                isRequired: false,
+                defaultDescription: '"14.0.22823.1"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Version of Solution
+
+Specify the VisualStudio version that you would like to appear as the generator of this Solution file.
+
+Example:
+\`\`\`FASTBuild
+.SolutionVisualStudioVersion = "14.0.22823.1"
+\`\`\`
+
+If not specified, "14.0.22823.1" will be used (VS2015 RC).`,
+            }],
+            ['SolutionMinimumVisualStudioVersion', {
+                isRequired: false,
+                defaultDescription: '"10.0.40219.1"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Min version of Solution
+
+Specify the minimum VisualStudio version necessary to open this Solution file.
+
+Example:
+\`\`\`FASTBuild
+.SolutionMinimumVisualStudioVersion = "10.0.40219.1"
+\`\`\`
+
+If not specified, "10.0.40219.1" will be used (VS2010 Express).`,
+            }],
+            ['SolutionBuildProject', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Project(s) set to build when "Build Solution" is selected
+
+Projects which will build when solution is built. Generally, only one project should be specified.
+
+Example:
+\`\`\`FASTBuild
+.SolutionBuildProjects = 'Project' // A previously defined vcxproject
+\`\`\``,
+            }],
+            ['SolutionDeployProjects', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Project(s) set deploy
+
+Projects in the solution to be deployed.
+
+Example:
+\`\`\`FASTBuild
+.SolutionDeployProjects = 'Project' // A previously defined vcxproject
+\`\`\``,
+            }]
         ]),
     }],
     [ 'XCodeProject', {
@@ -1729,7 +2678,289 @@ Example:
 \`\`\`FASTBuild
 .DebugConfig = [ ... ] // See below for options
 .ReleaseConfig = [ ... ] // See below for options
-.ProjectConfigs = [ .DebugConfig, .ReleaseConfig ]
+.ProjectConfigs = { .DebugConfig, .ReleaseConfig }
+\`\`\``,
+            }],
+            ['ProjectInputPaths', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path(s) containing files to include in project
+
+One or more directories can be specified to search for files and add to a project. Searching is recursive.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPaths = 'Code/Lib/Folder/'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectInputPaths = {
+                       'Code/Lib/Folder1/'
+                       'Code/Lib/Folder2/'
+                     }
+\`\`\``,
+            }],
+            ['ProjectInputPathsExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path(s) to exclude from project
+
+One or more directories can be specified to ignore during directory traversal.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPathsExclude = 'Code/Lib/FolderToExclude/'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectInputPathsExclude = {
+                              'Code/Lib/FolderToExclude1/'
+                              'Code/Lib/FolderToExclude2/'
+                            }
+\`\`\``,
+            }],
+            ['ProjectInputPathsRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into project input paths when finding files
+
+Toggles whether to recurse into subdirectories of .ProjectInputPaths when finding files to add to the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectInputPathsRecurse   = false
+\`\`\``,
+            }],
+            ['ProjectPatternToExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) for files to exclude from project
+
+One or more patterns can be specified to ignore during directory traversal.
+
+Example:
+\`\`\`FASTBuild
+.ProjectPatternToExclude = '*/OSX/*'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectPatternToExclude = {
+                              '*/Windows/*'
+                              '*/Linux/*'
+                           }
+\`\`\``,
+            }],
+            ['ProjectFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File(s) to include in project
+
+One or more files can be explicitly listed for inclusion in the project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectFiles = 'Code/Libraries/Lib/A.cpp'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectFiles = {
+                  'Code/Libraries/Core/A.cpp'
+                  'Code/Libraries/Core/B.cpp'
+                }
+\`\`\`
+
+Additionally, XCodeProjects can be embedded within other XCodeProjects:
+\`\`\`FASTBuild
+.ProjectFiles = {
+                  'Core-xcode'   // Assume alias to previously defined XCodeProject
+                  'Engine-xcode' // Assume alias to previously defined XCodeProject
+                }
+\`\`\``,
+            }],
+            ['ProjectFilesToExclude', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File(s) to exclude from project
+
+One or move files can be specified to ignore during directory traversal.
+
+Example:
+\`\`\`FASTBuild
+.ProjectFilesToExclude = 'Code/Lib/FileToExclude.cpp'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectFilesToExclude = {
+                           'Code/Lib/FileToExclude1.cpp'
+                           'Code/Lib/FileToExclude2.cpp'
+                         }
+\`\`\``,
+            }],
+            ['ProjectBasePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Base path(s) to use to build folder hierarchy in project
+
+One or move directories can be specified as the root of the folder hierarchy that will be created within the generated project.
+
+Example:
+\`\`\`FASTBuild
+.ProjectBasePath = 'Code/Lib/'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectBasePath = {
+                     'Code/Lib1/'
+                     'Code/Lib2/'
+                   }
+\`\`\``,
+            }],
+            ['ProjectAllowedFileExtensions', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File extension pattern(s) to include in project (see below for default)
+
+One or move wildcard patterns can be specified to restrict which files will be included in the project during directory traversal. Explicitly listed files (.ProjectFiles) will always be included.
+
+Example:
+\`\`\`FASTBuild
+.ProjectAllowedFileExtensions = '*.cpp'
+\`\`\`
+Or:
+\`\`\`FASTBuild
+.ProjectAllowedFileExtensions = { '*.cpp', '*.h' }
+\`\`\`
+
+If not specified, the default will be used:
+\`\`\`FASTBuild
+.ProjectAllowedFileExtensions = {
+                                  '*.cpp', '*.hpp', '*.cxx', '*.hxx', '*.c',   '*.h',  '*.cc',   '*.hh',
+                                  '*.cp',  '*.hp',  '*.cs',  '*.inl', '*.bff', '*.rc', '*.resx', '*.m',  '*.mm',
+                                  '*.cu',
+                                  '*.asm', '*.s',
+                                  '*.natvis', '*.editorconfig'
+                                }
+\`\`\``,
+            }],
+            ['XCodeBuildToolPath', {
+                isRequired: false,
+                defaultDescription: '"./FBuild"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Path to FASTBuild executable
+
+The location of the FASTBuild executable to invoke can be specified.
+
+Example:
+\`\`\`FASTBuild
+.XCodeBuildToolPath = '../Build/FBuild'
+\`\`\`
+
+If not specified, the default will be used:
+\`\`\`FASTBuild
+.XCodeBuildToolPath = './FBuild'
+\`\`\``,
+            }],
+            ['XCodeBuildToolArgs', {
+                isRequired: false,
+                defaultDescription: '"-ide ^$(FASTBUILD_TARGET)"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Args to pass to FASTBuild
+
+The command line args to pass to FASTBuild when compiling can be specified.
+
+Example:
+\`\`\`FASTBuild
+.XCodeBuildToolArgs = '-ide -cache -summary OSX64-All'
+\`\`\`
+
+If not specified, the default will be used:
+\`\`\`FASTBuild
+.XCodeBuildToolArgs = '-ide ^$(FASTBUILD_TARGET)'
+\`\`\`
+
+* FASTBUILD_TARGET is a special per-configuration symbol that will be replaced (by XCode) with the .Target being compiled. FASTBuild automatically defines this symbol correctly for each build configuration.
+* Note that the $ is escaped so that it's not interpretted by FASTBuild as the beginning of a variable substitution.`,
+            }],
+            ['XCodeBuildWorkingDir', {
+                isRequired: false,
+                defaultDescription: '"./"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Working dir to set when invoking FASTBuild
+
+The location to set as a working directory for compilation.
+
+Example:
+\`\`\`FASTBuild
+.XCodeBuildToolPath = 'Code/'
+\`\`\`
+
+If not specified, the default will be used:
+\`\`\`FASTBuild
+.XCodeBuildToolPath = './'
+\`\`\``,
+            }],
+            ['XCodeDocumentVersioning', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Enable "Document Versioning"
+
+Controls whether the "Document Versionsing" checkbox is enabled.
+
+By default (non-FASTBuild) XCode projects have this option set, which causes XCode to pass additional args on the command line to the process when debugging. This is usually not desired, so FASTBuild suppresses this by default. The option can be re-enabled if needed.
+
+Example:
+\`\`\`FASTBuild
+.XCodeDocumentVersioning = true
+\`\`\``,
+            }],
+            ['XCodeCommandLineArguments', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Enabled command line options for debug
+
+Specify command line arguments passed to the process when debugging.
+
+Example:
+\`\`\`FASTBuild
+.XCodeCommandLineArguments = { '-Arg1', '-Arg2' }
+\`\`\`
+
+NOTE: This option (and .XCodeCommandLineArgumentsDisabled) is stored in the .xcscheme file for the project, which also contains other user-edited settings. As such, while FASTBuild will generate this file if missing, it will not overwrite it when it changes (so as not to overwrite other user edited settings). The .xcscheme can be deleted to force regeneration.`,
+            }],
+            ['XCodeCommandLineArgumentsDisabled', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Disabled command line options for debug target
+
+Specify command line arguments passed to the process when debugging (same as .XCodeCommandLineArguments), but disable them by default.`,
+            }],
+            ['XCodeOrganizationName', {
+                isRequired: false,
+                defaultDescription: '"Organization"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Organization name to set in project
+
+The organization name which appears in the generated project can be set.
+
+Example:
+\`\`\`FASTBuild
+.XCodeOrganizationName = 'MyCompany'
+\`\`\`
+
+If not specified, the default will be used:
+\`\`\`FASTBuild
+.XCodeOrganizationName = 'Organization'
 \`\`\``,
             }],
         ]),
