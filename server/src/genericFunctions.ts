@@ -1395,6 +1395,102 @@ Can either be a file path or the name of a target specified with the \`Executabl
 
 When executing tests, FASTBuild will capture standard output channels of the executable and write them to this file when done.`,
             }],
+            ['TestInput', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Input file(s) to pass to executable`,
+            }],
+            ['TestInputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path to find files in`,
+            }],
+            ['TestInputPattern', {
+                isRequired: false,
+                defaultDescription: '"*.*"',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to use when finding files`,
+            }],
+            ['TestInputPathRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse into dirs when finding files`,
+            }],
+            ['TestInputExcludePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path(s) to exclude`,
+            }],
+            ['TestInputExcludedFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `File(s) to exclude from compilation (partial, root-relative of full path)`,
+            }],
+            ['TestInputExcludePattern', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) to exclude`,
+            }],
+            ['TestArguments', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Arguments to pass to test executable`,
+            }],
+            ['TestWorkingDir', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Working dir for test execution`,
+            }],
+            ['TestTimeOut', {
+                isRequired: false,
+                defaultDescription: '0',
+                types: new Set<ValueType>([ValueType.Integer]),
+                documentation: `TimeOut (in seconds) for test
+                
+The amount of time (in seconds) to wait for a test to finish execution.
+
+The default is 0, which means there is no timeout and FASTBuild will wait until the executable terminates on its own.`,
+            }],
+            ['TestAlwaysShowOutput', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Show output of tests even when they don't fail
+                
+The output of a test is normally shown only when the test fails. This option specifies that the output should always be shown.`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this Test (Rarely needed, but useful when Test relies on externally generated files).
+                
+One or more nodes which must be built before this test is executed.
+
+The .PreBuildDependencies option ensures the specified targets are up-to-date before the Test() is executed.`,
+            }],
+            ['Environment', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Environment variables to use for local build
+                
+If set, linker uses this environment
+
+If not set, linker uses .Environment from your Settings node
+
+When set, overrides the environment for running a Test.
+
+This allows you to have a different environment per Test if needed.`,
+            }],
         ]),
     }],
     [ 'TextFile', {
@@ -1412,6 +1508,24 @@ When executing tests, FASTBuild will capture standard output channels of the exe
                 types: new Set<ValueType>([ValueType.ArrayOfStrings]),
                 documentation: `Array of non-empty strings to be written to the output file, one per line.`,
             }],
+            ['TextFileAlways', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Generate the file even if it already exists with the current contents.`,
+            }],
+            ['Hidden', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Hide a target from -showtargets`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this TextFile (Rarely needed, but useful if the output would be deleted by an earlier step.)`,
+            }],
         ]),
     }],
     [ 'Unity', {
@@ -1422,6 +1536,114 @@ When executing tests, FASTBuild will capture standard output channels of the exe
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Path to output generated Unity files`,
+            }],
+            ['UnityInputPath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path (or paths) to find files`,
+            }],
+            ['UnityInputExcludePath', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Path (or paths) in which to ignore files`,
+            }],
+            ['UnityInputExcludePattern', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Wildcard pattern(s) of files/folders to exclude`,
+            }],
+            ['UnityInputPattern', {
+                isRequired: false,
+                defaultDescription: '"*.cpp"',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Pattern(s) of files to find`,
+            }],
+            ['UnityInputPathRecurse', {
+                isRequired: false,
+                defaultDescription: 'true',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Recurse when searching for files`,
+            }],
+            ['UnityInputFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Explicit list of files to include`,
+            }],
+            ['UnityInputExcludedFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Explicit list of excluded files (partial, root-relative or full path)`,
+            }],
+            ['UnityInputIsolatedFiles', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `List of files to exclude from unity, but still compile (partial end or root-relative)`,
+            }],
+            ['UnityInputObjectLists', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `ObjectList(s) to use as input`,
+            }],
+            ['UnityInputIsolateWritableFiles', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Build writable files individually`,
+            }],
+            ['UnityInputIsolateWritableFilesLimit', {
+                isRequired: false,
+                defaultDescription: '0',
+                types: new Set<ValueType>([ValueType.Integer]),
+                documentation: `Disable isolation when many files are writable`,
+            }],
+            ['UnityInputIsolateListFile', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Text file containing list of files to isolate`,
+            }],
+            ['UnityOutputPattern', {
+                isRequired: false,
+                defaultDescription: '"Unity*.cpp"',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Pattern of output Unity file names`,
+            }],
+            ['UnityNumFiles', {
+                isRequired: false,
+                defaultDescription: '1',
+                types: new Set<ValueType>([ValueType.Integer]),
+                documentation: `Number of Unity files to generate`,
+            }],
+            ['UnityPCH', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String]),
+                documentation: `Precompiled Header file to add to generated Unity files`,
+            }],
+            ['PreBuildDependencies', {
+                isRequired: false,
+                defaultDescription: '',
+                types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                documentation: `Force targets to be built before this Unity (Rarely needed, but useful when a Unity should contain generated code)`,
+            }],
+            ['Hidden', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Hide a target from -showtargets`,
+            }],
+            ['UseRelativePaths_Experimental', {
+                isRequired: false,
+                defaultDescription: 'false',
+                types: new Set<ValueType>([ValueType.Boolean]),
+                documentation: `Use relative paths for generated Unity files`,
             }],
         ]),
     }],
