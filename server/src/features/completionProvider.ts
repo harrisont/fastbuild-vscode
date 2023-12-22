@@ -69,8 +69,8 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
         }
     }
 
-    // TODO: Also lookup the non-property variable completions based on the URI and position in the AST.
-    //       This will require adding support for tracking the AST, which doesn't currently exist.
+    // Future opportunity: Also lookup the non-property variable completions based on the URI and position in the AST.
+    //     This will require adding support for tracking the AST, which doesn't currently exist.
 
     return [];
 }
