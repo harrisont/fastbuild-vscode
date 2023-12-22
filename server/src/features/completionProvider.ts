@@ -37,7 +37,6 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
     // Return the possible function properties (i.e. the parameter variables).
     //
     const functionsForFile = evaluatedData.genericFunctions.get(uri) || [];
-    // TODO: replace this linear search with a binary search, since the array is sorted.
     for (const genericFunction of functionsForFile) {
         if (isPositionInRange(position, genericFunction.bodyRangeWithoutBraces))
         {
@@ -70,8 +69,8 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
         }
     }
 
-    // TODO: Also lookup the possible variable completions based on the URI and position in the AST.
-    //       This will require adding support for tracking the AST, which we don't currently have.
+    // TODO: Also lookup the non-property variable completions based on the URI and position in the AST.
+    //       This will require adding support for tracking the AST, which doesn't currently exist.
 
     return [];
 }
