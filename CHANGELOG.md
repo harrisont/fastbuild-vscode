@@ -1,3 +1,9 @@
+# v0.14.1
+
+## Bug Fixes
+
+* ([#71](https://github.com/harrisont/fastbuild-vscode/issues/71)) Fix the syntax highlighting when using a period in a variable name when using it in a string template.
+
 # v0.14.0
 
 ## New Features
