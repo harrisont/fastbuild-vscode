@@ -96,3 +96,9 @@ flowchart TB
 * [VS Code Language Server Extension Guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
 * [How to create a language server and VS Code extension](https://github.com/donaldpipowitch/how-to-create-a-language-server-and-vscode-extension)
 * [Language Server Protocol: A Language Server For DOT With Visual Studio Code](https://tomassetti.me/language-server-dot-visual-studio/)
+
+## Visual Studio Code Marketplace extension administration
+
+The [Visual Studio Code Marketplace extension admin page](https://marketplace.visualstudio.com/manage/publishers/harrisont/extensions/fastbuild-support/hub?_a=acquisition) contains:
+* Conversion (installation) funnel telemetry
+* Ratings and reviews
