@@ -3,6 +3,7 @@ import * as assert from 'assert';
 import {
     createPosition,
     createRange,
+    isPositionInRange,
     parse,
     ParseSourceRange,
 } from '../parser';
@@ -35,6 +36,90 @@ function assertParseSyntaxError(input: string, expectedErrorMessage: string, exp
 }
 
 describe('parser', () => {
+    describe('isPositionInRange', () => {
+        describe('single line', () => {
+            describe('in range', () => {
+                it('at start', () => {
+                    const actual = isPositionInRange(createPosition(1, 1), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, true);
+                });
+
+                it('in middle', () => {
+                    const actual = isPositionInRange(createPosition(1, 2), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, true);
+                });
+
+                it('at end', () => {
+                    const actual = isPositionInRange(createPosition(1, 3), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, true);
+                });
+            });
+
+            describe('not in range', () => {
+                it('line before', () => {
+                    const actual = isPositionInRange(createPosition(0, 0), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('line after', () => {
+                    const actual = isPositionInRange(createPosition(2, 0), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('character before start', () => {
+                    const actual = isPositionInRange(createPosition(1, 0), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('character after end', () => {
+                    const actual = isPositionInRange(createPosition(1, 5), createRange(1, 1, 1, 4));
+                    assert.strictEqual(actual, false);
+                });
+            });
+        });
+
+        describe('multiple lines', () => {
+            describe('in range', () => {
+                it('at start', () => {
+                    const actual = isPositionInRange(createPosition(1, 1), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, true);
+                });
+
+                it('in middle', () => {
+                    const actual = isPositionInRange(createPosition(1, 10), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, true);
+                });
+
+                it('at end', () => {
+                    const actual = isPositionInRange(createPosition(2, 0), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, true);
+                });
+            });
+
+            describe('not in range', () => {
+                it('line before', () => {
+                    const actual = isPositionInRange(createPosition(0, 0), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('line after', () => {
+                    const actual = isPositionInRange(createPosition(3, 0), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('character before start', () => {
+                    const actual = isPositionInRange(createPosition(1, 0), createRange(1, 1, 2, 1));
+                    assert.strictEqual(actual, false);
+                });
+
+                it('character after end', () => {
+                    const actual = isPositionInRange(createPosition(2, 1), createRange(1, 1, 2, 0));
+                    assert.strictEqual(actual, false);
+                });
+            });
+        });
+    });
+
     it('should work on empty input', () => {
         const input = ``;
         assertParseResultsEqual(input, []);

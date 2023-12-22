@@ -1,4 +1,6 @@
 import {
+    CompletionItem,
+    CompletionParams,
     createConnection,
     DefinitionParams,
     DidChangeConfigurationNotification,
@@ -36,6 +38,7 @@ import * as definitionProvider from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
 import * as referenceProvider from './features/referenceProvider';
 import * as symbolProvider from './features/symbolProvider';
+import * as completionProvider from './features/completionProvider';
 import { DiskFileSystem } from './fileSystem';
 import { ParseDataProvider } from './parseDataProvider';
 
@@ -169,6 +172,9 @@ state.connection.onInitialize((params: InitializeParams) => {
             documentSymbolProvider: true,
             workspaceSymbolProvider: true,
             // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
+            completionProvider: {
+                triggerCharacters: [ '.' ],
+            },
         }
     };
 
@@ -235,6 +241,17 @@ state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
     flushQueuedDocumentUpdates();
 
     return symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
+});
+
+state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+    // Wait for any queued updates, so that we don't return stale data.
+    flushQueuedDocumentUpdates();
+
+    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    if (evaluatedData === null) {
+        return [];
+    }
+    return completionProvider.getCompletions(params, evaluatedData);
 });
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
