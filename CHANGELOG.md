@@ -2,7 +2,10 @@
 
 ## New Features
 
-* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties.
+* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties, including both inline documentation and a link to the offical function's documentation.
+
+    Example:
+    <img width="1111" alt="example" src="https://github.com/harrisont/fastbuild-vscode/assets/144260/fb0ccd56-5b12-41f5-9b29-4ca7f34027ee">
 
 # v0.13.4
 
