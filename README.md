@@ -8,6 +8,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
   * [Show errors](#show-errors)
   * [Go to symbol in editor or workspace](#go-to-symbol-in-editor-or-workspace)
   * [Syntax highlighting](#syntax-highlighting)
+  * [Function property auto-completion and documentation](#function-property-auto-completion-and-documentation)
 * [Limitations](#limitations)
 * [Compatibility](#compatibility)
 * [Installing](#installing)
@@ -44,6 +45,11 @@ See errors on the fly as you write the code, before running FASTBuild.
 ### Syntax highlighting
 
 FASTBuild files are easier to read with syntax highlighting.
+
+### Function property auto-completion and documentation
+
+Example:
+![Demo - function property auto-completion and documentation](https://github.com/harrisont/fastbuild-vscode/assets/144260/fb0ccd56-5b12-41f5-9b29-4ca7f34027ee)
 
 ## Limitations
 
