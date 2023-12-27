@@ -877,6 +877,7 @@ function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
     scopeStack.setVariableInCurrentScope('_CURRENT_BFF_DIR_', '', [createNoLocationVariableDefinition('_CURRENT_BFF_DIR_')]);
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_STRING_', 'vPlaceholderFastBuildVersionString', [createNoLocationVariableDefinition('_FASTBUILD_VERSION_STRING_')]);
     scopeStack.setVariableInCurrentScope('_FASTBUILD_VERSION_', -1, [createNoLocationVariableDefinition('_FASTBUILD_VERSION_')]);
+    scopeStack.setVariableInCurrentScope('_FASTBUILD_EXE_PATH_', 'placeholder-path-to-fastbuild-exe', [createNoLocationVariableDefinition('_FASTBUILD_EXE_PATH_')]);
 
     return scopeStack;
 }

@@ -57,7 +57,7 @@ Example:
 
 ## Compatibility
 
-Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.08 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
+Compatible with [FASTBuild](https://www.fastbuild.org/) version 1.11 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)).
 
 It may be compatible with a newer version of FASTBuild, but this was the latest version tested.
 

@@ -1,3 +1,9 @@
+# v0.14.2
+
+## New Features
+
+* Increase FASTBuild support from v1.08 to v1.11 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)). Previously the plugin worked for v1.11, but didn't support every features added after v1.08. Specifically support for the `_FASTBUILD_EXE_PATH_` builtin variable (added in FASTBuild v1.09).
+
 # v0.14.1
 
 ## Bug Fixes
