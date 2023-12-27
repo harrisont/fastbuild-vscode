@@ -2,8 +2,7 @@
 
 ## New Features
 
-* Increase FASTBuild support from v1.08 to v1.11 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)). Previously the plugin worked for v1.11, but didn't support some features added after v1.08. This includes:
-    * Support for the `_FASTBUILD_VERSION_` builtin variable.
+* Increase FASTBuild support from v1.08 to v1.11 ([FASTBuild Changelog](https://www.fastbuild.org/docs/changelog.html)). Previously the plugin worked for v1.11, but didn't support every features added after v1.08. Specifically support for the `_FASTBUILD_VERSION_` builtin variable (added in FASTBuild v1.09).
 
 # v0.14.1
 
