@@ -911,7 +911,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        // We need to use a placeholder because we don't know the actual version of FASTBuild being run.
+        // We need to use a placeholder because we don't know the actual version of FASTBuild executable.
         it('_FASTBUILD_VERSION_STRING_ is a builtin variable that evaluates to (a placeholder for) the current FASTBuild version as a string', () => {
             const input = `
                 Print( ._FASTBUILD_VERSION_STRING_ )
@@ -919,12 +919,20 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['vPlaceholderFastBuildVersionString']);
         });
 
-        // We need to use a placeholder because we don't know the actual version of FASTBuild being run.
+        // We need to use a placeholder because we don't know the actual version of FASTBuild executable.
         it('_FASTBUILD_VERSION_ is a builtin variable that evaluates to (a placeholder for) the current FASTBuild version as an integer', () => {
             const input = `
                 Print( ._FASTBUILD_VERSION_ )
             `;
             assertEvaluatedVariablesValueEqual(input, [-1]);
+        });
+
+        // We need to use a placeholder because we don't know the actual path to the FASTBuild executable.
+        it('_FASTBUILD_EXE_PATH_ is a builtin variable that evaluates to (a placeholder for) the path to the FASTBuild executable', () => {
+            const input = `
+                Print( ._FASTBUILD_EXE_PATH_ )
+            `;
+            assertEvaluatedVariablesValueEqual(input, ['placeholder-path-to-fastbuild-exe']);
         });
     });
 
