@@ -33,6 +33,29 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
     const scopeCharacter = (params.context?.triggerCharacter !== undefined) ? '' : '.';
 
     //
+    // Add variable completions for definitions in scope.
+    //
+    const completions: CompletionItem[] = [];
+    for (const definition of evaluatedData.variableDefinitions) {
+        if (definition.range.uri == uri
+            && ((definition.range.start.line == position.line && definition.range.start.character >= position.character)
+                || (definition.range.start.line > position.line)))
+        {
+            break;
+        }
+
+        const completion: CompletionItem = {
+            label: `${scopeCharacter}${definition.name}`,
+            kind: CompletionItemKind.Variable,
+            documentation: {
+                kind: MarkupKind.Markdown,
+                value: `TODO: documentation`,
+            },
+        };
+        completions.push(completion);
+    }
+
+    //
     // Check for a function that encloses this position.
     // Return the possible function properties (i.e. the parameter variables).
     //
@@ -45,7 +68,6 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
                 return [];
             }
 
-            const completions: CompletionItem[] = [];
             for (const [propertyName, propertyAttributes] of metadata.properties) {
                 const requiredHeader = propertyAttributes.isRequired ?
                     'Required'
@@ -65,12 +87,9 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
                 };
                 completions.push(completion);
             }
-            return completions;
+            break;
         }
     }
 
-    // Future opportunity: Also lookup the non-property variable completions based on the URI and position in the AST.
-    //     This will require adding support for tracking the AST, which doesn't currently exist.
-
-    return [];
+    return completions;
 }

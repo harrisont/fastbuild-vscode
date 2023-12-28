@@ -198,10 +198,18 @@ Alias('MyTarget2')
                     {
                         label: '.A',
                         kind: CompletionItemKind.Variable,
+                        documentation: {
+                            kind: 'markdown',
+                            value: `TODO: documentation`,
+                        },
                     },
                     {
                         label: '.B',
                         kind: CompletionItemKind.Variable,
+                        documentation: {
+                            kind: 'markdown',
+                            value: `TODO: documentation`,
+                        },
                     },
                 ];
     
