@@ -164,5 +164,52 @@ Alias('MyTarget2')
                 assert.deepStrictEqual(actualCompletions3, []);
             });
         });
+
+        describe('variable completions', () => {
+            describe('no completions', () => {
+                it('before variable definitions', () => {
+                    const input = `
+.A = 1
+                    `;
+                    const actualCompletions = getCompletions(input, Position.create(0, 0));
+                    assert.deepStrictEqual(actualCompletions, []);
+                });
+    
+                it('after definitions in a different scope', () => {
+                    const input = `
+{
+    .A = 1
+}
+                    `;
+                    const actualCompletions = getCompletions(input, Position.create(4, 0));
+                    assert.deepStrictEqual(actualCompletions, []);
+                });
+            });
+    
+            it('basic', () => {
+                const input = `
+.A = 1
+.B = 2
+
+.C = 3
+                `;
+
+                const expectedCompletions: CompletionItem[] = [
+                    {
+                        label: '.A',
+                        kind: CompletionItemKind.Variable,
+                    },
+                    {
+                        label: '.B',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+    
+                // Lookup fter `A` and `B`, but before `C`.
+                const lookupPosition = Position.create(3, 0);
+                const actualCompletions = getCompletions(input, lookupPosition);
+                assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            });
+        });
     });
 });

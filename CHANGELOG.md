@@ -1,3 +1,9 @@
+# v0.15.0
+
+## New Features
+
+* Support auto-completion for variables.
+
 # v0.14.2
 
 ## New Features
