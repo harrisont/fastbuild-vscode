@@ -3,7 +3,7 @@ import {
 } from '../parser';
 
 import {
-    EvaluatedData,
+    EvaluationContext,
 } from '../evaluator';
 
 import {
@@ -18,7 +18,7 @@ import {
     MarkupKind,
 } from 'vscode-languageserver';
 
-export function getCompletions(params: CompletionParams, evaluatedData: EvaluatedData): CompletionItem[] {
+export function getCompletions(params: CompletionParams, evaluationContext: EvaluationContext): CompletionItem[] {
     const uri = params.textDocument.uri;
 
     // If a trigger character was used, then the evaluated data will be out of date because the uncompleted item will have evaluation errors.
@@ -32,34 +32,32 @@ export function getCompletions(params: CompletionParams, evaluatedData: Evaluate
     // Otherwise, use '.' as the scope.
     const scopeCharacter = (params.context?.triggerCharacter !== undefined) ? '' : '.';
 
+    const completions: CompletionItem[] = [];
+
     //
     // Add variable completions for definitions in scope.
     //
-    const completions: CompletionItem[] = [];
-    for (const definition of evaluatedData.variableDefinitions) {
-        if (definition.range.uri == uri
-            && ((definition.range.start.line == position.line && definition.range.start.character >= position.character)
-                || (definition.range.start.line > position.line)))
-        {
-            break;
+    // TODO: add support for triggering for '^' for variables starting from the parent scope.
+    if (params.context?.triggerCharacter !== '^') {
+        const variables = evaluationContext.scopeStack.getVariablesStartingFromCurrentScope();
+        for (const variableName of variables.keys()) {
+            const completion: CompletionItem = {
+                label: `${scopeCharacter}${variableName}`,
+                kind: CompletionItemKind.Variable,
+                // documentation: {
+                //     kind: MarkupKind.Markdown,
+                //     value: `TODO: ${variable.value}`,
+                // },
+            };
+            completions.push(completion);
         }
-
-        const completion: CompletionItem = {
-            label: `${scopeCharacter}${definition.name}`,
-            kind: CompletionItemKind.Variable,
-            documentation: {
-                kind: MarkupKind.Markdown,
-                value: `TODO: documentation`,
-            },
-        };
-        completions.push(completion);
     }
 
     //
     // Check for a function that encloses this position.
     // Return the possible function properties (i.e. the parameter variables).
     //
-    const functionsForFile = evaluatedData.genericFunctions.get(uri) || [];
+    const functionsForFile = evaluationContext.evaluatedData.genericFunctions.get(uri) || [];
     for (const genericFunction of functionsForFile) {
         if (isPositionInRange(position, genericFunction.bodyRangeWithoutBraces))
         {

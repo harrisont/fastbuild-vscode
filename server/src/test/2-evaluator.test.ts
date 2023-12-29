@@ -17,10 +17,11 @@ import {
 
 import {
     ErrorRelatedInformation,
-    evaluate,
     EvaluatedData,
     EvaluatedVariable,
+    EvaluationContext,
     IncludeReference,
+    SourcePositionWithUri,
     SourceRange,
     Struct,
     StructMember,
@@ -29,6 +30,7 @@ import {
     Value,
     VariableDefinition,
     VariableReference,
+    evaluateUntilPosition,
 } from '../evaluator';
 
 import { IFileSystem } from '../fileSystem';
@@ -77,7 +79,7 @@ function createFileRange(uri: UriStr, startLine: number, startCharacter: number,
     );
 }
 
-export function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluatedData {
+export function evaluateInputsFullUntilPosition(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean, untilPosition: SourcePositionWithUri | undefined): EvaluationContext {
     const fileSystem = new MockFileSystem(inputs);
     const parseDataProvider = new ParseDataProvider(
         fileSystem,
@@ -89,16 +91,28 @@ export function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, Fil
         throw maybeParseData.getError();
     }
     const parseData = maybeParseData.getValue();
-    const evaluatedStatementsAndMaybeError = evaluate(parseData, thisFbuildUriStr, fileSystem, parseDataProvider);
+    const evaluatedStatementsAndMaybeError = evaluateUntilPosition(parseData, thisFbuildUriStr, fileSystem, parseDataProvider, untilPosition);
     if (evaluatedStatementsAndMaybeError.error !== null) {
         throw evaluatedStatementsAndMaybeError.error;
     }
     return evaluatedStatementsAndMaybeError.data;
 }
 
-export function evaluateInput(input: FileContents, enableDiagnostics: boolean): EvaluatedData {
+export function evaluateInputsFull(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluationContext {
+    return evaluateInputsFullUntilPosition(thisFbuildUriStr, inputs, enableDiagnostics, undefined /*untilPosition*/);
+}
+
+export function evaluateInputs(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, enableDiagnostics: boolean): EvaluatedData {
+    return evaluateInputsFull(thisFbuildUriStr, inputs, enableDiagnostics).evaluatedData;
+}
+
+export function evaluateInputFull(input: FileContents, enableDiagnostics: boolean): EvaluationContext {
     const thisFbuildUri = 'file:///dummy.bff';
-    return evaluateInputs(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), enableDiagnostics);
+    return evaluateInputsFull(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), enableDiagnostics);
+}
+
+export function evaluateInput(input: FileContents, enableDiagnostics: boolean): EvaluatedData {
+    return evaluateInputFull(input, enableDiagnostics).evaluatedData;
 }
 
 // Compares the parsed evaluatedVariables, but only the value, not the range.

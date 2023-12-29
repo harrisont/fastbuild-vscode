@@ -85,6 +85,12 @@ export class Struct {
     }
 }
 
+export class SourcePositionWithUri {
+    constructor(readonly uri: UriStr, readonly position: SourcePosition) {
+    }
+}
+
+
 export class SourceRange {
     readonly start: SourcePosition;
     readonly end: SourcePosition;
@@ -746,6 +752,16 @@ class ScopeStack {
         }
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`, []));
     }
+    
+
+    // Get all variables, starting from the current scope.
+    getVariablesStartingFromCurrentScope(): Map<string, ScopeVariable> {
+        const result = new Map<string, ScopeVariable>();
+        for (const scope of this.stack) {
+            scope.variables.forEach((value, key) => result.set(key, value));
+        }
+        return result;
+    }
 
     // Return null if the variable is not defined.
     getVariableInCurrentScope(variableName: string): ScopeVariable | null {
@@ -836,7 +852,7 @@ interface VariableAndEvaluatedVariable {
     evaluatedVariable: EvaluatedVariable;
 }
 
-interface EvaluationContext {
+export interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
     defines: Map<string, DefineInfo>,
@@ -849,6 +865,8 @@ interface EvaluationContext {
     onceIncludeUrisAlreadyIncluded: string[];
     // Used for unnamed modifiers (e.g. adding to the LHS of the previous statement).
     previousStatementLhs: VariableAndEvaluatedVariable | null;
+    // If set, stops evaluating once this position is hit.
+    untilPosition: SourcePositionWithUri | undefined;
 }
 
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
@@ -899,8 +917,13 @@ function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Ma
     defines.set(platformSpecificSymbol, info);
     return defines;
 }
+
+export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluationContext> {
+    return evaluateUntilPosition(parseData, thisFbuildUri, fileSystem, parseDataProvider, undefined /*untilPosition*/);
+}
+
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
+export function evaluateUntilPosition(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider, untilPosition: SourcePositionWithUri | undefined): DataAndMaybeError<EvaluationContext> {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
     const scopeStack = createDefaultScopeStack(rootFbuildDirUri);
     const context: EvaluationContext = {
@@ -914,9 +937,10 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
         previousStatementLhs: null,
+        untilPosition,
     };
     const error = evaluateStatements(parseData.statements, context);
-    return new DataAndMaybeError(context.evaluatedData, error);
+    return new DataAndMaybeError(context, error);
 }
 
 // The resulting evaluated data is stored in `context.evaluatedData`.
@@ -927,6 +951,19 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             let statementLhs: VariableAndEvaluatedVariable | null = null;
 
             if (isParsedStatementVariableDefintion(statement)) {
+                // Stop evaluating if we're only evaluating until a position and we're at or have passed that position.
+                //
+                // TODO: ideally this check happens for each statement, not just for variable definitions.
+                //    But right now that's not possible since not all statements know the range.
+                if (context.untilPosition && context.thisFbuildUri == context.untilPosition.uri) {
+                    const statementRangeStart = statement.lhs.range.start;
+                    if ((statementRangeStart.line == context.untilPosition.position.line && statementRangeStart.character >= context.untilPosition.position.character)
+                        || (statementRangeStart.line > context.untilPosition.position.line))
+                    {
+                        break;
+                    }
+                }
+
                 const maybeStatementLhs = evaluateStatementVariableDefinition(statement, context);
                 if (maybeStatementLhs.hasError) {
                     return maybeStatementLhs.getError();
@@ -1712,6 +1749,7 @@ function evaluateStatementUserFunctionCall(
             parseDataProvider: context.parseDataProvider,
             onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
             previousStatementLhs: null,
+            untilPosition: context.untilPosition,
         };
 
         // Set a variable for each parameter.
@@ -1788,6 +1826,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         parseDataProvider: context.parseDataProvider,
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: context.previousStatementLhs,
+        untilPosition: context.untilPosition,
     };
 
     const error = evaluateStatements(includeParseData.statements, includeContext);

@@ -3,26 +3,59 @@ import {
     Position,
 } from 'vscode-languageserver-protocol';
 import * as completionProvider from '../features/completionProvider';
-import { evaluateInputs } from './2-evaluator.test';
-import { CompletionItem, CompletionItemKind, CompletionParams } from 'vscode-languageserver';
+import { evaluateInputsFullUntilPosition } from './2-evaluator.test';
+import { CompletionItem, CompletionItemKind, CompletionParams, CompletionTriggerKind } from 'vscode-languageserver';
+import { SourcePositionWithUri } from '../evaluator';
 
 type UriStr = string;
 type FileContents = string;
 
-function getCompletionsMultiFile(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, position: Position): CompletionItem[] {
-    const evaluatedData = evaluateInputs(thisFbuildUriStr, inputs, true /*enableDiagnostics*/);
+function getCompletionsMultiFile(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, position: Position, triggerCharacter: string | undefined): CompletionItem[] {
+    const untilPosition = new SourcePositionWithUri(thisFbuildUriStr, position);
+    const evaluationContext = evaluateInputsFullUntilPosition(thisFbuildUriStr, inputs, true /*enableDiagnostics*/, untilPosition);
     const completionParams: CompletionParams = {
         textDocument: {
             uri: thisFbuildUriStr,
         },
         position,
+        context: {
+            triggerKind: (triggerCharacter === undefined) ? CompletionTriggerKind.Invoked : CompletionTriggerKind.TriggerCharacter,
+            triggerCharacter,
+        },
     };
-    return completionProvider.getCompletions(completionParams, evaluatedData);
+    return completionProvider.getCompletions(completionParams, evaluationContext);
 }
 
-function getCompletions(input: string, position: Position): CompletionItem[] {
+function getCompletions(input: string, position: Position, triggerCharacter: string | undefined): CompletionItem[] {
     const thisFbuildUri = 'file:///dummy.bff';
-    return getCompletionsMultiFile(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), position);
+    return getCompletionsMultiFile(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), position, triggerCharacter);
+}
+
+// Augments `expectedCompletions` with the builtin variables.
+function addBuiltinCompletions(expectedCompletions: CompletionItem[]): CompletionItem[] {
+    const builtinCompletions: CompletionItem[] = [
+        {
+            label: '._WORKING_DIR_',
+            kind: CompletionItemKind.Variable,
+        },
+        {
+            label: '._CURRENT_BFF_DIR_',
+            kind: CompletionItemKind.Variable,
+        },
+        {
+            label: '._FASTBUILD_VERSION_STRING_',
+            kind: CompletionItemKind.Variable,
+        },
+        {
+            label: '._FASTBUILD_VERSION_',
+            kind: CompletionItemKind.Variable,
+        },
+        {
+            label: '._FASTBUILD_EXE_PATH_',
+            kind: CompletionItemKind.Variable,
+        },
+    ];
+    return [...builtinCompletions, ...expectedCompletions];
 }
 
 describe('completionProvider', () => {
@@ -35,8 +68,8 @@ Alias('MyTargetName')
 {
 }
                     `;
-                    const actualCompletions = getCompletions(input, Position.create(2, 0));
-                    assert.deepStrictEqual(actualCompletions, []);
+                    const actualCompletions = getCompletions(input, Position.create(2, 0), undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, addBuiltinCompletions([]));
                 });
     
                 it('the position of the body closing brace', () => {
@@ -45,8 +78,8 @@ Alias('MyTargetName')
 {
 }
                     `;
-                    const actualCompletions = getCompletions(input, Position.create(3, 1));
-                    assert.deepStrictEqual(actualCompletions, []);
+                    const actualCompletions = getCompletions(input, Position.create(3, 1), undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, addBuiltinCompletions([]));
                 });
             });
     
@@ -95,13 +128,13 @@ Alias('MyTargetName')
     
                 // The position just after the body's opening brace
                 const lookupPosition1 = Position.create(2, 1);
-                const actualCompletions1 = getCompletions(input, lookupPosition1);
-                assert.deepStrictEqual(actualCompletions1, expectedCompletions);
+                const actualCompletions1 = getCompletions(input, lookupPosition1, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions1, addBuiltinCompletions(expectedCompletions));
     
                 // The position just before the body's closing brace
                 const lookupPosition2 = Position.create(3, 0);
-                const actualCompletions2 = getCompletions(input, lookupPosition2);
-                assert.deepStrictEqual(actualCompletions2, expectedCompletions);
+                const actualCompletions2 = getCompletions(input, lookupPosition2, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions2, addBuiltinCompletions(expectedCompletions));
             });
     
             it('Multiple functions in the same file', () => {
@@ -117,13 +150,13 @@ Alias('MyTarget2')
     
                 // A position inside MyTarget1's body
                 const lookupPosition1 = Position.create(2, 1);
-                const actualCompletions1 = getCompletions(input, lookupPosition1);
-                assert.deepStrictEqual(actualCompletions1, expectedCompletions);
+                const actualCompletions1 = getCompletions(input, lookupPosition1, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions1, addBuiltinCompletions(expectedCompletions));
     
                 // A position inside MyTarget2's body
                 const lookupPosition2 = Position.create(7, 0);
-                const actualCompletions2 = getCompletions(input, lookupPosition2);
-                assert.deepStrictEqual(actualCompletions2, expectedCompletions);
+                const actualCompletions2 = getCompletions(input, lookupPosition2, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions2, addBuiltinCompletions(expectedCompletions));
             });
     
             it('multiple files', () => {
@@ -150,18 +183,18 @@ Alias('MyTarget2')
     
                 // Inside the body of MyTarget1
                 const lookupPosition1 = Position.create(4, 1);
-                const actualCompletions1 = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition1);
-                assert.deepStrictEqual(actualCompletions1, expectedCompletions);
+                const actualCompletions1 = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition1, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions1, addBuiltinCompletions(expectedCompletions));
     
                 // Inside the body of MyTarget2
                 const lookupPosition2 = Position.create(2, 1);
-                const actualCompletions2 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition2);
-                assert.deepStrictEqual(actualCompletions2, expectedCompletions);
+                const actualCompletions2 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition2, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions2, addBuiltinCompletions(expectedCompletions));
     
                 // The same position as inside the body of MyTarget1, but in a different file
                 const lookupPosition3 = Position.create(4, 1);
-                const actualCompletions3 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition3);
-                assert.deepStrictEqual(actualCompletions3, []);
+                const actualCompletions3 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition3, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions3, addBuiltinCompletions([]));
             });
         });
 
@@ -171,8 +204,8 @@ Alias('MyTarget2')
                     const input = `
 .A = 1
                     `;
-                    const actualCompletions = getCompletions(input, Position.create(0, 0));
-                    assert.deepStrictEqual(actualCompletions, []);
+                    const actualCompletions = getCompletions(input, Position.create(0, 0), undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, addBuiltinCompletions([]));
                 });
     
                 it('after definitions in a different scope', () => {
@@ -181,8 +214,8 @@ Alias('MyTarget2')
     .A = 1
 }
                     `;
-                    const actualCompletions = getCompletions(input, Position.create(4, 0));
-                    assert.deepStrictEqual(actualCompletions, []);
+                    const actualCompletions = getCompletions(input, Position.create(4, 0), undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, addBuiltinCompletions([]));
                 });
             });
     
@@ -198,25 +231,17 @@ Alias('MyTarget2')
                     {
                         label: '.A',
                         kind: CompletionItemKind.Variable,
-                        documentation: {
-                            kind: 'markdown',
-                            value: `TODO: documentation`,
-                        },
                     },
                     {
                         label: '.B',
                         kind: CompletionItemKind.Variable,
-                        documentation: {
-                            kind: 'markdown',
-                            value: `TODO: documentation`,
-                        },
                     },
                 ];
     
-                // Lookup fter `A` and `B`, but before `C`.
+                // Lookup after `A` and `B`, but before `C`.
                 const lookupPosition = Position.create(3, 0);
-                const actualCompletions = getCompletions(input, lookupPosition);
-                assert.deepStrictEqual(actualCompletions, expectedCompletions);
+                const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions, addBuiltinCompletions(expectedCompletions));
             });
         });
     });
