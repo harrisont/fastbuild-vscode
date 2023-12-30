@@ -1529,6 +1529,7 @@ Expecting to see one of the following:
             {
                 type: 'scopedStatements',
                 statements: [],
+                range: createRange(0, 0, 0, 2),
             }
         ]);
     });
@@ -1542,6 +1543,7 @@ Expecting to see one of the following:
             {
                 type: 'scopedStatements',
                 statements: [],
+                range: createRange(1, 12, 2, 13),
             }
         ]);
     });
@@ -1574,6 +1576,7 @@ Expecting to see one of the following:
                         }
                     }
                 ],
+                range: createRange(1, 12, 3, 13),
             }
         ]);
     });
@@ -1604,6 +1607,7 @@ Expecting to see one of the following:
                         }
                     }
                 ],
+                range: createRange(1, 12, 1, 28),
             }
         ]);
     });
@@ -1727,6 +1731,7 @@ Expecting to see one of the following:
                         operator: '+',
                     }
                 ],
+                range: createRange(2, 12, 4, 13),
             },
         ]);
     });

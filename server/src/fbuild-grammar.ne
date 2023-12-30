@@ -225,7 +225,7 @@ statement ->
   | directiveUndefine                {% ([valueWithContext]) => valueWithContext %}
   | directiveImport                  {% ([valueWithContext]) => valueWithContext %}
 
-scopedStatements -> %scopeOrArrayStart linesWithScopeEnd  {% ([braceOpen, [statements, closeBrace]]) => { return { type: 'scopedStatements', statements }; } %}
+scopedStatements -> %scopeOrArrayStart linesWithScopeEnd  {% ([braceOpen, [statements, braceClose]]) => { return { type: 'scopedStatements', statements, range: createRangeEndInclusive(braceOpen, braceClose) }; } %}
 
 @{%
 

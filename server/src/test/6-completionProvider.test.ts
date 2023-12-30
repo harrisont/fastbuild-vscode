@@ -248,7 +248,7 @@ Alias('MyTarget2')
             describe('no completions', () => {
                 it('before variable definitions - no trigger character', () => {
                     const input = `
-.A = 1
+.Var1 = 1
                     `;
                     const actualCompletions = getCompletions(input, Position.create(0, 0), undefined /*triggerCharacter*/);
                     assert.deepStrictEqual(actualCompletions, getBuiltinCompletions('.'));
@@ -256,7 +256,7 @@ Alias('MyTarget2')
 
                 it('before variable definitions - "." trigger character', () => {
                     const input = `
-.A = 1
+.Var1 = 1
                     `;
                     const actualCompletions = getCompletions(input, Position.create(0, 0), '.' /*triggerCharacter*/);
                     assert.deepStrictEqual(actualCompletions, getBuiltinCompletions(''));
@@ -264,7 +264,7 @@ Alias('MyTarget2')
 
                 it('before variable definitions - "^" trigger character', () => {
                     const input = `
-.A = 1
+.Var1 = 1
                     `;
                     const actualCompletions = getCompletions(input, Position.create(0, 0), '^' /*triggerCharacter*/);
                     assert.deepStrictEqual(actualCompletions, getBuiltinCompletions(''));
@@ -273,7 +273,7 @@ Alias('MyTarget2')
                 it('after definitions in a different scope', () => {
                     const input = `
 {
-    .A = 1
+    .Var1 = 1
 }
                     `;
                     const actualCompletions = getCompletions(input, Position.create(4, 0), undefined /*triggerCharacter*/);
@@ -283,25 +283,25 @@ Alias('MyTarget2')
 
             it('current scope - no trigger character', () => {
                 const input = `
-.A = 1
-.B = 2
+.Var1 = 1
+.Var2 = 2
 
-.C = 3
+.Var3 = 3
                 `;
 
                 const expectedCompletions: CompletionItem[] = [
                     ...getBuiltinCompletions('.'),
                     {
-                        label: '.A',
+                        label: '.Var1',
                         kind: CompletionItemKind.Variable,
                     },
                     {
-                        label: '.B',
+                        label: '.Var2',
                         kind: CompletionItemKind.Variable,
                     },
                 ];
 
-                // Lookup after `A` and `B`, but before `C`.
+                // Lookup after `Var1` and `Var2`, but before `Var3`.
                 const lookupPosition = Position.create(3, 0);
                 const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions, expectedCompletions);
@@ -309,56 +309,124 @@ Alias('MyTarget2')
 
             it('current scope - "." trigger character', () => {
                 const input = `
-.A = 1
-.B = 2
+.Var1 = 1
+.Var2 = 2
 
-.C = 3
+.Var3 = 3
                 `;
 
                 const expectedCompletions: CompletionItem[] = [
                     ...getBuiltinCompletions(''),
                     {
-                        label: 'A',
+                        label: 'Var1',
                         kind: CompletionItemKind.Variable,
                     },
                     {
-                        label: 'B',
+                        label: 'Var2',
                         kind: CompletionItemKind.Variable,
                     },
                 ];
 
-                // Lookup after `A` and `B`, but before `C`.
+                // Lookup after `Var1` and `Var2`, but before `Var3`.
                 const lookupPosition = Position.create(3, 0);
                 const actualCompletions = getCompletions(input, lookupPosition, '.' /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions, expectedCompletions);
             });
 
-            it('parent scope - "^" trigger character', () => {
+            it('parent scope - "^" trigger character - no variables after', () => {
                 const input = `
-.A = 1
-.B = 2
+.Var1 = 1
+.Var2 = 2
 {
 
-    .C = 3
 }
                 `;
 
                 const expectedCompletions: CompletionItem[] = [
                     ...getBuiltinCompletions(''),
                     {
-                        label: 'A',
+                        label: 'Var1',
                         kind: CompletionItemKind.Variable,
                     },
                     {
-                        label: 'B',
+                        label: 'Var2',
                         kind: CompletionItemKind.Variable,
                     },
                 ];
 
-                // Lookup after `A` and `B`, but before `C`.
+                // Lookup inside a nested scope.
                 const lookupPosition = Position.create(4, 0);
                 const actualCompletions = getCompletions(input, lookupPosition, '^' /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            });
+
+            it('parent scope - "^" trigger character - variables after', () => {
+                const input = `
+.Var1 = 1
+.Var2 = 2
+{
+
+    .Var3 = 3
+}
+                `;
+
+                const expectedCompletions: CompletionItem[] = [
+                    ...getBuiltinCompletions(''),
+                    {
+                        label: 'Var1',
+                        kind: CompletionItemKind.Variable,
+                    },
+                    {
+                        label: 'Var2',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+
+                // Lookup inside a nested scope, before other variables are defined.
+                const lookupPosition = Position.create(4, 0);
+                const actualCompletions = getCompletions(input, lookupPosition, '^' /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            });
+
+            it('variables from #include after completion position are not included', () => {
+                const inputs =  new Map<UriStr, FileContents>([
+                    [
+                        'file:///fbuild.bff',
+                        `
+.Var1 = 1
+
+#include 'helper.bff'
+                        `
+                    ],
+                    [
+                        'file:///helper.bff',
+                        `
+.Var2 = 2
+                        `
+                    ]
+                ]);
+
+                const expectedCompletions: CompletionItem[] = [
+                    ...getBuiltinCompletions('.'),
+                    {
+                        label: '.Var1',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+
+                // After `Var1` but before the `#include`.
+                const lookupPosition = Position.create(2, 0);
+                const actualCompletions = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition, undefined /*triggerCharacter*/);
+                assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            });
+
+            describe('ForEach', () => {
+                // TODO
+            });
+
+            describe('User function', () => {
+                // TODO
+                // Note: user functions cannot access variables in the parent scope, so verify that.
             });
         });
     });
