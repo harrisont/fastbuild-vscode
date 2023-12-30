@@ -86,19 +86,19 @@ export class ParseDataProvider {
     //
     // Returns |Error| on failing to read the file contents.
     // Returns |ParseError| on failing to parse the file contents.
-    getParseData(uri: vscodeUri.URI): Maybe<ParseData> {
+    getParseData(uri: vscodeUri.URI, includeStale: boolean): Maybe<ParseData> {
         const cachedData = this.data.get(uri.toString());
-        if (cachedData === undefined) {
+        if (cachedData === undefined || (!includeStale && cachedData.isStale)) {
             return this.updateParseData(uri);
         } else {
             return Maybe.ok(cachedData.data);
         }
     }
 
-    // Returns the cached content for a URI if it exists, or `null` otherwise.
+    // Returns the non-stale cached content for a URI if it exists, or `null` otherwise.
     getCachedDocumentContent(uri: vscodeUri.URI): string | null {
         const cachedData = this.data.get(uri.toString());
-        if (cachedData === undefined) {
+        if (cachedData === undefined || cachedData.isStale) {
             return null;
         } else {
             return cachedData.fileContent;

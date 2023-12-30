@@ -18,13 +18,15 @@ import {
     MarkupKind,
 } from 'vscode-languageserver';
 
-export function getCompletions(params: CompletionParams, evaluationContext: EvaluationContext): CompletionItem[] {
+// `isTriggerCharacterInContent` should normally be true.
+// It should only be false in tests.
+export function getCompletions(params: CompletionParams, evaluationContext: EvaluationContext, isTriggerCharacterInContent: boolean): CompletionItem[] {
     const uri = params.textDocument.uri;
 
     // If a trigger character was used, then the evaluated data will be out of date because the uncompleted item will have evaluation errors.
     // Account for this by adjusting the position left one, as if the trigger character were not used.
     const position = params.position;
-    if (params.context?.triggerCharacter !== undefined) {
+    if (params.context?.triggerCharacter !== undefined && isTriggerCharacterInContent) {
         position.character -= 1;
     }
 
@@ -33,25 +35,7 @@ export function getCompletions(params: CompletionParams, evaluationContext: Eval
     const scopeCharacter = (params.context?.triggerCharacter !== undefined) ? '' : '.';
 
     const completions: CompletionItem[] = [];
-
-    //
-    // Add variable completions for definitions in scope.
-    //
-    // TODO: add support for triggering for '^' for variables starting from the parent scope.
-    if (params.context?.triggerCharacter !== '^') {
-        const variables = evaluationContext.scopeStack.getVariablesStartingFromCurrentScope();
-        for (const variableName of variables.keys()) {
-            const completion: CompletionItem = {
-                label: `${scopeCharacter}${variableName}`,
-                kind: CompletionItemKind.Variable,
-                // documentation: {
-                //     kind: MarkupKind.Markdown,
-                //     value: `TODO: ${variable.value}`,
-                // },
-            };
-            completions.push(completion);
-        }
-    }
+    let isInFunction = false;
 
     //
     // Check for a function that encloses this position.
@@ -61,32 +45,58 @@ export function getCompletions(params: CompletionParams, evaluationContext: Eval
     for (const genericFunction of functionsForFile) {
         if (isPositionInRange(position, genericFunction.bodyRangeWithoutBraces))
         {
-            const metadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(genericFunction.functionName);
-            if (metadata === undefined) {
-                return [];
-            }
+            isInFunction = true;
 
-            for (const [propertyName, propertyAttributes] of metadata.properties) {
-                const requiredHeader = propertyAttributes.isRequired ?
-                    'Required'
-                    : `Optional${propertyAttributes.defaultDescription ? ', defaults to `' + propertyAttributes.defaultDescription + '`' : ''}`;
+            // Function property completions do not trigger on parent scope.
+            if (params.context?.triggerCharacter !== '^') {
+                const metadata = GENERIC_FUNCTION_METADATA_BY_NAME.get(genericFunction.functionName);
+                if (metadata === undefined) {
+                    break;
+                }
 
-                const typeHeader = Array.from(propertyAttributes.types.values()).map(type => ValueType[type]).join('/');
+                for (const [propertyName, propertyAttributes] of metadata.properties) {
+                    const requiredHeader = propertyAttributes.isRequired ?
+                        'Required'
+                        : `Optional${propertyAttributes.defaultDescription ? ', defaults to `' + propertyAttributes.defaultDescription + '`' : ''}`;
 
-                const completion: CompletionItem = {
-                    label: `${scopeCharacter}${propertyName}`,
-                    kind: CompletionItemKind.Variable,
-                    documentation: {
-                        kind: MarkupKind.Markdown,
-                        value: `**${typeHeader} (${requiredHeader})**\n\n${propertyAttributes.documentation}
+                    const typeHeader = Array.from(propertyAttributes.types.values()).map(type => ValueType[type]).join('/');
+
+                    const completion: CompletionItem = {
+                        label: `${scopeCharacter}${propertyName}`,
+                        kind: CompletionItemKind.Variable,
+                        documentation: {
+                            kind: MarkupKind.Markdown,
+                            value: `**${typeHeader} (${requiredHeader})**\n\n${propertyAttributes.documentation}
 
 [Function documentation website](${metadata.documentationUrl})`,
-                    },
-                };
-                completions.push(completion);
+                        },
+                    };
+                    completions.push(completion);
+                }
+                break;
             }
-            break;
         }
+    }
+
+    //
+    // Add variable completions for definitions in scope.
+    //
+
+    // If in a function, then search starting from the current scope because the evaluation might have terminated late, outside the function scope.
+    const variables = (params.context?.triggerCharacter === '^' && !isInFunction)
+        ? evaluationContext.scopeStack.getVariablesStartingFromParentScope()
+        : evaluationContext.scopeStack.getVariablesStartingFromCurrentScope();
+
+    for (const variableName of variables.keys()) {
+        const completion: CompletionItem = {
+            label: `${scopeCharacter}${variableName}`,
+            kind: CompletionItemKind.Variable,
+            // documentation: {
+            //     kind: MarkupKind.Markdown,
+            //     value: `TODO: ${variable.value}`,
+            // },
+        };
+        completions.push(completion);
     }
 
     return completions;

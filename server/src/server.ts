@@ -181,7 +181,7 @@ state.connection.onInitialize((params: InitializeParams) => {
             workspaceSymbolProvider: true,
             // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
             completionProvider: {
-                triggerCharacters: [ '.' ],
+                triggerCharacters: [ '.', '^' ],
             },
         }
     };
@@ -272,18 +272,18 @@ state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
         console.error(evaluatedDataAndMaybeError.error, evaluatedDataAndMaybeError.error.stack);
     }
 
-    return completionProvider.getCompletions(params, evaluatedDataAndMaybeError.data);
+    return completionProvider.getCompletions(params, evaluatedDataAndMaybeError.data, true /*isTriggerCharacterInContent*/);
 });
 
 function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri): Maybe<DataAndMaybeError<EvaluationContext>> {
     const positionUri = vscodeUri.URI.parse(untilPosition.uri);
     const rootFbuildUri = state.getRootFbuildFile(positionUri);
     if (rootFbuildUri === null) {
-        return Maybe.error(new Error(`Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${positionUri.fsPath}'`)); 
+        return Maybe.error(new Error(`Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${positionUri.fsPath}'`));
     }
     const rootFbuildUriStr = rootFbuildUri.toString();
 
-    const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+    const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri, true /*includeStale*/);
     if (maybeRootFbuildParseData.hasError) {
         return Maybe.error(maybeRootFbuildParseData.getError());
     }
@@ -385,7 +385,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
             throw maybeChangedDocumentParseData.getError();
         }
 
-        const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri, false /*includeStale*/);
         if (settings.logPerformanceMetrics) {
             console.timeEnd(parseDurationLabel);
         }

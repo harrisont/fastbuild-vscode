@@ -86,7 +86,7 @@ export function evaluateInputsFullUntilPosition(thisFbuildUriStr: UriStr, inputs
         { enableDiagnostics, includeCodeLocationInError: true }
     );
     const thisFbuildUri = vscodeUri.URI.parse(thisFbuildUriStr);
-    const maybeParseData = parseDataProvider.getParseData(thisFbuildUri);
+    const maybeParseData = parseDataProvider.getParseData(thisFbuildUri, true /*includeStale*/);
     if (maybeParseData.hasError) {
         throw maybeParseData.getError();
     }

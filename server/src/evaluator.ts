@@ -752,15 +752,39 @@ class ScopeStack {
         }
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`, []));
     }
-    
 
     // Get all variables, starting from the current scope.
     getVariablesStartingFromCurrentScope(): Map<string, ScopeVariable> {
+        // First determine how down the stack we can go, then add all the variables in each scope from there upwards.
+        // Do it in this order so that the inner scopes override the outer scopes.
         const result = new Map<string, ScopeVariable>();
-        for (const scope of this.stack) {
+        for (let scopeIndex = this.getLowestAccessibleScopeIndex(); scopeIndex < this.stack.length; ++scopeIndex) {
+            const scope = this.stack[scopeIndex];
             scope.variables.forEach((value, key) => result.set(key, value));
         }
         return result;
+    }
+
+    // Get all variables, starting from the parent scope, if a parent scope exists.
+    getVariablesStartingFromParentScope(): Map<string, ScopeVariable> {
+        // First determine how down the stack we can go, then add all the variables in each scope from there upwards.
+        // Do it in this order so that the inner scopes override the outer scopes.
+        const result = new Map<string, ScopeVariable>();
+        for (let scopeIndex = this.getLowestAccessibleScopeIndex(); scopeIndex < this.stack.length - 1; ++scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            scope.variables.forEach((value, key) => result.set(key, value));
+        }
+        return result;
+    }
+
+    private getLowestAccessibleScopeIndex(): number {
+        for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            if (!scope.canAccessParentScopes) {
+                return scopeIndex;
+            }
+        }
+        return 0;
     }
 
     // Return null if the variable is not defined.
@@ -1789,7 +1813,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         return null;
     }
 
-    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
+    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, false /*includeStale*/);
     if (maybeIncludeParseData.hasError) {
         const includeError = maybeIncludeParseData.getError();
         let error: Error;
