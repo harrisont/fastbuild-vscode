@@ -262,14 +262,11 @@ state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
     const maybeEvaluationContextAndMaybeError = evaluateUntilPositionWrapper(untilPosition);
     if (maybeEvaluationContextAndMaybeError.hasError) {
         // There was an error doing any evaluation, so return no completions.
-        const error = maybeEvaluationContextAndMaybeError.getError();
-        console.error(error.message, error.stack);
         return [];
     }
     const evaluatedDataAndMaybeError = maybeEvaluationContextAndMaybeError.getValue();
     if (evaluatedDataAndMaybeError.error !== null) {
         // The evaluation partially completed, so continue to use what completions we can.
-        console.error(evaluatedDataAndMaybeError.error, evaluatedDataAndMaybeError.error.stack);
     }
 
     return completionProvider.getCompletions(params, evaluatedDataAndMaybeError.data, true /*isTriggerCharacterInContent*/);
