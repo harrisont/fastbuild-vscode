@@ -408,14 +408,13 @@ function isParsedStatementSettings(obj: Record<string, any>): obj is ParsedState
 }
 
 interface ParsedIfConditionBoolean {
-    type: 'boolean';
-    range: ParseSourceRange;
+    type: 'ifConditionBoolean';
     value: ParsedEvaluatedVariable;
     invert: boolean;
 }
 
 function isParsedIfConditionBoolean(obj: Record<string, any>): obj is ParsedIfConditionBoolean {
-    return (obj as ParsedIfConditionBoolean).type === 'boolean';
+    return (obj as ParsedIfConditionBoolean).type === 'ifConditionBoolean';
 }
 
 interface ParsedIfConditionComparison {
@@ -435,7 +434,6 @@ function isParsedIfConditionComparison(obj: Record<string, any>): obj is ParsedI
 
 interface ParsedIfConditionIn {
     type: 'in';
-    range: ParseSourceRange;
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
     invert: boolean;

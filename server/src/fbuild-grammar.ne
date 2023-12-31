@@ -264,6 +264,17 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
     };
 }
 
+// Creates a range from token's location (inclusive) to the end of the token.
+function createRangeFromToken(token: Token): SourceRange {
+    return {
+        start: createLocation(token),
+        end: {
+            line: token.line - 1,
+            character: token.col - 1 + token.value.length,
+        },
+    };
+}
+
 // Creates a range from tokenStart's location (inclusive) to a to-be-received-later token's location (exclusive).
 function createRangeStart(startToken: Token): [object, ParseContext] {
     const range = {
@@ -1003,11 +1014,11 @@ ifConditionTermInCompound ->
 # A condition term that is a boolean expression (boolean literal or evaluated variable)
 ifConditionTermBoolean ->
     # Boolean expression: literal
-    bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', range: todo, value, invert: false }, context ] %}
+    bool                                                        {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: false }, context ] %}
     # Boolean expression: .Value
-  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', range: todo, value, invert: false }, context ] %}
+  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: false }, context ] %}
     # Boolean expression: ! .Value
-  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', range: todo, value, invert: true  }, context ] %}
+  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: true  }, context ] %}
 
 # A condition term that is a comparison or a check for presence-in-ArrayOfStrings
 #
@@ -1032,15 +1043,42 @@ ifConditionTermComparisonOrPresenceInArrayOfStrings ->
   | summand                     %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
   | summand whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Presence in ArrayOfStrings: .Value1 in .Value2
-  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', range: todo, lhs, rhs, invert: false }, rhsContext ]; } %}
-  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', range: todo, lhs, rhs, invert: false }, rhsContext ]; } %}
+  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
+  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
     # Presence in ArrayOfStrings: .Value1 not in .Value2
-  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', range: todo, lhs, rhs, invert: true  }, rhsContext ]; } %}
-  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', range: todo, lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
 
-directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => { return { type: 'include', range: todo, path }; } %}
+@{%
 
-directiveOnce -> %directiveOnce  {% () => { return { type: 'once', range: todo }; } %}
+function createInclude(includeToken: Token, path: Record<string, any>) {
+    return {
+        type: 'include',
+        range: {
+          start: createLocation(includeToken),
+          end: path.range.end,
+        }
+        path,
+    };
+}
+
+%}
+
+directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => createInclude(include, path) %}
+
+
+@{%
+
+function createOnce(onceToken: Token) {
+    return {
+        type: 'once',
+        range: createRangeFromToken(onceToken),
+    };
+}
+
+%}
+
+directiveOnce -> %directiveOnce  {% ([once]) => createOnce(once) %}
 
 directiveIf ->
     %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements,                                        directiveEndIf]) => {
