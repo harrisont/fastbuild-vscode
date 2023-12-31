@@ -194,8 +194,8 @@ type ScopeLocation = 'current' | 'parent';
 
 interface ParsedString {
     type: 'string';
-    value: string;
     range: ParseSourceRange;
+    value: string;
 }
 
 function isParsedString(obj: Record<string, any>): obj is ParsedString {
@@ -231,6 +231,7 @@ interface ParsedSumSummand {
 
 interface ParsedSum {
     type: 'sum';
+    range: ParseSourceRange;
     first: any;
     // summands must be of length at least 1
     summands: ParsedSumSummand[];
@@ -242,9 +243,9 @@ function isParsedSum(obj: Record<string, any>): obj is ParsedSum {
 
 interface ParsedEvaluatedVariable {
     type: 'evaluatedVariable';
+    range: ParseSourceRange;
     name: ParsedString | ParsedStringExpression;
     scope: ScopeLocation;
-    range: ParseSourceRange;
 }
 
 function isParsedEvaluatedVariable(obj: Record<string, any>): obj is ParsedEvaluatedVariable {
@@ -253,8 +254,8 @@ function isParsedEvaluatedVariable(obj: Record<string, any>): obj is ParsedEvalu
 
 interface ParsedArray {
     type: 'array';
-    value: any[];
     range: ParseSourceRange;
+    value: any[];
 }
 
 function isParsedArray(obj: Record<string, any>): obj is ParsedArray {
@@ -289,6 +290,7 @@ interface ParsedVariableDefinitionLhs {
 
 interface ParsedStatementVariableDefintion {
     type: 'variableDefinition';
+    range: ParseSourceRange;
     lhs: ParsedVariableDefinitionLhs;
     rhs: any;
 }
@@ -299,6 +301,7 @@ function isParsedStatementVariableDefintion(obj: Record<string, any>): obj is Pa
 
 interface ParsedStatementBinaryOperator {
     type: 'binaryOperator';
+    range: ParseSourceRange;
     lhs: ParsedVariableDefinitionLhs;
     rhs: any;
     operator: OperatorPlusOrMinus;
@@ -310,9 +313,9 @@ function isParsedStatementBinaryOperator(obj: Record<string, any>): obj is Parse
 
 interface ParsedStatementBinaryOperatorOnUnnamed {
     type: 'binaryOperatorOnUnnamed';
+    range: ParseSourceRange;
     rhs: any;
     operator: OperatorPlusOrMinus;
-    rangeStart: SourcePosition;
 }
 
 function isParsedStatementBinaryOperatorOnUnnamed(obj: Record<string, any>): obj is ParsedStatementBinaryOperatorOnUnnamed {
@@ -322,8 +325,8 @@ function isParsedStatementBinaryOperatorOnUnnamed(obj: Record<string, any>): obj
 // {...}
 interface ParsedStatementScopedStatements {
     type: 'scopedStatements';
-    statements: Statement[];
     range: ParseSourceRange;
+    statements: Statement[];
 }
 
 function isParsedStatementScopedStatements(obj: Record<string, any>): obj is ParsedStatementScopedStatements {
@@ -396,6 +399,7 @@ function isParsedStatementPrint(obj: Record<string, any>): obj is ParsedStatemen
 
 interface ParsedStatementSettings {
     type: 'settings';
+    range: ParseSourceRange;
     statements: Statement[];
 }
 
@@ -405,6 +409,7 @@ function isParsedStatementSettings(obj: Record<string, any>): obj is ParsedState
 
 interface ParsedIfConditionBoolean {
     type: 'boolean';
+    range: ParseSourceRange;
     value: ParsedEvaluatedVariable;
     invert: boolean;
 }
@@ -415,6 +420,7 @@ function isParsedIfConditionBoolean(obj: Record<string, any>): obj is ParsedIfCo
 
 interface ParsedIfConditionComparison {
     type: 'comparison';
+    range: ParseSourceRange;
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
     operator: {
@@ -429,6 +435,7 @@ function isParsedIfConditionComparison(obj: Record<string, any>): obj is ParsedI
 
 interface ParsedIfConditionIn {
     type: 'in';
+    range: ParseSourceRange;
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
     invert: boolean;
@@ -440,6 +447,7 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
 
 interface ParsedIfConditionOperatorAnd {
     type: 'operator';
+    range: ParseSourceRange;
     operator: '&&';
     lhs: ParsedIfCondtion;
     rhs: ParsedIfCondtion;
@@ -452,6 +460,7 @@ function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is Parsed
 
 interface ParsedIfConditionOperatorOr {
     type: 'operator';
+    range: ParseSourceRange;
     operator: '||';
     lhs: ParsedIfCondtion;
     rhs: ParsedIfCondtion;
@@ -477,8 +486,8 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
 
 interface ParsedStatementUserFunctionDeclarationParameter {
     type: 'userFunctionDeclarationParameter';
-    name: string;
     range: ParseSourceRange;
+    name: string;
     definition: VariableDefinition | undefined;
 }
 
@@ -488,6 +497,7 @@ function isParsedStatementUserFunctionDeclarationParameter(obj: Record<string, a
 
 interface ParsedStatementUserFunctionDeclaration {
     type: 'userFunctionDeclaration';
+    range: ParseSourceRange;
     name: string;
     nameRange: ParseSourceRange;
     parameters: ParsedStatementUserFunctionDeclarationParameter[];
@@ -506,8 +516,8 @@ function isParsedStatementUserFunctionDeclaration(obj: Record<string, any>): obj
 
 interface ParsedStatementUserFunctionCallParameter {
     type: 'userFunctionCallParameter';
-    value: Value;
     range: ParseSourceRange;
+    value: Value;
 }
 
 function isParsedStatementUserFunctionCallParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionCallParameter {
@@ -535,6 +545,7 @@ function isParsedStatementUserFunctionCall(obj: Record<string, any>): obj is Par
 // #include
 interface ParsedStatementInclude {
     type: 'include';
+    range: ParseSourceRange;
     path: ParsedString;
 }
 
@@ -545,6 +556,7 @@ function isParsedStatementInclude(obj: Record<string, any>): obj is ParsedStatem
 // #once
 interface ParsedStatementOnce {
     type: 'once';
+    range: ParseSourceRange;
 }
 
 function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatementOnce {
@@ -553,8 +565,8 @@ function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatement
 
 interface ParsedDirectiveIfConditionTermIsSymbolDefined {
     type: 'isSymbolDefined';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermIsSymbolDefined {
@@ -563,8 +575,8 @@ function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any
 
 interface ParsedDirectiveIfConditionTermEnvVarExists {
     type: 'envVarExists';
-    envVar: string;
     range: ParseSourceRange;
+    envVar: string;
 }
 
 function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermEnvVarExists {
@@ -573,8 +585,8 @@ function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>):
 
 interface ParsedDirectiveIfConditionTermFileExists {
     type: 'fileExists';
-    filePath: ParsedString;
     range: ParseSourceRange;
+    filePath: ParsedString;
 }
 
 function isParsedDirectiveIfConditionTermFileExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermFileExists {
@@ -594,6 +606,7 @@ interface DirectiveIfConditionTermOrNot {
 // #if
 interface ParsedStatementDirectiveIf {
     type: 'directiveIf';
+    range: ParseSourceRange;
     rangeStart: SourcePosition;
     // An array of AND statements OR'd together
     condition: Array<Array<DirectiveIfConditionTermOrNot>>;
@@ -608,8 +621,8 @@ function isParsedStatementDirectiveIf(obj: Record<string, any>): obj is ParsedSt
 // #define
 interface ParsedStatementDefine {
     type: 'define';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStatementDefine {
@@ -619,8 +632,8 @@ function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStateme
 // #undefine
 interface ParsedStatementUndefine {
     type: 'undefine';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedStatementUndefine {
@@ -630,8 +643,8 @@ function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedState
 // #import
 interface ParsedStatementImportEnvVar {
     type: 'importEnvVar';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementImportEnvVar(obj: Record<string, any>): obj is ParsedStatementImportEnvVar {
@@ -993,6 +1006,10 @@ function isPastPosition(context: EvaluationContext, position: SourcePosition): b
 function evaluateStatements(statements: Statement[], context: EvaluationContext): CancellableMaybe<void> {
     try {
         for (const statement of statements) {
+            if (isPastPosition(context, statement.range.start)) {
+                return CancellableMaybe.cancelled();
+            }
+
             let statementLhs: VariableAndEvaluatedVariable | null = null;
 
             if (isParsedStatementVariableDefintion(statement)) {
@@ -1108,12 +1125,6 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
 function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefintion, context: EvaluationContext): CancellableMaybe<VariableAndEvaluatedVariable> {
-    // TODO: ideally this check happens for each statement, not just for variable definitions.
-    //    But right now that's not possible since not all statements know the range.
-    if (isPastPosition(context, statement.lhs.range.start)) {
-        return CancellableMaybe.cancelled();
-    }
-
     const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
     if (!maybeEvaluatedRhs.hasValue()) {
         return maybeEvaluatedRhs as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
@@ -1280,7 +1291,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
 function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBinaryOperatorOnUnnamed, context: EvaluationContext): CancellableMaybe<VariableAndEvaluatedVariable> {
     if (context.previousStatementLhs === null) {
-        const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
+        const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.range.start, statement.range.end);
         return CancellableMaybe.error(new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []));
     }
     const lhsVariable = context.previousStatementLhs.variable;
@@ -1291,7 +1302,7 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
     }
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
-    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
+    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.range.start, evaluatedRhs.range.end);
     let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
     switch (statement.operator) {
         case '+':
@@ -1317,10 +1328,6 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
 
 // Returns `Error` on fatal error.
 function evaluateStatementScopedStatements(statement: ParsedStatementScopedStatements, context: EvaluationContext): CancellableMaybe<void> {
-    if (isPastPosition(context, statement.range.start)) {
-        return CancellableMaybe.cancelled();
-    }
-
     context.scopeStack.push(ParentScopeAccess.Yes);
 
     const result = evaluateStatements(statement.statements, context);
@@ -1484,6 +1491,10 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
             return result;
         }
 
+        if (isPastPosition(context, statement.range.end)) {
+            return CancellableMaybe.cancelled();
+        }
+
         context.scopeStack.pop();
     }
 
@@ -1564,6 +1575,10 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
     const error = evaluateGenericFunctionProperties(statement, context);
     if (error !== null) {
         return CancellableMaybe.error(error);
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
     }
 
     context.scopeStack.pop();
@@ -1649,6 +1664,10 @@ function evaluateStatementSettings(statement: ParsedStatementSettings, context: 
         return result;
     }
 
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
     context.scopeStack.pop();
     return CancellableMaybe.completed();
 }
@@ -1678,6 +1697,10 @@ function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationCo
     const result = evaluateStatements(statement.statements, context);
     if (!result.hasValue()) {
         return result;
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
     }
 
     context.scopeStack.pop();
@@ -1839,6 +1862,10 @@ function evaluateStatementUserFunctionCall(
     const result = evaluateStatements(userFunction.statements, functionCallContext);
     if (!result.hasValue()) {
         return result;
+    }
+
+    if (isPastPosition(context, call.range.end)) {
+        return CancellableMaybe.cancelled();
     }
 
     context.scopeStack.pop();
@@ -2189,6 +2216,10 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Cance
     const statements = evaluateStatements(struct.statements, context);
     if (!statements.hasValue()) {
         return statements as CancellableMaybe<EvaluatedRValue>;
+    }
+
+    if (isPastPosition(context, struct.range.end)) {
+        return CancellableMaybe.cancelled();
     }
 
     const structScope = context.scopeStack.getCurrentScope();

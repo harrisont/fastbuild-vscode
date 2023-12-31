@@ -265,7 +265,7 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
 }
 
 // Creates a range from tokenStart's location (inclusive) to a to-be-received-later token's location (exclusive).
-function createRangeStart(startToken: Token) {
+function createRangeStart(startToken: Token): [object, ParseContext] {
     const range = {
         start: createLocation(startToken),
         // Updated by the onNextToken callback
@@ -335,15 +335,100 @@ lhsWithBinaryOperator ->
   | variableReference                     %operatorSubtraction    {% ([[scopeToken, scope, varName, context],        operator]) => { callOnNextToken(context, operator); return [ { name: varName, scope, range: createRange(scopeToken, operator) }, '-' ]; } %}
   | variableReference whitespaceOrNewline %operatorSubtraction    {% ([[scopeToken, scope, varName, context], space, operator]) => { callOnNextToken(context, space   ); return [ { name: varName, scope, range: createRange(scopeToken, space)    }, '-' ]; } %}
 
+@{%
+
+function createVariableDefinition(lhs: Record<string, any>, rhs: Record<string, any>, existingContext: ParseContext) {
+    const result = {
+        type: 'variableDefinition',
+        range: {
+            start: lhs.range.start,
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+        lhs,
+        rhs,
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+%}
+
 variableDefinition ->
-    lhsWithAssignmentOperator optionalWhitespaceOrNewline rValue  {% ([lhs,             space, [rValue, context]]) => { return [ { type: 'variableDefinition', lhs: lhs, rhs: rValue           }, context ]; } %}
+    lhsWithAssignmentOperator optionalWhitespaceOrNewline rValue  {% ([lhs,             space, [rValue, context]]) => createVariableDefinition(lhs, rValue, context) %}
+
+@{%
+
+function createBinaryOperator(lhs: Record<string, any>, rhs: Record<string, any>, operator: string, existingContext: ParseContext) {
+    const result = {
+        type: 'binaryOperator',
+        range: {
+            start: lhs.range.start,
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+        lhs,
+        rhs,
+        operator,
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+%}
 
 variableBinaryOperator ->
-    lhsWithBinaryOperator     optionalWhitespaceOrNewline rValue  {% ([[lhs, operator], space, [rValue, context]]) => { return [ { type: 'binaryOperator',     lhs: lhs, rhs: rValue, operator }, context ]; } %}
+    lhsWithBinaryOperator     optionalWhitespaceOrNewline rValue  {% ([[lhs, operator], space, [rValue, context]]) => createBinaryOperator(lhs, rValue, operator, context) %}
+
+@{%
+
+function createBinaryOperatorOnUnnamed(rhs: Record<string, any>, operator: Token, existingContext: ParseContext) {
+    const result = {
+        type: 'binaryOperatorOnUnnamed',
+        range: {
+            start: createLocation(operator),
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+        rhs,
+        operator: operator.value,
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+%}
 
 variableBinaryOperatorOnUnnamed ->
-    %operatorAddition         optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => { return [ { type: 'binaryOperatorOnUnnamed', rhs: rValue, operator: '+', rangeStart: createLocation(operator) }, context ]; } %}
-  | %operatorSubtraction      optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => { return [ { type: 'binaryOperatorOnUnnamed', rhs: rValue, operator: '-', rangeStart: createLocation(operator) }, context ]; } %}
+    %operatorAddition         optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => createBinaryOperatorOnUnnamed(rValue, operator, context) %}
+  | %operatorSubtraction      optionalWhitespaceOrNewline rValue  {% ([      operator,  space, [rValue, context]]) => createBinaryOperatorOnUnnamed(rValue, operator, context) %}
 
 @{%
 
@@ -387,15 +472,30 @@ integer ->
     %integer  {% ([token]) => createInteger(token) %}
 
 # A single item or multiple items added/subtracted together.
-rValue -> sumHelper  {% ([[first, rest, context]]) => {
+rValue -> sumHelper  {% ([[first, rest, existingContext]]) => {
     if (rest.length == 0) {
-        return [first, context];
+        return [first, existingContext];
     } else {
         const sum = {
             type: 'sum',
+            range: {
+                start: first.range.start,
+                // Updated by the onNextToken callback
+                end: {
+                    line: 0,
+                    character: 0,
+                }
+            },
             first,
             summands: rest,
         };
+
+        const context = new ParseContext();
+        context.onNextToken = (token: Token) => {
+            callOnNextToken(existingContext, token);
+            sum.range.end = createLocation(token);
+        };
+
         return [sum, context];
     }
 } %}
@@ -561,7 +661,7 @@ nonEmptyStructStatements ->
 
 @{%
 
-function createUsing(struct: object, statementStartToken: Token, statementEndToken: Token) {
+function createUsing(struct: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'using',
         struct,
@@ -577,7 +677,7 @@ functionUsing ->
 
 @{%
 
-function createForEach(iterators: object[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createForEach(iterators: Record<string, any>[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
     return {
         type: 'forEach',
         iterators,
@@ -666,9 +766,10 @@ targetName ->
 
 @{%
 
-function createUserFunctionDeclaration(nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
+function createUserFunctionDeclaration(functionKeywordToken: Token, bodyBraceCloseToken: Token, nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
     return {
         type: 'userFunctionDeclaration',
+        range: createRange(functionKeywordToken, bodyBraceCloseToken),
         name: nameToken.value,
         nameRange: createRange(nameToken, tokenAfterName),
         parameters,
@@ -724,8 +825,8 @@ function createUserFunctionCallParameter(value: Record<string, any>) {
 
 # User functions
 userFunctionDeclaration ->
-    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, braceOpen, parameters, statements); } %}
-  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionName, space2,    parameters, statements); } %}
+    %keywordUserFunctionDeclaration whitespaceOrNewline %functionName                     %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName,         braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionKeyword, bodyBraceClose, functionName, braceOpen, parameters, statements); } %}
+  | %keywordUserFunctionDeclaration whitespaceOrNewline %functionName whitespaceOrNewline %parametersStart userFunctionDeclarationParams %parametersEnd functionBody {% ([functionKeyword, space1, functionName, space2, braceOpen, [parameters, context], braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createUserFunctionDeclaration(functionKeyword, bodyBraceClose, functionName, space2,    parameters, statements); } %}
 
 userFunctionDeclarationParams ->
     # Empty
@@ -776,11 +877,45 @@ functionPrint ->
   | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable                             %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context],         braceClose]) => { callOnNextToken(context, braceClose); return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
   | %keywordPrint optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline evaluatedVariable whitespaceOrNewline         %functionParametersEnd  {% ([functionName, space1, braceOpen, space2, [value, context], space3, braceClose]) => { callOnNextToken(context, space3);     return { type: 'print', value, range: createRangeEndInclusive(functionName, braceClose) }; } %}
 
-functionSettings -> %keywordSettings functionBody  {% ([functionName, [statements, bodyBraceOpen, bodyBraceClose]]) => { return { type: 'settings', statements }; } %}
+functionSettings -> %keywordSettings functionBody  {% ([functionName, [statements, bodyBraceOpen, bodyBraceClose]]) => { return { type: 'settings', range: createRangeEndInclusive(functionName, bodyBraceClose), statements }; } %}
 
 functionIf ->
     %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
   | %keywordIf optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline ifConditionExpression whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [condition, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return { type: 'if', condition, statements, range: createRangeEndInclusive(functionName, braceClose) }; } %}
+
+@{%
+
+function createOperator(operator: string, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
+    const operatorValue = operatorToken.value;
+
+    const operatorRange = createRange(operatorToken, operatorToken);
+    operatorRange.end.character += operatorValue.length;
+
+    const result = {
+        type: 'operator',
+        range: {
+            start: lhs.range.start,
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
+        operator,
+        lhs,
+        rhs,
+    };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
+}
+
+%}
 
 # Note on grouping (with `(...)`): grouping is always optional for boolean expressions (single booleans),
 # but is required for comparisions and presence-in-ArrayOfStrings when they are part of a compound expression.
@@ -788,49 +923,65 @@ ifConditionExpression ->
     # Single item
     ifConditionExpressionExceptOr  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
-  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('||', lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('||', lhs, rhs, rhsContext); } %}
 
 # Same as `ifConditionExpression` but it's part of a compund condition, so all paths use `ifConditionExpressionExceptOrInCompound`.
 ifConditionExpressionInCompound ->
     # Single item
     ifConditionExpressionExceptOrInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
-  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '||', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('||', lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('||', lhs, rhs, rhsContext); } %}
 
 ifConditionExpressionExceptOr ->
     # Single item
     ifConditionTermNotInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
-  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('&&', lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('&&', lhs, rhs, rhsContext); } %}
 
 # Same as `ifConditionExpressionExceptOr` but it's part of a compound condition, so all paths use `ifConditionTermInCompound`.
 ifConditionExpressionExceptOrInCompound ->
     # Single item
     ifConditionTermInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
-  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
-  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [{ type: 'operator', operator: '&&', lhs: lhs, rhs: rhs }, rhsContext]; } %}
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('&&', lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('&&', lhs, rhs, rhsContext); } %}
 
 @{%
 
-function createIfConditionComparison(operatorToken: Token, lhs: any, rhs: any) {
+function createIfConditionComparison(operatorToken: Token, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
     const operatorValue = operatorToken.value;
 
     const operatorRange = createRange(operatorToken, operatorToken);
     operatorRange.end.character += operatorValue.length;
 
-    return {
+    const result = {
         type: 'comparison',
+        range: {
+            start: lhs.range.start,
+            // Updated by the onNextToken callback
+            end: {
+                line: 0,
+                character: 0,
+            }
+        },
         operator: {
             value: operatorValue,
-            range: operatorRange
+            range: operatorRange,
         },
         lhs,
-        rhs
+        rhs,
     };
+
+    const context = new ParseContext();
+    context.onNextToken = (token: Token) => {
+        callOnNextToken(existingContext, token);
+        result.range.end = createLocation(token);
+    };
+
+    return [result, context];
 }
 
 %}
@@ -852,59 +1003,59 @@ ifConditionTermInCompound ->
 # A condition term that is a boolean expression (boolean literal or evaluated variable)
 ifConditionTermBoolean ->
     # Boolean expression: literal
-    bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
+    bool                                                        {% ([            [value, context]]) => [ { type: 'boolean', range: todo, value, invert: false }, context ] %}
     # Boolean expression: .Value
-  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', value, invert: false }, context ] %}
+  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'boolean', range: todo, value, invert: false }, context ] %}
     # Boolean expression: ! .Value
-  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', value, invert: true  }, context ] %}
+  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'boolean', range: todo, value, invert: true  }, context ] %}
 
 # A condition term that is a comparison or a check for presence-in-ArrayOfStrings
 #
 # Allow specifying more types than are allowed in comparisons, because we can give a better error in the evaluator than here.
 ifConditionTermComparisonOrPresenceInArrayOfStrings ->
     # Comparison: .Value1 == .Value2
-    summand                     %operatorEqual          optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+    summand                     %operatorEqual          optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorEqual          optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Comparison: .Value1 != .Value2
-  | summand                     %operatorNotEqual       optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorNotEqual       optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | summand                     %operatorNotEqual       optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorNotEqual       optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Comparison: .Value1 < .Value2
-  | summand                     %operatorLess           optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorLess           optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | summand                     %operatorLess           optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorLess           optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Comparison: .Value1 <= .Value2
-  | summand                     %operatorLessOrEqual    optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorLessOrEqual    optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | summand                     %operatorLessOrEqual    optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorLessOrEqual    optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Comparison: .Value1 > .Value2
-  | summand                     %operatorGreater        optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorGreater        optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | summand                     %operatorGreater        optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorGreater        optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Comparison: .Value1 >= .Value2
-  | summand                     %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
-  | summand whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return [ createIfConditionComparison(operator, lhs, rhs), rhsContext ]; } %}
+  | summand                     %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
+  | summand whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Presence in ArrayOfStrings: .Value1 in .Value2
-  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
-  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
+  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', range: todo, lhs, rhs, invert: false }, rhsContext ]; } %}
+  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', range: todo, lhs, rhs, invert: false }, rhsContext ]; } %}
     # Presence in ArrayOfStrings: .Value1 not in .Value2
-  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
-  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', range: todo, lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', range: todo, lhs, rhs, invert: true  }, rhsContext ]; } %}
 
-directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => { return { type: 'include', path }; } %}
+directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => { return { type: 'include', range: todo, path }; } %}
 
-directiveOnce -> %directiveOnce  {% () => { return { type: 'once' }; } %}
+directiveOnce -> %directiveOnce  {% () => { return { type: 'once', range: todo }; } %}
 
 directiveIf ->
     %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements,                                        directiveEndIf]) => {
         callOnNextToken(context, space2);
-        return { type: 'directiveIf', condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf)};
+        return { type: 'directiveIf', range: todo, condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf)};
     } %}
   | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => {
         callOnNextToken(context, space2);
-        return { type: 'directiveIf', condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf)};
+        return { type: 'directiveIf', range: todo, condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf)};
     } %}
 
 # Like `directIf` but the contents can only be `arrayContents`.
 directiveIfContainingArrayContents ->
-    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', range: todo, condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', range: todo, condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
 
 # Returns [or-expression, context]
 directiveIfConditionOrExpression ->

@@ -164,7 +164,10 @@ function createWholeDocumentRange(): ParseSourceRange {
     return createRange(0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
 }
 
-export type Statement = Record<string, any>;
+export interface Statement extends Record<string, any> {
+    type: string;
+    range: ParseSourceRange;
+}
 
 export class ParseError extends Error {
     constructor(readonly message: string, readonly fileUri: UriStr, readonly range: ParseSourceRange) {
