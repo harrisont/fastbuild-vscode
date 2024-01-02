@@ -31,6 +31,16 @@
 				"--require", "source-map-support/register",
 			],
 			"preLaunchTask": "build"
+		},
+		{
+			"name": "Build Grammar",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/server/node_modules/nearley/bin/nearleyc.js",
+			"args": [
+				"server/src/fbuild-grammar.ne",
+				"--out", "server/src/fbuild-grammar.ts",
+			],
 		}
 	],
 	"compounds": [
