@@ -264,13 +264,24 @@ function createRangeEndInclusive(tokenStart: Token, tokenEnd: Token): SourceRang
     };
 }
 
-// Creates a range from token's location (inclusive) to the end of the token.
+// Creates a range from token's location (inclusive) to the end of the token (inclusive).
 function createRangeFromToken(token: Token): SourceRange {
     return {
         start: createLocation(token),
         end: {
             line: token.line - 1,
-            character: token.col - 1 + token.value.length,
+            character: token.col + token.value.length,
+        },
+    };
+}
+
+// Creates a range from `startToken`'s location (inclusive) to the end of `endToken` (inclusive).
+function createRangeFromStartTokenThroughEndToken(startToken: Token, endToken: Token) {
+    return {
+        start: createLocation(startToken),
+        end: {
+            line: endToken.line - 1,
+            character: endToken.col + endToken.value.length,
         },
     };
 }
@@ -1066,10 +1077,9 @@ function createInclude(includeToken: Token, path: Record<string, any>) {
 
 directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral  {% ([include, space, path]) => createInclude(include, path) %}
 
-
 @{%
 
-function createOnce(onceToken: Token) {
+function createDirectiveOnce(onceToken: Token) {
     return {
         type: 'once',
         range: createRangeFromToken(onceToken),
@@ -1078,22 +1088,42 @@ function createOnce(onceToken: Token) {
 
 %}
 
-directiveOnce -> %directiveOnce  {% ([once]) => createOnce(once) %}
+directiveOnce -> %directiveOnce  {% ([once]) => createDirectiveOnce(once) %}
+
+@{%
+
+function createDirectiveIf(
+  startToken: Token,
+  endToken: Token,
+  condition: any[],
+  ifStatements: Record<string, any>[],
+  elseStatements: Record<string, any>[])
+{
+    return {
+        type: 'directiveIf',
+        range: createRangeFromStartTokenThroughEndToken(startToken, endToken),
+        condition,
+        ifStatements,
+        elseStatements,
+    };
+}
+
+%}
 
 directiveIf ->
     %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements,                                        directiveEndIf]) => {
         callOnNextToken(context, space2);
-        return { type: 'directiveIf', range: todo, condition, ifStatements, elseStatements: [], rangeStart: createLocation(directiveIf)};
+        createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, [] /*elseStatements*/)
     } %}
   | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => {
         callOnNextToken(context, space2);
-        return { type: 'directiveIf', range: todo, condition, ifStatements, elseStatements    , rangeStart: createLocation(directiveIf)};
+        createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, elseStatements)
     } %}
 
 # Like `directIf` but the contents can only be `arrayContents`.
 directiveIfContainingArrayContents ->
-    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveEndIf);                                                        return { type: 'directiveIf', range: todo, condition, ifStatements: ifContents, elseStatements: [],           rangeStart: createLocation(directiveIf) }; } %}
-  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return { type: 'directiveIf', range: todo, condition, ifStatements: ifContents, elseStatements: elseContents, rangeStart: createLocation(directiveIf) }; } %}
+    %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents                                                                     %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext],                                                             directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveEndIf);                                                        return createDirectiveIf(directiveIf, directiveEndIf, condition, ifContents, [] /*elseStatements*/ } %}
+  | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline arrayContents %directiveElse %optionalWhitespaceAndMandatoryNewline arrayContents %directiveEndIf  {% ([directiveIf, space1, [condition, conditionContext], space2, [ifContents, ifContentsContext], directiveElse, space3, [elseContents, elseContentsContext], directiveEndIf]) => { callOnNextToken(conditionContext, space2); callOnNextToken(ifContentsContext, directiveElse );  callOnNextToken(elseContentsContext, directiveEndIf); return createDirectiveIf(directiveIf, directiveEndIf, condition, ifContents, elseContents          } %}
 
 # Returns [or-expression, context]
 directiveIfConditionOrExpression ->

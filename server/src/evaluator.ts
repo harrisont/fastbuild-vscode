@@ -605,7 +605,6 @@ interface DirectiveIfConditionTermOrNot {
 interface ParsedStatementDirectiveIf {
     type: 'directiveIf';
     range: ParseSourceRange;
-    rangeStart: SourcePosition;
     // An array of AND statements OR'd together
     condition: Array<Array<DirectiveIfConditionTermOrNot>>;
     ifStatements: Statement[];
