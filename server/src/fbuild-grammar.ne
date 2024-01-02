@@ -907,12 +907,7 @@ functionIf ->
 
 @{%
 
-function createOperator(operator: string, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
-    const operatorValue = operatorToken.value;
-
-    const operatorRange = createRange(operatorToken, operatorToken);
-    operatorRange.end.character += operatorValue.length;
-
+function createOperator(operatorToken: Token, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
     const result = {
         type: 'operator',
         range: {
@@ -923,7 +918,7 @@ function createOperator(operator: string, lhs: Record<string, any>, rhs: any, ex
                 character: 0,
             }
         },
-        operator,
+        operator: operatorToken.value,
         lhs,
         rhs,
     };
@@ -974,11 +969,6 @@ ifConditionExpressionExceptOrInCompound ->
 @{%
 
 function createIfConditionComparison(operatorToken: Token, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
-    const operatorValue = operatorToken.value;
-
-    const operatorRange = createRange(operatorToken, operatorToken);
-    operatorRange.end.character += operatorValue.length;
-
     const result = {
         type: 'comparison',
         range: {
@@ -990,8 +980,8 @@ function createIfConditionComparison(operatorToken: Token, lhs: Record<string, a
             }
         },
         operator: {
-            value: operatorValue,
-            range: operatorRange,
+            value: operatorToken.value,
+            range: createRangeFromToken(operatorToken),
         },
         lhs,
         rhs,
