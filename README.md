@@ -28,7 +28,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
 
 ### Hover to see variable value
 
-Hover over a variable to show a tooltip with its evaulated value. For example, the `Message` or `Location` variables in `.Message = 'Hello $Location$'`. If a variable is evaluated multiple times, like from a `ForEach` loop, it will show the deduplicated values.
+Hover over a variable to show a tooltip with its evaluated value. For example, the `Message` or `Location` variables in `.Message = 'Hello $Location$'`. If a variable is evaluated multiple times, like from a `ForEach` loop, it will show the deduplicated values.
 
 ![Demo - hover variables](https://user-images.githubusercontent.com/144260/229382487-fedbe466-5e2f-449c-b184-8b38f97fec48.gif)
 

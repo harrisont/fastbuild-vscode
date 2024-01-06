@@ -708,7 +708,7 @@ describe('parser', () => {
         ]);
     });
 
-    it('should work on assigning a string literal with an escaped variable delimeter', () => {
+    it('should work on assigning a string literal with an escaped variable delimiter', () => {
         const input = `.MyVar = 'h^$i'`;
         assertParseResultsEqual(input, [
             {
@@ -1877,7 +1877,7 @@ Expecting to see one of the following:
         ]);
     });
 
-    it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+    it('adding multiple string literals should use the last referenced variable if none is specified', () => {
         const input = `
             .MyMessage = 'hello'
                        + ' world'
@@ -1924,7 +1924,7 @@ Expecting to see one of the following:
         ]);
     });
 
-    it('adding mulitple string literals on the same line should use the last referenced variable', () => {
+    it('adding multiple string literals on the same line should use the last referenced variable', () => {
         const input = `.MyVar = 'hello' + ' world'+'!'
         `;
         assertParseResultsEqual(input, [
@@ -1969,7 +1969,7 @@ Expecting to see one of the following:
         ]);
     });
 
-    it('adding and subtracting mulitple string literals should use the last referenced variable if none is specified', () => {
+    it('adding and subtracting multiple string literals should use the last referenced variable if none is specified', () => {
         const input = `
             .MyMessage = 'hello world!'
                        - ' world'

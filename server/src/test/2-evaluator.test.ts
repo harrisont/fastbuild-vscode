@@ -320,7 +320,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1, 2, 2]);
         });
 
-        it('should not be able to read a non-existant variable in a parent scope', () => {
+        it('should not be able to read a non-existent variable in a parent scope', () => {
             const input = `
                 {
                     .Var1 = 0
@@ -331,7 +331,7 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 26, 3, 31));
         });
 
-        it('should not be able to write a non-existant variable in a parent scope', () => {
+        it('should not be able to write a non-existent variable in a parent scope', () => {
             const input = `
                 {
                     .Var1 = 0
@@ -342,7 +342,7 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 25));
         });
 
-        it('should not be able to read a non-existant variable from the parent of the root scope ', () => {
+        it('should not be able to read a non-existent variable from the parent of the root scope ', () => {
             const input = `
                 .Var1 = 0
                 Print(^Var1)
@@ -351,7 +351,7 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 22, 2, 27));
         });
 
-        it('should not be able to write a non-existant variable from the parent of the root scope ', () => {
+        it('should not be able to write a non-existent variable from the parent of the root scope ', () => {
             const input = `
                 .Var1 = 0
                 ^Var1 = 1
@@ -376,7 +376,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, [1, 2, 2, 3, 3, 1]);
         });
 
-        it('should correctly evaulate an empty string literal', () => {
+        it('should correctly evaluate an empty string literal', () => {
             const input = `
                 .MyVar = ''
                 Print(.MyVar)
@@ -1016,7 +1016,7 @@ describe('evaluator', () => {
             assertEvaluatedVariablesValueEqual(input, ['hello world']);
         });
 
-        it('adding mulitple string literals should use the last referenced variable if none is specified', () => {
+        it('adding multiple string literals should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyMessage = 'hello'
                             + ' world'
@@ -1040,7 +1040,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('adding mulitple evaluated variables should use the last referenced variable if none is specified', () => {
+        it('adding multiple evaluated variables should use the last referenced variable if none is specified', () => {
             const input = `
                 .MyVar1 = 'world'
                 .MyVar2 = '!'
@@ -1078,7 +1078,7 @@ describe('evaluator', () => {
                     .MyMessage + ' world'
                 }
             `;
-            const expectedErrorMessage = 'Referencing varable "MyMessage" that is not defined in the current scope.';
+            const expectedErrorMessage = 'Referencing variable "MyMessage" that is not defined in the current scope.';
             assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 20, 2, 30));
         });
 
@@ -1093,7 +1093,7 @@ describe('evaluator', () => {
             assertEvaluationError(input, expectedErrorMessage, createParseRange(3, 20, 3, 30));
         });
 
-        it('adding to a current-scope non-existant, parent-scope existant, current-scope variable defines it in the current scope to be the sum', () => {
+        it('adding to a current-scope non-existent, parent-scope existent, current-scope variable defines it in the current scope to be the sum', () => {
             const input = `
                 .MyMessage = 'hello'
                 {
@@ -1109,7 +1109,7 @@ describe('evaluator', () => {
         });
 
         // Similar to the above test, but in a loop
-        it('in a loop, adding to a current-scope non-existant, parent-scope existant, current-scope variable redefines it each time in the current scope to be the sum', () => {
+        it('in a loop, adding to a current-scope non-existent, parent-scope existent, current-scope variable redefines it each time in the current scope to be the sum', () => {
             const input = `
                 .MyArray = {'a', 'b', 'c'}
                 .MyMessage = 'Base'
@@ -1128,7 +1128,7 @@ describe('evaluator', () => {
             ]);
         });
 
-        it('adding to a current-scope non-existant, parent-scope existant, current-scope struct variable defines it in the current scope to be the sum', () => {
+        it('adding to a current-scope non-existent, parent-scope existent, current-scope struct variable defines it in the current scope to be the sum', () => {
             const input = `
                 .MyMessage = 'hello'
                 .MyStruct = [
@@ -2204,7 +2204,7 @@ describe('evaluator', () => {
         });
 
         // 'Using' defines the struct variables if they do not already exist,
-        // references the previous defintion if it does already exist,
+        // references the previous definition if it does already exist,
         // and references the struct variables.
         it('Using has correct definitions and references', () => {
             const input = `
@@ -2796,7 +2796,7 @@ describe('evaluator', () => {
                     1,
                 ];
 
-                // Ensure that the non-proprety body is evaluated.
+                // Ensure that the non-property body is evaluated.
                 assert.deepStrictEqual(actualValues.slice(0,expectedValuesWithoutProperties.length), expectedValuesWithoutProperties);
             });
         }
@@ -5471,7 +5471,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('true && true evaulates to true', () => {
+        it('true && true evaluates to true', () => {
             const input = `
                 #if ${builtInDefine} && ${builtInDefine}
                     .Value = true
@@ -5480,7 +5480,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('true && false evaulates to false', () => {
+        it('true && false evaluates to false', () => {
             const input = `
                 #if ${builtInDefine} && !${builtInDefine}
                     .Value = true
@@ -5489,7 +5489,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('false && true evaulates to false', () => {
+        it('false && true evaluates to false', () => {
             const input = `
                 #if !${builtInDefine} && ${builtInDefine}
                     .Value = true
@@ -5498,7 +5498,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('false && false evaulates to false', () => {
+        it('false && false evaluates to false', () => {
             const input = `
                 #if !${builtInDefine} && !${builtInDefine}
                     .Value = true
@@ -5507,7 +5507,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('true || true evaulates to true', () => {
+        it('true || true evaluates to true', () => {
             const input = `
                 #if ${builtInDefine} || ${builtInDefine}
                     .Value = true
@@ -5516,7 +5516,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('true || false evaulates to true', () => {
+        it('true || false evaluates to true', () => {
             const input = `
                 #if ${builtInDefine} || !${builtInDefine}
                     .Value = true
@@ -5525,7 +5525,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('false || true evaulates to true', () => {
+        it('false || true evaluates to true', () => {
             const input = `
                 #if !${builtInDefine} || ${builtInDefine}
                     .Value = true
@@ -5534,7 +5534,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('false || false evaulates to false', () => {
+        it('false || false evaluates to false', () => {
             const input = `
                 #if !${builtInDefine} || !${builtInDefine}
                     .Value = true
@@ -5543,7 +5543,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, []);
         });
 
-        it('false && false || true evaulates to true (&& takes precedence over ||) variation 1', () => {
+        it('false && false || true evaluates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
                 #if !${builtInDefine} && !${builtInDefine} || ${builtInDefine}
                     .Value = true
@@ -5552,7 +5552,7 @@ Expecting to see the following:
             assertEvaluatedVariablesValueEqual(input, [true]);
         });
 
-        it('true || false && false evaulates to true (&& takes precedence over ||) variation 1', () => {
+        it('true || false && false evaluates to true (&& takes precedence over ||) variation 1', () => {
             const input = `
                 #if ${builtInDefine} || !${builtInDefine} && !${builtInDefine}
                     .Value = true

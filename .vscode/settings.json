@@ -11,8 +11,18 @@
 	"editor.renderFinalNewline": "dimmed",
 	"files.insertFinalNewline": true,
 	"cSpell.words": [
+		"Aumid",
+		"Bobo",
+		"Datas",
+		"nearley",
+		"pbxproj",
 		"Rosco",
 		"struct",
-		"structs"
+		"structs",
+		"summands",
+		"Toolset",
+		"undefining",
+		"vcxproject",
+		"xcodeproj"
 	]
 }

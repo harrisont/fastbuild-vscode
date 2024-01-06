@@ -35,6 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'fastbuild' }],
+        // cSpell:ignore clientrc
         //synchronize: {
         //	// Notify the server about file changes to '.clientrc files contained in the workspace
         //	fileEvents: workspace.createFileSystemWatcher('**/.clientrc')

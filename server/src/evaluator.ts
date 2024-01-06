@@ -280,14 +280,14 @@ interface ParsedVariableDefinitionLhs {
     range: ParseSourceRange;
 }
 
-interface ParsedStatementVariableDefintion {
+interface ParsedStatementVariableDefinition {
     type: 'variableDefinition';
     lhs: ParsedVariableDefinitionLhs;
     rhs: any;
 }
 
-function isParsedStatementVariableDefintion(obj: Record<string, any>): obj is ParsedStatementVariableDefintion {
-    return (obj as ParsedStatementVariableDefintion).type === 'variableDefinition';
+function isParsedStatementVariableDefinition(obj: Record<string, any>): obj is ParsedStatementVariableDefinition {
+    return (obj as ParsedStatementVariableDefinition).type === 'variableDefinition';
 }
 
 interface ParsedStatementBinaryOperator {
@@ -433,8 +433,8 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
 interface ParsedIfConditionOperatorAnd {
     type: 'operator';
     operator: '&&';
-    lhs: ParsedIfCondtion;
-    rhs: ParsedIfCondtion;
+    lhs: ParsedIfCondition;
+    rhs: ParsedIfCondition;
 }
 
 function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is ParsedIfConditionOperatorAnd {
@@ -445,8 +445,8 @@ function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is Parsed
 interface ParsedIfConditionOperatorOr {
     type: 'operator';
     operator: '||';
-    lhs: ParsedIfCondtion;
-    rhs: ParsedIfCondtion;
+    lhs: ParsedIfCondition;
+    rhs: ParsedIfCondition;
 }
 
 function isParsedIfConditionOperatorOr(obj: Record<string, any>): obj is ParsedIfConditionOperatorOr {
@@ -454,12 +454,12 @@ function isParsedIfConditionOperatorOr(obj: Record<string, any>): obj is ParsedI
     return castObj.type === 'operator' && castObj.operator === '||';
 }
 
-type ParsedIfCondtion = ParsedIfConditionBoolean | ParsedIfConditionComparison | ParsedIfConditionIn | ParsedIfConditionOperatorAnd | ParsedIfConditionOperatorOr;
+type ParsedIfCondition = ParsedIfConditionBoolean | ParsedIfConditionComparison | ParsedIfConditionIn | ParsedIfConditionOperatorAnd | ParsedIfConditionOperatorOr;
 
 interface ParsedStatementIf {
     type: 'if';
     range: ParseSourceRange;
-    condition: ParsedIfCondtion;
+    condition: ParsedIfCondition;
     statements: Statement[];
 }
 
@@ -762,7 +762,7 @@ class ScopeStack {
     getVariableInCurrentScopeOrError(variableName: string, variableRange: SourceRange): Maybe<ScopeVariable> {
         const maybeVariable = this.getVariableInCurrentScope(variableName);
         if (maybeVariable === null) {
-            return Maybe.error(new EvaluationError(variableRange, `Referencing varable "${variableName}" that is not defined in the current scope.`, []));
+            return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" that is not defined in the current scope.`, []));
         } else {
             return Maybe.ok(maybeVariable);
         }
@@ -926,7 +926,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
         for (const statement of statements) {
             let statementLhs: VariableAndEvaluatedVariable | null = null;
 
-            if (isParsedStatementVariableDefintion(statement)) {
+            if (isParsedStatementVariableDefinition(statement)) {
                 const maybeStatementLhs = evaluateStatementVariableDefinition(statement, context);
                 if (maybeStatementLhs.hasError) {
                     return maybeStatementLhs.getError();
@@ -1038,7 +1038,7 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
 }
 
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
-function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefintion, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefinition, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
     const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
     if (maybeEvaluatedRhs.hasError) {
         return Maybe.error(maybeEvaluatedRhs.getError());
@@ -1142,7 +1142,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
 
     let lhsVariable: ScopeVariable;
     let maybeExistingVariableStartingFromParentScope: ScopeVariable | null;
-    // Adding to a current-scope non-existant, parent-scope existant variable defines it in the current scope to be the sum.
+    // Adding to a current-scope non-existent, parent-scope existent variable defines it in the current scope to be the sum.
     if (lhs.scope === 'current'
         && context.scopeStack.getVariableInCurrentScope(evaluatedLhsName.value) === null
         && (maybeExistingVariableStartingFromParentScope = context.scopeStack.getVariableStartingFromCurrentScope(evaluatedLhsName.value)) !== null)
@@ -1292,7 +1292,7 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
 
         context.evaluatedData.variableReferences.push(
             // The `Using` statement references the variable definition being set to the new value,
-            // which is either the existing definition, if one exists, or the new defintion otherwise.
+            // which is either the existing definition, if one exists, or the new definition otherwise.
             {
                 definitions: variableDefinitions,
                 range: statementRange,
@@ -1304,7 +1304,7 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
             },
         );
         // The struct's member's definition references the variable definition being set to the new value,
-        // which is either the existing definition, if one exists, or the new defintion otherwise.
+        // which is either the existing definition, if one exists, or the new definition otherwise.
         for (const structMemberDefinition of structMember.definitions) {
             context.evaluatedData.variableReferences.push({
                 definitions: variableDefinitions,
@@ -1414,7 +1414,7 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
         return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []);
     }
 
-    // Ensure that this doesn't resuse an existing target name.
+    // Ensure that this doesn't reuse an existing target name.
     const existingTargetDefinition = context.evaluatedData.targetDefinitions.get(evaluatedTargetName.value);
     if (existingTargetDefinition !== undefined) {
         const existingTargetDefinitionInfo: ErrorRelatedInformation = {
@@ -2213,7 +2213,7 @@ function inPlaceSubtract(existingValue: Value, valueToSubtract: Value, subtracti
 }
 
 function evaluateIfCondition(
-    condition: ParsedIfCondtion,
+    condition: ParsedIfCondition,
     context: EvaluationContext,
     statementRange: SourceRange
 ): Maybe<EvaluatedCondition>
@@ -2419,10 +2419,10 @@ function evaluateDirectiveIfCondition(
             const term = conditionTermOrNot.term;
             const invert = conditionTermOrNot.invert;
             const termRange = new SourceRange(context.thisFbuildUri, term.range);
-            let evaulatedTerm = false;
+            let evaluatedTerm = false;
             if (isParsedDirectiveIfConditionTermIsSymbolDefined(term)) {
                 const info = context.defines.get(term.symbol);
-                evaulatedTerm = (info !== undefined);
+                evaluatedTerm = (info !== undefined);
                 if (info !== undefined && !info.isPredefined) {
                     const reference: VariableReference = {
                         definitions: [info.definition],
@@ -2433,20 +2433,20 @@ function evaluateDirectiveIfCondition(
             } else if (isParsedDirectiveIfConditionTermEnvVarExists(term)) {
                 const envVarValue = process.env[term.envVar];
                 const hasEnvVar = (envVarValue !== undefined);
-                evaulatedTerm = hasEnvVar;
+                evaluatedTerm = hasEnvVar;
             } else if (isParsedDirectiveIfConditionTermFileExists(term)) {
                 const fileUri = convertFileSystemPathToUri(term.filePath.value, context.thisFbuildUri);
-                evaulatedTerm = context.fileSystem.fileExists(fileUri);
+                evaluatedTerm = context.fileSystem.fileExists(fileUri);
             } else {
                 return Maybe.error(new InternalEvaluationError(termRange, `Unknown '#if' term type from term '${JSON.stringify(term)}' from statement ${JSON.stringify(statement)}`));
             }
 
             if (invert) {
-                evaulatedTerm = !evaulatedTerm;
+                evaluatedTerm = !evaluatedTerm;
             }
 
             // All parts of the AND expression must be true for the expression to be true.
-            if (!evaulatedTerm) {
+            if (!evaluatedTerm) {
                 andExpressionResult = false;
                 break;
             }

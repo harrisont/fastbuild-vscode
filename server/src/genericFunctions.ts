@@ -33,6 +33,7 @@ export const GENERIC_FUNCTION_METADATA_BY_NAME = new Map<PropertyName, GenericFu
                 isRequired: true,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore libcmt
                 documentation: `One or more targets must be provided, either as a string or an array of strings. Targets can be previously
 defined nodes, or files external to the build process.
 
@@ -47,6 +48,7 @@ Example:
                 isRequired: false,
                 defaultDescription: 'false',
                 types: new Set<ValueType>([ValueType.Boolean]),
+                // cSpell:ignore showtargets
                 documentation: `Hide a target from -showtargets`,
             }]
         ]),
@@ -64,6 +66,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '{}',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore behaviour, subdir, msvcrt
                 documentation: `Additional files (usually dlls) required by the compiler.
 
 For distributed compilation, the specified files will also be synchronized to the remote machine. The relative location of the source files controls how they will be mirrored on the remote machine. Files in 'ExtraFiles' in the same directory or in sub-directories under the primary 'Executable' will be placed in the same relative location on the remote machine. 'ExtraFiles' in other folders will be placed at the same level as the executable.
@@ -74,7 +77,7 @@ Compiler( 'Test' )
 {
   .Executable	= 'C:\\compiler\\compiler.exe'       // dest: compiler.exe
   .ExtraFiles = { 'C:\\compiler\\subdir\\helper.dll'  // dest: subdir/helper.exe
-                  'C:\\cruntime\\mvscrt.dll'         // dest: msvcrt.dll
+                  'C:\\cruntime\\msvcrt.dll'         // dest: msvcrt.dll
 }
 \`\`\``,
             }],
@@ -82,11 +85,12 @@ Compiler( 'Test' )
                 isRequired: false,
                 defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore msvc, codewarrior,greenhills, wiiu, cuda, nvcc, vbcc, orbis, psslc
                 documentation: `Explicitly specify compiler type
 
 By default, FASTBuild will detect the compiler type based on the executable name. The .CompilerFamily property allows you to explicitly control the compiler type instead. This can be useful for:
 * custom variants of compilers with unique naming
-* custom exeutables used as compilers
+* custom executables used as compilers
 
 The following values are supported:
 
@@ -125,7 +129,7 @@ The following values are supported:
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Override default path for executable distribution
 
-When a compiler is distributed the .Compiler and .ExtraFiles hierarchy is replicated on the remote machine as documented above (see .ExtraFiles). The base path for this replication can be overriden by setting the .ExectuableRootPath property, allowing more flexibility in how the file hierarchy is replicated on the remote host.`,
+When a compiler is distributed the .Compiler and .ExtraFiles hierarchy is replicated on the remote machine as documented above (see .ExtraFiles). The base path for this replication can be overridden by setting the .ExecutableRootPath property, allowing more flexibility in how the file hierarchy is replicated on the remote host.`,
             }],
             ['SimpleDistributionMode', {
                 isRequired: false,
@@ -169,6 +173,7 @@ Use of Response Files in all cases can be forced with .ForceResponseFile if requ
                 isRequired: false,
                 defaultDescription: 'true',
                 types: new Set<ValueType>([ValueType.Boolean]),
+                // cSpell:ignore frewrite
                 documentation: `Use Clang's -frewrite-includes option when preprocessing
 
 FASTBuild uses the -E preprocessor option when compiling with Clang to preprocess the source code. In order to improve consistency between this preprocessed source and the original source, FASTBuild also uses the -frewrite-includes option by default. An example of this improved consistency is that compiler errors originating from macros will have the caret point to the correct column location of the source code instead of the column location where the error would be in the expanded macro.
@@ -195,6 +200,7 @@ To maintain backwards compatibility, this option is disabled by default and must
                 isRequired: false,
                 defaultDescription: 'false',
                 types: new Set<ValueType>([ValueType.Boolean]),
+                // cSpell:ignore dateorder, enummdateorder
                 documentation: `Enable work-around for bug in VS2012 compiler
 
 NOTE: This option incurs a minor build time cost that impacts compile times.
@@ -269,6 +275,7 @@ NOTE: This feature is incomplete and should not be used.`,
                 isRequired: false,
                 defaultDescription: 'false',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore fdebug, fmacro
                 documentation: `Use Clang's -fdebug-source-map option to remap source files
 
 Provides a new root to remap source file paths to so they are recorded in the debugging information as if they were stored under the new root. For example, if $_WORKING_DIR_$ is "/path/to/original", a source file "src/main.cpp" would normally be recorded as being stored under "/path/to/original/src/main.cpp", but with .SourceMapping_Experimental='/another/root' it would be recorded as "/another/root/src/main.cpp" instead.
@@ -283,7 +290,7 @@ NOTE: Paths expanded from the __FILE__ macro are not remapped because that requi
 
 NOTE: Only one mapping can be provided, and the source directory for the mapping is always $_WORKING_DIR_$.
 
-NOTE: This option currently inhibits dsitributed compilation. This will be resolved in a future release.`,
+NOTE: This option currently inhibits distributed compilation. This will be resolved in a future release.`,
             }],
             ['ClangFixupUnity_Disable', {
                 isRequired: false,
@@ -450,6 +457,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore badfiles
                 documentation: `Source directories to ignore when recursing
 
 An optional list of source directories to ignore during the CopyDir() operation.
@@ -620,6 +628,7 @@ For files which are present before the build starts (i.e. always on disk, or gen
                 isRequired: false,
                 defaultDescription: '"auto"',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore exlr
                 documentation: `Specify the linker type. Valid options include: auto, msvc, gcc, snc-ps3, clang-orbis, greenhills-exlr, codewarrior-ld
 
 Default is 'auto' (use the linker executable name to detect)`,
@@ -1000,7 +1009,7 @@ Default is 'auto' (use the librarian executable name to detect)`,
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
-                documentation: `ObjectList(s) whos output should be used as an input`,
+                documentation: `ObjectList(s) who's output should be used as an input`,
             }],
             ['AllowCaching', {
                 isRequired: false,
@@ -1206,7 +1215,7 @@ If not set, librarian uses .Environment from your Settings node`,
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
-                documentation: `ObjectList(s) whos output should be used as an input`,
+                documentation: `ObjectList(s) who's output should be used as an input`,
             }],
             ['AllowCaching', {
                 isRequired: false,
@@ -1739,6 +1748,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore resx, natvis
                 documentation: `Extensions to allow in path searches
 
 Filter for file type(s) to include in the project.
@@ -1887,6 +1897,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore myproj
                 documentation: `References to projects (e.g. "myproj.csproj|{guid}")
 
 Add explicit references to projects not generated by FASTBuild. If your Visual Studio Solution mixes generated and manually created project files, you can set explicit references to them.
@@ -2120,6 +2131,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore isystem, imsvc, idirafter, iquote
                 documentation: `Include search paths.
 
 Include search paths for Intellisense can be manually specified. If the .Target for a configuration is specified, this will be populated automatically by detecting use of /I, -I, -isystem, -isystem-after, /imsvc, -imsvc, -idirafter, -iquote, /external:I or -external:I in the compiler command line. Manual specification will override the automated detection.
@@ -2187,7 +2199,7 @@ Example:
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `Executable to launch when debugging.
 
-Explicitly specify the executable to launch when debugging. The LocalDebuggerCommand property of a Visual Studio project is usually set automatically by FASTBuild (extracted from the .Target specified per build configuration), but can be explicitily set via .LocalDebuggerCommand if desired.
+Explicitly specify the executable to launch when debugging. The LocalDebuggerCommand property of a Visual Studio project is usually set automatically by FASTBuild (extracted from the .Target specified per build configuration), but can be explicitly set via .LocalDebuggerCommand if desired.
 
 Example:
 \`\`\`FASTBuild
@@ -2231,6 +2243,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore myexe
                 documentation: `Executable to launch when debugging remotely.
 
 Specify the executable to launch when debugging remotely, when using the Windows Subsystem for Linux for example.
@@ -2386,6 +2399,7 @@ Example:
                 isRequired: true,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore wixproj
                 documentation: `Path to project file
 
 The location of the external, "foreign" .???proj file.
@@ -2401,7 +2415,7 @@ Example:
                 types: new Set<ValueType>([ValueType.String]),
                 documentation: `(only when avoiding external module) Project Guid
 
-(only if the value parsed by the external [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor) should be preceeded)
+(only if the value parsed by the external [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor) should be preceded)
 
 The actual project GUID exactly as found in the external, "foreign" .???proj file.
 
@@ -2414,6 +2428,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String]),
+                // cSpell:ignore guids, hkcu
                 documentation: `(only when avoiding external module) Project Type Guid
 
 (Should not be given if using [VSProjTypeExtractor](https://github.com/lucianm/VSProjTypeExtractor))
@@ -2887,7 +2902,7 @@ If not specified, the default will be used:
 \`\`\`
 
 * FASTBUILD_TARGET is a special per-configuration symbol that will be replaced (by XCode) with the .Target being compiled. FASTBuild automatically defines this symbol correctly for each build configuration.
-* Note that the $ is escaped so that it's not interpretted by FASTBuild as the beginning of a variable substitution.`,
+* Note that the $ is escaped so that it's not interpreted by FASTBuild as the beginning of a variable substitution.`,
             }],
             ['XCodeBuildWorkingDir', {
                 isRequired: false,
@@ -2913,7 +2928,7 @@ If not specified, the default will be used:
                 types: new Set<ValueType>([ValueType.Boolean]),
                 documentation: `Enable "Document Versioning"
 
-Controls whether the "Document Versionsing" checkbox is enabled.
+Controls whether the "Document Versioning" checkbox is enabled.
 
 By default (non-FASTBuild) XCode projects have this option set, which causes XCode to pass additional args on the command line to the process when debugging. This is usually not desired, so FASTBuild suppresses this by default. The option can be re-enabled if needed.
 
@@ -2926,6 +2941,7 @@ Example:
                 isRequired: false,
                 defaultDescription: '',
                 types: new Set<ValueType>([ValueType.String, ValueType.ArrayOfStrings]),
+                // cSpell:ignore xcscheme
                 documentation: `Enabled command line options for debug
 
 Specify command line arguments passed to the process when debugging.

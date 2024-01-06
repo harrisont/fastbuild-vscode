@@ -233,7 +233,7 @@ function createParseErrorFromNearlyParseError(
     //     ...
     const match = nearlyParseError.message.match(/(?:(?:invalid syntax)|(?:Syntax error)) at line (\d+) col (\d+):\n\n(.+)\r?\n.+\n(.+) Instead, I was expecting to see one of the following:\n((?:.|\n)+)/);
     if (match !== null) {
-        // Subtract 1 from the postition because VS Code positions are 0-based, but Nearly is 1-based.
+        // Subtract 1 from the position because VS Code positions are 0-based, but Nearly is 1-based.
         const lineNum = parseInt(match[1]) - 1;
         const characterNum = parseInt(match[2]) - 1;
         const range = createRange(lineNum, characterNum, lineNum, characterNum + 1);

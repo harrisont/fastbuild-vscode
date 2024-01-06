@@ -58,10 +58,10 @@ flowchart TB
             FileUpdate -->|11. Cache| EvaluatedDataCache[(Evaluated data cache)]
 
             subgraph FeatureProviders[Feature providers]
-                HoverProvider
-                DefinitionProvider
-                ReferenceProvider
                 DiagnosticProvider
+                HoverProvider
+                Other["...other providers..."]:::justText
+                classDef justText stroke-width:0px,fill:#333
             end
             FeatureProviders --> EvaluatedDataCache
 
@@ -75,7 +75,7 @@ flowchart TB
     style FeatureProviders fill:#333
 ```
 
-1. The [Nearley](https://nearley.js.org/) parser generator compiles [fbuild-grammar.ne](server/src/fbuild-grammar.ne) into `fbuild-grammar.ts`. This compiled grammer is used later to parse `.bff` files. The parsing lexes using [Moo](https://github.com/no-context/moo).
+1. The [Nearley](https://nearley.js.org/) parser generator compiles [fbuild-grammar.ne](server/src/fbuild-grammar.ne) into `fbuild-grammar.ts`. This compiled grammar is used later to parse `.bff` files. The parsing lexes using [Moo](https://github.com/no-context/moo).
    * [Nearley Parser Playground](https://omrelli.ug/nearley-playground/)
    * Example: [Moo.js Tokenizer with Nearley.js](https://www.youtube.com/watch?v=GP91_duEmk8)
 2. The extension has a language [server](server/src/server.ts) and [client](client/src/extension.ts). They communicate using the Language Server Protocol. The [client](client/src/extension.ts) sends the server a message that a file has changed.
