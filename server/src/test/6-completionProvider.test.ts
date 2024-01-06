@@ -90,6 +90,7 @@ Alias('MyTargetName')
                         kind: CompletionItemKind.Variable,
                         documentation: {
                             kind: 'markdown',
+                            // cSpell:ignore libcmt
                             value: `**String/ArrayOfStrings (Required)**
 
 One or more targets must be provided, either as a string or an array of strings. Targets can be previously
@@ -110,6 +111,7 @@ Example:
                         kind: CompletionItemKind.Variable,
                         documentation: {
                             kind: 'markdown',
+                            // cSpell:ignore showtargets
                             value: `**Boolean (Optional, defaults to \`false\`)**
 
 Hide a target from -showtargets
