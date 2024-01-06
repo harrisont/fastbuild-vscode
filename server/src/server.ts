@@ -317,8 +317,8 @@ async function queueDocumentUpdate(change: TextDocumentChangeEvent<TextDocument>
 
     const updateFunction = () => updateDocument(change, settings);
 
-    // Skip the delay and immediately update if the document has no evaulated data.
-    // This is necesasry in order to do initially populate the data.
+    // Skip the delay and immediately update if the document has no evaluated data.
+    // This is necessary in order to do initially populate the data.
     const evaluatedData = state.getRootFbuildEvaluatedData(documentUriStr);
     if (evaluatedData === null) {
         updateFunction();

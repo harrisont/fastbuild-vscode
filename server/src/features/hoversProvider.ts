@@ -102,7 +102,7 @@ export function getHover(params: HoverParams, evaluatedData: EvaluatedData): Hov
     const possibleValues: Value[] = [];
     let firstEvaluatedVariable: EvaluatedVariable | null = null;
 
-    // Potential optmization: use a different data structure to allow for a more efficient search.
+    // Potential optimization: use a different data structure to allow for a more efficient search.
     for (const evaluatedVariable of evaluatedData.evaluatedVariables) {
         if (uri == evaluatedVariable.range.uri
             && isPositionInRange(position, evaluatedVariable.range))

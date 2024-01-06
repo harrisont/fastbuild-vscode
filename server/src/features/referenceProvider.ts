@@ -46,7 +46,7 @@ function getTargetReferences(uri: string, position: Position, evaluatedData: Eva
     // Search algorithm: for each references, check if the definition is the same as this one.
     // This is not very optimized.
 
-    // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+    // Map JSON.stringify(Location) to Location in order to deduplicate references in a 'ForEach' loop.
     const locations = new Map<string, Location>();
 
     for (const reference of references)
@@ -71,7 +71,7 @@ function getIncludeReferences(uri: string, position: Position, evaluatedData: Ev
     // Search algorithm: for each references, check if the URI matches.
     // This is not very optimized.
 
-    // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+    // Map JSON.stringify(Location) to Location in order to deduplicate references in a 'ForEach' loop.
     const locations = new Map<string, Location>();
 
     for (const reference of references)
@@ -100,12 +100,12 @@ function getVariableReferences(uri: string, position: Position, evaluatedData: E
     // Search algorithm: for each references, check if the definition is the same as this one.
     // This is not very optimized.
 
-    // Map JSON.stringify(Location) to Location in order to deduplicate referencs in a 'ForEach' loop.
+    // Map JSON.stringify(Location) to Location in order to deduplicate references in a 'ForEach' loop.
     const locations = new Map<string, Location>();
 
     for (const reference of references)
     {
-        if (definitionIdsAtPosition.some(defnIdAtPos => (reference.definitions.some(refDef => (refDef.id === defnIdAtPos))))) {
+        if (definitionIdsAtPosition.some(id => (reference.definitions.some(refDef => (refDef.id === id))))) {
             const location = createLocationFromSourceRange(reference.range);
             const key = JSON.stringify(location);
             locations.set(key, location);

@@ -229,8 +229,8 @@ Values:
             const expectedHoverTextWithoutValue = `\`\`\`fastbuild
 "…
 \`\`\``;
-            const expectedValueStrLenth = 100000 - expectedHoverTextWithoutValue.length;
-            const expectedTruncatedStr = 'a'.repeat(expectedValueStrLenth);
+            const expectedValueStrLength = 100000 - expectedHoverTextWithoutValue.length;
+            const expectedTruncatedStr = 'a'.repeat(expectedValueStrLength);
             const expectedHoverText = `\`\`\`fastbuild
 '${expectedTruncatedStr}…
 \`\`\``;
