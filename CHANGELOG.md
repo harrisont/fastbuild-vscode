@@ -20,7 +20,7 @@
 
 ## New Features
 
-* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties, including both inline documentation and a link to the offical function's documentation.
+* ([#13](https://github.com/harrisont/fastbuild-vscode/issues/13)) Support auto-completion for function properties, including both inline documentation and a link to the official function's documentation.
 
     Example:
     <img width="1111" alt="example" src="https://github.com/harrisont/fastbuild-vscode/assets/144260/fb0ccd56-5b12-41f5-9b29-4ca7f34027ee">
@@ -201,7 +201,7 @@
 
 ## Changes
 
-* Convert the demo videos from `.mov` to `.gif` so that they can show in the Visual Studio Code Externsion Marketplace.
+* Convert the demo videos from `.mov` to `.gif` so that they can show in the Visual Studio Code Extension Marketplace.
 
 # v0.5.2
 
@@ -265,7 +265,7 @@
 
 # v0.1.7
 
-* Fixed a bug where `ForEach` kept variable definitions across loop iterations. An example of how this bug manifested is that adding to a "current-scope non-existant, parent-scope existant, current-scope variable" in a `ForEach` loop added to the previous loop-iteration value instead of redefining it each time.
+* Fixed a bug where `ForEach` kept variable definitions across loop iterations. An example of how this bug manifested is that adding to a "current-scope non-existent, parent-scope existent, current-scope variable" in a `ForEach` loop added to the previous loop-iteration value instead of redefining it each time.
 
 
 # v0.1.6

@@ -6,6 +6,7 @@
 	"recommendations": [
 		"dbaeumer.vscode-eslint",
 		"karyfoundation.nearley",
-		"bierner.markdown-mermaid"
+		"bierner.markdown-mermaid",
+		"streetsidesoftware.code-spell-checker"
 	]
 }
