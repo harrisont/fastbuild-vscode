@@ -9,5 +9,10 @@
 		"**/out": true
 	},
 	"editor.renderFinalNewline": "dimmed",
-	"files.insertFinalNewline": true
+	"files.insertFinalNewline": true,
+	"cSpell.words": [
+		"Rosco",
+		"struct",
+		"structs"
+	]
 }
