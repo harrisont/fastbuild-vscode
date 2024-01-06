@@ -1,0 +1,14 @@
+diff --git a/node_modules/nearley/bin/nearleyc.js b/node_modules/nearley/bin/nearleyc.js
+index 11aa8cf..2ac3187 100644
+--- a/node_modules/nearley/bin/nearleyc.js
++++ b/node_modules/nearley/bin/nearleyc.js
+@@ -17,7 +17,8 @@ opts.version(version, '-v, --version')
+     .parse(process.argv);
+ 
+ 
+-var input = opts.args[0] ? fs.createReadStream(opts.args[0]) : process.stdin;
++// Specify `highWaterMark` to increase from the default of 64K. With the default, nearley fails to parse input over 64K.
++var input = opts.args[0] ? fs.createReadStream(opts.args[0],{ highWaterMark: 1000000*1024 }) : process.stdin;
+ var output = opts.out ? fs.createWriteStream(opts.out) : process.stdout;
+ 
+ var parserGrammar = nearley.Grammar.fromCompiled(require('../lib/nearley-language-bootstrapped.js'));
