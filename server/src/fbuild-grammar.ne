@@ -940,31 +940,31 @@ ifConditionExpression ->
     # Single item
     ifConditionExpressionExceptOr  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
-  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('||', lhs, rhs, rhsContext); } %}
-  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('||', lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator(operator, lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator(operator, lhs, rhs, rhsContext); } %}
 
 # Same as `ifConditionExpression` but it's part of a compund condition, so all paths use `ifConditionExpressionExceptOrInCompound`.
 ifConditionExpressionInCompound ->
     # Single item
     ifConditionExpressionExceptOrInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items ||'d together
-  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('||', lhs, rhs, rhsContext); } %}
-  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('||', lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound                     %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator(operator, lhs, rhs, rhsContext); } %}
+  | ifConditionExpressionExceptOrInCompound whitespaceOrNewline %operatorOr optionalWhitespaceOrNewline ifConditionExpressionInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator(operator, lhs, rhs, rhsContext); } %}
 
 ifConditionExpressionExceptOr ->
     # Single item
     ifConditionTermNotInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
-  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('&&', lhs, rhs, rhsContext); } %}
-  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('&&', lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator(operator, lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator(operator, lhs, rhs, rhsContext); } %}
 
 # Same as `ifConditionExpressionExceptOr` but it's part of a compound condition, so all paths use `ifConditionTermInCompound`.
 ifConditionExpressionExceptOrInCompound ->
     # Single item
     ifConditionTermInCompound  {% ([valueWithContext]) => valueWithContext %}
     # Multiple items &&'d together
-  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator('&&', lhs, rhs, rhsContext); } %}
-  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator('&&', lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound                     %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createOperator(operator, lhs, rhs, rhsContext); } %}
+  | ifConditionTermInCompound whitespaceOrNewline %operatorAnd optionalWhitespaceOrNewline ifConditionExpressionExceptOrInCompound  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createOperator(operator, lhs, rhs, rhsContext); } %}
 
 @{%
 
@@ -1058,7 +1058,7 @@ function createInclude(includeToken: Token, path: Record<string, any>) {
         range: {
           start: createLocation(includeToken),
           end: path.range.end,
-        }
+        },
         path,
     };
 }
