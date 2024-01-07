@@ -705,20 +705,6 @@ class ScopeStack {
         this.stack.pop();
     }
 
-    // Convenience method to `push`, run `body`, and then `pop`.
-    withScope___TodoRemoveMe(body: () => void) {
-        this.push(ParentScopeAccess.Yes);
-        body();
-        this.pop();
-    }
-
-    // Like `withScope`, but cannot access variables in parent scopes.
-    withPrivateScope___TodoRemoveMe(body: () => void) {
-        this.push(ParentScopeAccess.No);
-        body();
-        this.pop();
-    }
-
     getDepth(): number {
         return this.stack.length;
     }
