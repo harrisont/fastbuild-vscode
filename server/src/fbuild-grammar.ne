@@ -281,7 +281,7 @@ function createRangeFromStartTokenThroughEndToken(startToken: Token, endToken: T
         start: createLocation(startToken),
         end: {
             line: endToken.line - 1,
-            character: endToken.col + endToken.value.length,
+            character: endToken.col - 1 + endToken.value.length,
         },
     };
 }
@@ -471,8 +471,8 @@ function createBoolean(value: boolean, token: Token) {
 
     const result = {
         type: 'boolean',
-        value,
         range,
+        value,
     };
 
     return [result, context];
@@ -791,7 +791,7 @@ targetName ->
 function createUserFunctionDeclaration(functionKeywordToken: Token, bodyBraceCloseToken: Token, nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
     return {
         type: 'userFunctionDeclaration',
-        range: createRange(functionKeywordToken, bodyBraceCloseToken),
+        range: createRangeEndInclusive(functionKeywordToken, bodyBraceCloseToken),
         name: nameToken.value,
         nameRange: createRange(nameToken, tokenAfterName),
         parameters,
@@ -996,6 +996,19 @@ function createIfConditionComparison(operatorToken: Token, lhs: Record<string, a
     return [result, context];
 }
 
+function createIfConditionIn(lhs: Record<string, any>, rhs: any, invert: boolean) {
+    return {
+        type: 'in',
+        range: {
+            start: lhs.range.start,
+            end: rhs.range.end,
+        },
+        lhs,
+        rhs,
+        invert,
+    };
+}
+
 %}
 
 # Note on grouping (with `(...)`): grouping is optional since this is not part of a compound expression.
@@ -1015,11 +1028,11 @@ ifConditionTermInCompound ->
 # A condition term that is a boolean expression (boolean literal or evaluated variable)
 ifConditionTermBoolean ->
     # Boolean expression: literal
-    bool                                                        {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: false }, context ] %}
+    bool                                                        {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', range: value.range, value, invert: false }, context ] %}
     # Boolean expression: .Value
-  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: false }, context ] %}
+  |                                          evaluatedVariable  {% ([            [value, context]]) => [ { type: 'ifConditionBoolean', range: value.range, value, invert: false }, context ] %}
     # Boolean expression: ! .Value
-  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'ifConditionBoolean', value, invert: true  }, context ] %}
+  | %operatorNot optionalWhitespaceOrNewline evaluatedVariable  {% ([not, space, [value, context]]) => [ { type: 'ifConditionBoolean', range: value.range, value, invert: true  }, context ] %}
 
 # A condition term that is a comparison or a check for presence-in-ArrayOfStrings
 #
@@ -1044,11 +1057,11 @@ ifConditionTermComparisonOrPresenceInArrayOfStrings ->
   | summand                     %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, operator); return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
   | summand whitespaceOrNewline %operatorGreaterOrEqual optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, operator, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);   return createIfConditionComparison(operator, lhs, rhs, rhsContext); } %}
     # Presence in ArrayOfStrings: .Value1 in .Value2
-  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
-  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: false }, rhsContext ]; } %}
+  | summand                                                             %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],                      keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, keywordIn); return [ createIfConditionIn(lhs, rhs, false), rhsContext ]; } %}
+  | summand whitespaceOrNewline                                         %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1,              keywordIn, space2, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ createIfConditionIn(lhs, rhs, false), rhsContext ]; } %}
     # Presence in ArrayOfStrings: .Value1 not in .Value2
-  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
-  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ { type: 'in', lhs, rhs, invert: true  }, rhsContext ]; } %}
+  | summand                     %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext],         not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, not);       return [ createIfConditionIn(lhs, rhs, true), rhsContext ]; } %}
+  | summand whitespaceOrNewline %keywordNot optionalWhitespaceOrNewline %keywordIn optionalWhitespaceOrNewline summand  {% ([[lhs, lhsContext], space1, not, space2, keywordIn, space3, [rhs, rhsContext]]) => { callOnNextToken(lhsContext, space1);    return [ createIfConditionIn(lhs, rhs, true), rhsContext ]; } %}
 
 @{%
 
@@ -1103,11 +1116,11 @@ function createDirectiveIf(
 directiveIf ->
     %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines                                                             %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements,                                        directiveEndIf]) => {
         callOnNextToken(context, space2);
-        createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, [] /*elseStatements*/)
+        return createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, [] /*elseStatements*/)
     } %}
   | %directiveIf %whitespace directiveIfConditionOrExpression %optionalWhitespaceAndMandatoryNewline lines %directiveElse %optionalWhitespaceAndMandatoryNewline lines %directiveEndIf  {% ([directiveIf, space1, [condition, context], space2, ifStatements, directiveElse, space3, elseStatements, directiveEndIf]) => {
         callOnNextToken(context, space2);
-        createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, elseStatements)
+        return createDirectiveIf(directiveIf, directiveEndIf, condition, ifStatements, elseStatements)
     } %}
 
 # Like `directIf` but the contents can only be `arrayContents`.

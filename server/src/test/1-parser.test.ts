@@ -3125,6 +3125,7 @@ Expecting to see one of the following:
             assertParseResultsEqual(input, [
                 {
                     type: 'userFunctionDeclaration',
+                    range: createRange(1, 16, 2, 17),
                     name: 'Func',
                     nameRange: createRange(1, 25, 1, 29),
                     parameters: [
@@ -3180,13 +3181,13 @@ Expecting to see one of the following:
                     assertParseResultsEqual(input, [
                         {
                             type: 'binaryOperatorOnUnnamed',
+                            range: createRange(1, 24, 1, 27),
                             operator,
                             rhs: {
                                 type: 'integer',
                                 value: 1,
                                 range: createRange(1, 26, 1, 27)
                             },
-                            rangeStart: createPosition(1, 24)
                         }
                     ]);
                 });
@@ -3209,13 +3210,13 @@ Expecting to see one of the following:
                         },
                         {
                             type: 'binaryOperatorOnUnnamed',
+                            range: createRange(2, 24, 2, 27),
                             operator,
                             rhs: {
                                 type: 'integer',
                                 value: 1,
                                 range: createRange(2, 26, 2, 27)
                             },
-                            rangeStart: createPosition(2, 24)
                         }
                     ]);
                 });
@@ -3233,7 +3234,7 @@ Expecting to see one of the following:
                     assertParseResultsEqual(input, [
                         {
                             type: 'variableDefinition',
-                            range: createRange(1, 12, 2, 33),
+                            range: createRange(1, 24, 2, 33),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -3251,6 +3252,7 @@ Expecting to see one of the following:
                         },
                         {
                             type: 'directiveIf',
+                            range: createRange(3, 24, 7, 30),
                             condition: [
                                 [
                                     {
@@ -3266,28 +3268,27 @@ Expecting to see one of the following:
                             ifStatements: [
                                 {
                                     type: 'binaryOperatorOnUnnamed',
+                                    range: createRange(4, 28, 4, 34),
                                     operator,
                                     rhs: {
                                         type: 'string',
                                         value: ' 2',
                                         range: createRange(4, 30, 4, 34)
                                     },
-                                    rangeStart: createPosition(4, 28)
                                 }
                             ],
                             elseStatements: [
                                 {
                                     type: 'binaryOperatorOnUnnamed',
+                                    range: createRange(6, 28, 6, 34),
                                     operator,
                                     rhs: {
                                         type: 'string',
                                         value: ' 3',
                                         range: createRange(6, 30, 6, 34)
                                     },
-                                    rangeStart: createPosition(6, 28)
                                 }
                             ],
-                            rangeStart: createPosition(3, 24)
                         }
                     ]);
                 });
