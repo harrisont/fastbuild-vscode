@@ -269,7 +269,7 @@ Alias('MyTarget2')
 .Var1 = 1
                     `;
                     const actualCompletions = getCompletions(input, Position.create(0, 0), '^' /*triggerCharacter*/);
-                    assert.deepStrictEqual(actualCompletions, getBuiltinCompletions(''));
+                    assert.deepStrictEqual(actualCompletions, []);
                 });
 
                 it('after definitions in a different scope', () => {
