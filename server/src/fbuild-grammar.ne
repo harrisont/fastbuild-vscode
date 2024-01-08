@@ -699,11 +699,18 @@ functionUsing ->
 
 @{%
 
-function createForEach(iterators: Record<string, any>[], statements: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createForEach(
+    iterators: Record<string, any>[],
+    statements: Record<string,any>,
+    statementStartToken: Token,
+    statementEndToken: Token,
+    functionCallEndToken: Token)
+{
     return {
         type: 'forEach',
-        iterators,
         range: createRangeEndInclusive(statementStartToken, statementEndToken),
+        rangeWithoutBody: createRangeEndInclusive(statementStartToken, functionCallEndToken),
+        iterators,
         statements
     };
 }
@@ -711,8 +718,8 @@ function createForEach(iterators: Record<string, any>[], statements: Record<stri
 %}
 
 functionForEach ->
-    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createForEach(iterators, statements, functionName, braceClose); } %}
-  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return createForEach(iterators, statements, functionName, braceClose); } %}
+    %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators                     %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context],         braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, braceClose); return createForEach(iterators, statements, functionName, bodyBraceClose, braceClose); } %}
+  | %keywordForEach optionalWhitespaceOrNewline %functionParametersStart optionalWhitespaceOrNewline forEachIterators whitespaceOrNewline %functionParametersEnd functionBody  {% ([functionName, space1, braceOpen, space2, [iterators, context], space3, braceClose, [statements, bodyBraceOpen, bodyBraceClose]]) => { callOnNextToken(context, space3);     return createForEach(iterators, statements, functionName, bodyBraceClose, braceClose); } %}
 
 forEachIterators ->
     # Single loop variable

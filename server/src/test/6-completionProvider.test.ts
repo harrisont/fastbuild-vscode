@@ -423,7 +423,65 @@ Alias('MyTarget2')
             });
 
             describe('ForEach', () => {
-                // TODO
+                it('no statements', () => {
+                    const input = `
+.Items = { '1', '2' }
+ForEach(.Item in .Items)
+{
+
+}
+                    `;
+
+                    const expectedCompletions: CompletionItem[] = [
+                        ...getBuiltinCompletions('.'),
+                        {
+                            label: '.Items',
+                            kind: CompletionItemKind.Variable,
+                        },
+                        {
+                            label: '.Item',
+                            kind: CompletionItemKind.Variable,
+                        },
+                    ];
+
+                    // Lookup inside the loop body.
+                    const lookupPosition = Position.create(4, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, expectedCompletions);
+                });
+
+                it('with statements', () => {
+                    const input = `
+.Items = { '1', '2' }
+ForEach(.Item in .Items)
+{
+    .InnerVar1 = 1
+
+    .InnerVar2 = 2
+}
+                    `;
+
+                    const expectedCompletions: CompletionItem[] = [
+                        ...getBuiltinCompletions('.'),
+                        {
+                            label: '.Items',
+                            kind: CompletionItemKind.Variable,
+                        },
+                        {
+                            label: '.Item',
+                            kind: CompletionItemKind.Variable,
+                        },
+                        {
+                            label: '.InnerVar1',
+                            kind: CompletionItemKind.Variable,
+                        },
+                    ];
+
+                    // Lookup inside the loop body, after .InnerVar1, but before .InnerVar2.
+                    const lookupPosition = Position.create(5, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, expectedCompletions);
+                });
             });
 
             describe('User function', () => {

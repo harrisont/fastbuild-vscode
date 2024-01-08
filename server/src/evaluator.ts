@@ -354,6 +354,7 @@ interface ParsedForEachIterator {
 interface ParsedStatementForEach {
     type: 'forEach';
     range: ParseSourceRange;
+    rangeWithoutBody: ParseSourceRange;
     iterators: ParsedForEachIterator[];
     statements: Statement[];
 }
@@ -1407,7 +1408,7 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
     for (const iterator of statement.iterators) {
         // Evaluate the array to loop over.
         if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
-            const range = new SourceRange(context.thisFbuildUri, statement.range);
+            const range = new SourceRange(context.thisFbuildUri, statement.rangeWithoutBody);
             return CancellableMaybe.error(new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`));
         }
         const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
