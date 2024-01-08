@@ -1850,7 +1850,7 @@ describe('evaluator', () => {
                 + 1
             `;
             const expectedErrorMessage = 'Unnamed modification must follow a variable assignment in the same scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 16));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 19));
         });
 
         it('should error if there is no existing value that can be added to (2)', () => {
@@ -1859,7 +1859,7 @@ describe('evaluator', () => {
                 + 1
             `;
             const expectedErrorMessage = 'Unnamed modification must follow a variable assignment in the same scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 16));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 19));
         });
     });
 
@@ -1914,7 +1914,7 @@ describe('evaluator', () => {
                 - 1
             `;
             const expectedErrorMessage = 'Unnamed modification must follow a variable assignment in the same scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 16));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(1, 16, 1, 19));
         });
 
         it('should error if there is no existing value that can be added to (2)', () => {
@@ -1923,7 +1923,7 @@ describe('evaluator', () => {
                 - 1
             `;
             const expectedErrorMessage = 'Unnamed modification must follow a variable assignment in the same scope.';
-            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 16));
+            assertEvaluationError(input, expectedErrorMessage, createParseRange(2, 16, 2, 19));
         });
     });
 

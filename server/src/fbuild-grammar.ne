@@ -270,7 +270,7 @@ function createRangeFromToken(token: Token): SourceRange {
         start: createLocation(token),
         end: {
             line: token.line - 1,
-            character: token.col + token.value.length,
+            character: token.col - 1 + token.value.length,
         },
     };
 }
