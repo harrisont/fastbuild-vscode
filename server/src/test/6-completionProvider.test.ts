@@ -10,14 +10,15 @@ import { SourcePositionWithUri } from '../evaluator';
 type UriStr = string;
 type FileContents = string;
 
-function getCompletionsMultiFile(thisFbuildUriStr: UriStr, inputs: Map<UriStr, FileContents>, position: Position, triggerCharacter: string | undefined): CompletionItem[] {
-    const untilPosition = new SourcePositionWithUri(thisFbuildUriStr, position);
-    const evaluationContext = evaluateInputsFullUntilPosition(thisFbuildUriStr, inputs, true /*enableDiagnostics*/, untilPosition);
+function getCompletionsMultiFile(inputs: Map<UriStr, FileContents>, completionFile: UriStr, completionPosition: Position, triggerCharacter: string | undefined): CompletionItem[] {
+    const rootFbuildUriStr = 'file:///fbuild.bff';
+    const completionFileAndPosition = new SourcePositionWithUri(completionFile, completionPosition);
+    const evaluationContext = evaluateInputsFullUntilPosition(rootFbuildUriStr, inputs, true /*enableDiagnostics*/, completionFileAndPosition);
     const completionParams: CompletionParams = {
         textDocument: {
-            uri: thisFbuildUriStr,
+            uri: completionFile,
         },
-        position,
+        position: completionPosition,
         context: {
             triggerKind: (triggerCharacter === undefined) ? CompletionTriggerKind.Invoked : CompletionTriggerKind.TriggerCharacter,
             triggerCharacter,
@@ -26,9 +27,10 @@ function getCompletionsMultiFile(thisFbuildUriStr: UriStr, inputs: Map<UriStr, F
     return completionProvider.getCompletions(completionParams, evaluationContext, false /*isTriggerCharacterInContent*/);
 }
 
-function getCompletions(input: string, position: Position, triggerCharacter: string | undefined): CompletionItem[] {
-    const thisFbuildUri = 'file:///dummy.bff';
-    return getCompletionsMultiFile(thisFbuildUri, new Map<UriStr, FileContents>([[thisFbuildUri, input]]), position, triggerCharacter);
+function getCompletions(input: string, completionPosition: Position, triggerCharacter: string | undefined): CompletionItem[] {
+    const rootFbuildUriStr = 'file:///fbuild.bff';
+    const completionFile = rootFbuildUriStr;
+    return getCompletionsMultiFile(new Map<UriStr, FileContents>([[rootFbuildUriStr, input]]), completionFile, completionPosition, triggerCharacter);
 }
 
 // Completions for the builtin variables.
@@ -231,17 +233,17 @@ Alias('MyTarget2')
 
                 // Inside the body of MyTarget1
                 const lookupPosition1 = Position.create(4, 1);
-                const actualCompletions1 = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition1, undefined /*triggerCharacter*/);
+                const actualCompletions1 = getCompletionsMultiFile(inputs, 'file:///fbuild.bff', lookupPosition1, undefined /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions1, [...getExpectedCompletions('.'), ...getBuiltinCompletions('.')]);
 
                 // Inside the body of MyTarget2
                 const lookupPosition2 = Position.create(2, 1);
-                const actualCompletions2 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition2, undefined /*triggerCharacter*/);
+                const actualCompletions2 = getCompletionsMultiFile(inputs, 'file:///helper.bff', lookupPosition2, undefined /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions2, [...getExpectedCompletions('.'), ...getBuiltinCompletions('.')]);
 
                 // The same position as inside the body of MyTarget1, but in a different file
                 const lookupPosition3 = Position.create(4, 1);
-                const actualCompletions3 = getCompletionsMultiFile('file:///helper.bff', inputs, lookupPosition3, undefined /*triggerCharacter*/);
+                const actualCompletions3 = getCompletionsMultiFile(inputs, 'file:///helper.bff', lookupPosition3, undefined /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions3, getBuiltinCompletions('.'));
             });
         });
@@ -418,8 +420,77 @@ Alias('MyTarget2')
 
                 // After `Var1` but before the `#include`.
                 const lookupPosition = Position.create(2, 0);
-                const actualCompletions = getCompletionsMultiFile('file:///fbuild.bff', inputs, lookupPosition, undefined /*triggerCharacter*/);
+                const actualCompletions = getCompletionsMultiFile(inputs, 'file:///fbuild.bff', lookupPosition, undefined /*triggerCharacter*/);
                 assert.deepStrictEqual(actualCompletions, expectedCompletions);
+            });
+
+            it('multiple files', () => {
+                const inputs =  new Map<UriStr, FileContents>([
+                    [
+                        'file:///fbuild.bff',
+                        `
+.OuterFileBeforeIncludeVar = 1
+
+#include 'helper.bff'
+
+.OuterFileAfterIncludeVar = 2
+                        `
+                    ],
+                    [
+                        'file:///helper.bff',
+                        `
+.IncludedFileOuterVar = 3
+
+{
+    .IncludedFileInnerVar = 4
+}
+                        `
+                    ]
+                ]);
+
+                // fbuild.bff after the #include but before .OuterFileAfterIncludeVar
+                const lookupPosition1 = Position.create(4, 0);
+                const actualCompletions1 = getCompletionsMultiFile(inputs, 'file:///fbuild.bff', lookupPosition1, undefined /*triggerCharacter*/);
+                const expectedCompletions1: CompletionItem[] = [
+                    ...getBuiltinCompletions('.'),
+                    {
+                        label: '.OuterFileBeforeIncludeVar',
+                        kind: CompletionItemKind.Variable,
+                    },
+                    {
+                        label: '.IncludedFileOuterVar',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+                assert.deepStrictEqual(actualCompletions1, expectedCompletions1);
+
+                // At the start of helper.bff
+                const lookupPosition2 = Position.create(0, 0);
+                const actualCompletions2 = getCompletionsMultiFile(inputs, 'file:///helper.bff', lookupPosition2, undefined /*triggerCharacter*/);
+                const expectedCompletions2: CompletionItem[] = [
+                    ...getBuiltinCompletions('.'),
+                    {
+                        label: '.OuterFileBeforeIncludeVar',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+                assert.deepStrictEqual(actualCompletions2, expectedCompletions2);
+
+                // helper.bff after .IncludedFileOuterVar but before .IncludedFileInnerVar
+                const lookupPosition3 = Position.create(2, 0);
+                const actualCompletions3 = getCompletionsMultiFile(inputs, 'file:///helper.bff', lookupPosition3, undefined /*triggerCharacter*/);
+                const expectedCompletions3: CompletionItem[] = [
+                    ...getBuiltinCompletions('.'),
+                    {
+                        label: '.OuterFileBeforeIncludeVar',
+                        kind: CompletionItemKind.Variable,
+                    },
+                    {
+                        label: '.IncludedFileOuterVar',
+                        kind: CompletionItemKind.Variable,
+                    },
+                ];
+                assert.deepStrictEqual(actualCompletions3, expectedCompletions3);
             });
 
             describe('ForEach', () => {
@@ -484,9 +555,102 @@ ForEach(.Item in .Items)
                 });
             });
 
-            describe('User function', () => {
-                // TODO
-                // Note: user functions cannot access variables in the parent scope, so verify that.
+            describe.skip('User function', () => {
+                it('uncalled function - current scope - can access parameters and variables inside but not outside', () => {
+                    const input = `
+.OuterVar = 'hi'
+
+function Func( .Arg ){
+    .InnerVar1 = 1
+
+    .InnerVar2 = 2
+}
+                    `;
+
+                    const expectedCompletions: CompletionItem[] = [
+                        ...getBuiltinCompletions('.'),
+                        {
+                            label: '.Arg',
+                            kind: CompletionItemKind.Variable,
+                        },
+                        {
+                            label: '.InnerVar',
+                            kind: CompletionItemKind.Variable,
+                        },
+                    ];
+
+                    // Lookup inside the function body, after .InnerVar1, but before .InnerVar2.
+                    const lookupPosition = Position.create(5, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, expectedCompletions);
+                });
+
+                it('uncalled function - parent scope - no access', () => {
+                    const input = `
+.OuterVar = 'hi'
+
+function Func( .Arg ){
+    .InnerVar1 = 1
+
+    .InnerVar2 = 2
+}
+                    `;
+
+                    // Lookup inside the function body, after .InnerVar1, but before .InnerVar2.
+                    const lookupPosition = Position.create(5, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, '^' /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, []);
+                });
+
+                it('called function - current scope - can access parameters and variables inside but not outside', () => {
+                    const input = `
+.OuterVar = 'hi'
+
+function Func( .Arg ){
+    .InnerVar1 = 1
+
+    .InnerVar2 = 2
+}
+
+Func(3)
+                    `;
+
+                    const expectedCompletions: CompletionItem[] = [
+                        ...getBuiltinCompletions('.'),
+                        {
+                            label: '.Arg',
+                            kind: CompletionItemKind.Variable,
+                        },
+                        {
+                            label: '.InnerVar',
+                            kind: CompletionItemKind.Variable,
+                        },
+                    ];
+
+                    // Lookup inside the function body, after .InnerVar1, but before .InnerVar2.
+                    const lookupPosition = Position.create(5, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, undefined /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, expectedCompletions);
+                });
+
+                it('called function - parent scope - no access', () => {
+                    const input = `
+.OuterVar = 'hi'
+
+function Func( .Arg ){
+    .InnerVar1 = 1
+
+    .InnerVar2 = 2
+}
+
+Func(3)
+                    `;
+
+                    // Lookup inside the function body, after .InnerVar1, but before .InnerVar2.
+                    const lookupPosition = Position.create(5, 0);
+                    const actualCompletions = getCompletions(input, lookupPosition, '^' /*triggerCharacter*/);
+                    assert.deepStrictEqual(actualCompletions, []);
+                });
             });
         });
     });
