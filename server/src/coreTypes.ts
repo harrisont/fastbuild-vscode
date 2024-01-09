@@ -62,7 +62,7 @@ export enum CancellableMaybeState {
 // Exactly one of a T value or an Error or Cancelled.
 export class CancellableMaybe<T> {
     private static COMPLETED_VOID = new CancellableMaybe<void>(CancellableMaybeState.Value, null /*_value*/, null /*_error*/);
-    private static CANCELLED = new CancellableMaybe<void>(CancellableMaybeState.Value, null /*_value*/, null /*_error*/);
+    private static CANCELLED = new CancellableMaybe<void>(CancellableMaybeState.Cancelled, null /*_value*/, null /*_error*/);
 
     static completed<U>(value: U): CancellableMaybe<U>;
     static completed(): CancellableMaybe<void>;
