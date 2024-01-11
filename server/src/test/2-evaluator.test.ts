@@ -91,7 +91,14 @@ export function evaluateInputsFullUntilPosition(thisFbuildUriStr: UriStr, inputs
         throw maybeParseData.getError();
     }
     const parseData = maybeParseData.getValue();
-    const evaluatedStatementsAndMaybeError = evaluateUntilPosition(parseData, thisFbuildUriStr, fileSystem, parseDataProvider, untilPosition);
+    const evaluatedStatementsAndMaybeError =
+        evaluateUntilPosition(
+            parseData,
+            thisFbuildUriStr,
+            fileSystem,
+            parseDataProvider,
+            untilPosition,
+            true /*includeStaleParseData*/);
     if (evaluatedStatementsAndMaybeError.error !== null) {
         throw evaluatedStatementsAndMaybeError.error;
     }

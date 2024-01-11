@@ -286,7 +286,14 @@ function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri): May
     }
     const rootFbuildParseData = maybeRootFbuildParseData.getValue();
 
-    const evaluationContextAndMaybeError = evaluateUntilPosition(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider, untilPosition);
+    const evaluationContextAndMaybeError =
+        evaluateUntilPosition(
+            rootFbuildParseData,
+            rootFbuildUriStr,
+            state.fileSystem,
+            state.parseDataProvider,
+            untilPosition,
+            true /*includeStaleParseData*/);
     return Maybe.ok(evaluationContextAndMaybeError);
 }
 

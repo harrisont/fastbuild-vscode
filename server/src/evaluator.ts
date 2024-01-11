@@ -896,7 +896,13 @@ export interface EvaluationContext {
     // Used for unnamed modifiers (e.g. adding to the LHS of the previous statement).
     previousStatementLhs: VariableAndEvaluatedVariable | null;
     // If set, stops evaluating once this position is hit.
+    // Used to generate completion results.
     untilPosition: SourcePositionWithUri | undefined;
+    // If true, will be okay with using stale parse data.
+    //
+    // This is useful to generate completion results when a partially-written statement causes a parse error.
+    // In that case, it's useful to use the stale parse data from the last successful parse.
+    includeStaleParseData: boolean;
 }
 
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
@@ -949,11 +955,25 @@ function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Ma
 }
 
 export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluationContext> {
-    return evaluateUntilPosition(parseData, thisFbuildUri, fileSystem, parseDataProvider, undefined /*untilPosition*/);
+    return evaluateUntilPosition(
+        parseData,
+        thisFbuildUri,
+        fileSystem,
+        parseDataProvider,
+        undefined /*untilPosition*/,
+        false /*includeStaleParseData*/);
 }
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluateUntilPosition(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider, untilPosition: SourcePositionWithUri | undefined): DataAndMaybeError<EvaluationContext> {
+export function evaluateUntilPosition(
+    parseData: ParseData,
+    thisFbuildUri: string,
+    fileSystem: IFileSystem,
+    parseDataProvider: ParseDataProvider,
+    untilPosition: SourcePositionWithUri | undefined,
+    includeStaleParseData: boolean
+): DataAndMaybeError<EvaluationContext>
+{
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
     const scopeStack = createDefaultScopeStack(rootFbuildDirUri);
     const context: EvaluationContext = {
@@ -968,6 +988,7 @@ export function evaluateUntilPosition(parseData: ParseData, thisFbuildUri: strin
         onceIncludeUrisAlreadyIncluded: [],
         previousStatementLhs: null,
         untilPosition,
+        includeStaleParseData,
     };
     const maybeCompletion = evaluateStatements(parseData.statements, context);
     const error = maybeCompletion.hasError() ? maybeCompletion.getError() : null;
@@ -1831,6 +1852,7 @@ function evaluateStatementUserFunctionCall(
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: null,
         untilPosition: context.untilPosition,
+        includeStaleParseData: context.includeStaleParseData,
     };
 
     // Set a variable for each parameter.
@@ -1877,7 +1899,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         return CancellableMaybe.completed();
     }
 
-    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, false /*includeStale*/);
+    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, context.includeStaleParseData);
     if (maybeIncludeParseData.hasError) {
         const includeError = maybeIncludeParseData.getError();
         if (includeError instanceof ParseError) {
@@ -1913,6 +1935,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: context.previousStatementLhs,
         untilPosition: context.untilPosition,
+        includeStaleParseData: context.includeStaleParseData,
     };
 
     const result = evaluateStatements(includeParseData.statements, includeContext);
