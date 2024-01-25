@@ -287,7 +287,7 @@ function createRangeFromStartTokenThroughEndToken(startToken: Token, endToken: T
 }
 
 // Creates a range from tokenStart's location (inclusive) to a to-be-received-later token's location (exclusive).
-function createRangeStart(startToken: Token): [object, ParseContext] {
+function createRangeStart(startToken: Token): [SourceRange, ParseContext] {
     const range = {
         start: createLocation(startToken),
         // Updated by the onNextToken callback
@@ -315,7 +315,12 @@ function createCombinedContext(contexts: ParseContext[]): ParseContext {
     return combinedContext;
 }
 
-function createString(value: string, range: SourceRange) {
+interface Statement extends Record<string, any> {
+    type: string;
+    range: SourceRange;
+}
+
+function createString(value: string, range: SourceRange): Statement {
     return {
         type: 'string',
         value,
@@ -323,7 +328,7 @@ function createString(value: string, range: SourceRange) {
     };
 }
 
-function createStringWithStartRange(nameToken: Token) {
+function createStringWithStartRange(nameToken: Token): [Statement, ParseContext] {
     const [range, context] = createRangeStart(nameToken);
 
     const result = {
@@ -359,7 +364,11 @@ lhsWithBinaryOperator ->
 
 @{%
 
-function createVariableDefinition(lhs: Record<string, any>, rhs: Record<string, any>, existingContext: ParseContext) {
+function createVariableDefinition(
+    lhs: Record<string, any>,
+    rhs: Record<string, any>,
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const result = {
         type: 'variableDefinition',
         range: {
@@ -390,7 +399,12 @@ variableDefinition ->
 
 @{%
 
-function createBinaryOperator(lhs: Record<string, any>, rhs: Record<string, any>, operator: string, existingContext: ParseContext) {
+function createBinaryOperator(
+    lhs: Record<string, any>,
+    rhs: Record<string, any>,
+    operator: string,
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const result = {
         type: 'binaryOperator',
         range: {
@@ -422,7 +436,11 @@ variableBinaryOperator ->
 
 @{%
 
-function createBinaryOperatorOnUnnamed(rhs: Record<string, any>, operator: Token, existingContext: ParseContext) {
+function createBinaryOperatorOnUnnamed(
+    rhs: Record<string, any>,
+    operator: Token,
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const result = {
         type: 'binaryOperatorOnUnnamed',
         range: {
@@ -454,7 +472,7 @@ variableBinaryOperatorOnUnnamed ->
 
 @{%
 
-function createInteger(token: Token) {
+function createInteger(token: Token): [Statement, ParseContext] {
     const [range, context] = createRangeStart(token);
 
     const result = {
@@ -466,7 +484,7 @@ function createInteger(token: Token) {
     return [result, context];
 }
 
-function createBoolean(value: boolean, token: Token) {
+function createBoolean(value: boolean, token: Token): [Statement, ParseContext] {
     const [range, context] = createRangeStart(token);
 
     const result = {
@@ -498,7 +516,7 @@ rValue -> sumHelper  {% ([[first, rest, existingContext]]) => {
     if (rest.length == 0) {
         return [first, existingContext];
     } else {
-        const sum = {
+        const sum: Statement = {
             type: 'sum',
             range: {
                 start: first.range.start,
@@ -550,7 +568,7 @@ function unescapeString(escapedString: string): string {
     return escapedString.replace(/\^(.)/g, '$1');
 }
 
-function createStringOrStringExpression(parts: any[], startToken: Token, endToken: Token) {
+function createStringOrStringExpression(parts: any[], startToken: Token, endToken: Token): Statement {
     const range = createRangeEndInclusive(startToken, endToken);
     if (parts.length == 0) {
         return createString('', range);
@@ -595,7 +613,7 @@ stringContents ->
         const varNameValue = varNameWithContext[0] as Record<string, any>;
         const varNameContext = varNameWithContext[1] as ParseContext;
         callOnNextToken(varNameContext, endVarIndicator);
-        const evaluatedVariable = {
+        const evaluatedVariable: Statement = {
             type: 'evaluatedVariable',
             scope: 'current',
             name: varNameValue,
@@ -610,7 +628,12 @@ stringContents ->
 
 @{%
 
-function createEvaluatedVariable(varName: any, startToken: Token, scope: ("current" | "parent"), existingContext: ParseContext) {
+function createEvaluatedVariable(
+    varName: any,
+    startToken: Token,
+    scope: ("current" | "parent"),
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const evaluatedVariable = {
         type: 'evaluatedVariable',
         scope: scope,
@@ -683,7 +706,7 @@ nonEmptyStructStatements ->
 
 @{%
 
-function createUsing(struct: Record<string, any>, statementStartToken: Token, statementEndToken: Token) {
+function createUsing(struct: Record<string, any>, statementStartToken: Token, statementEndToken: Token): Statement {
     return {
         type: 'using',
         struct,
@@ -704,7 +727,7 @@ function createForEach(
     statements: Record<string,any>,
     statementStartToken: Token,
     statementEndToken: Token,
-    functionCallEndToken: Token)
+    functionCallEndToken: Token): Statement
 {
     return {
         type: 'forEach',
@@ -749,7 +772,7 @@ function createGenericFunction(
     headerEndToken: Token,
     statementsStartToken: Token,
     statementsEndToken: Token
-) {
+): Statement {
     return {
         type: 'genericFunction',
         functionName,
@@ -795,7 +818,14 @@ targetName ->
 
 @{%
 
-function createUserFunctionDeclaration(functionKeywordToken: Token, bodyBraceCloseToken: Token, nameToken: Token, tokenAfterName: Token, parameters: Record<string, any>[], statements: Record<string, any>) {
+function createUserFunctionDeclaration(
+    functionKeywordToken: Token,
+    bodyBraceCloseToken: Token,
+    nameToken: Token,
+    tokenAfterName: Token,
+    parameters: Record<string, any>[],
+    statements: Record<string, any>
+): Statement {
     return {
         type: 'userFunctionDeclaration',
         range: createRangeEndInclusive(functionKeywordToken, bodyBraceCloseToken),
@@ -806,7 +836,7 @@ function createUserFunctionDeclaration(functionKeywordToken: Token, bodyBraceClo
     };
 }
 
-function createUserFunctionDeclarationParameter(nameToken: Token, tokenAfterName: Token) {
+function createUserFunctionDeclarationParameter(nameToken: Token, tokenAfterName: Token): Statement {
     // Strip the leading "." since it's not part of the name.
     const name = nameToken.value.substring(1);
 
@@ -817,7 +847,7 @@ function createUserFunctionDeclarationParameter(nameToken: Token, tokenAfterName
     };
 }
 
-function createUserFunctionDeclarationParameterWithStartRange(nameToken: Token) {
+function createUserFunctionDeclarationParameterWithStartRange(nameToken: Token): [Statement, ParseContext] {
     const [range, context] = createRangeStart(nameToken);
 
     // Strip the leading "." since it's not part of the name.
@@ -832,7 +862,12 @@ function createUserFunctionDeclarationParameterWithStartRange(nameToken: Token) 
     return [result, context];
 }
 
-function createUserFunctionCall(nameToken: Token, tokenAfterName: Token, closeBraceToken: Token, parameters: Record<string, any>[]) {
+function createUserFunctionCall(
+    nameToken: Token,
+    tokenAfterName: Token,
+    closeBraceToken: Token,
+    parameters: Record<string, any>[]
+): Statement {
     return {
         type: 'userFunctionCall',
         range: createRangeEndInclusive(nameToken, closeBraceToken),
@@ -842,7 +877,7 @@ function createUserFunctionCall(nameToken: Token, tokenAfterName: Token, closeBr
     };
 }
 
-function createUserFunctionCallParameter(value: Record<string, any>) {
+function createUserFunctionCallParameter(value: Record<string, any>): Statement {
     return {
         type: 'userFunctionCallParameter',
         value,
@@ -914,7 +949,12 @@ functionIf ->
 
 @{%
 
-function createOperator(operatorToken: Token, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
+function createOperator(
+    operatorToken: Token,
+    lhs: Record<string, any>,
+    rhs: any,
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const result = {
         type: 'operator',
         range: {
@@ -975,7 +1015,12 @@ ifConditionExpressionExceptOrInCompound ->
 
 @{%
 
-function createIfConditionComparison(operatorToken: Token, lhs: Record<string, any>, rhs: any, existingContext: ParseContext) {
+function createIfConditionComparison(
+    operatorToken: Token,
+    lhs: Record<string, any>,
+    rhs: any,
+    existingContext: ParseContext
+): [Statement, ParseContext] {
     const result = {
         type: 'comparison',
         range: {
@@ -1003,7 +1048,7 @@ function createIfConditionComparison(operatorToken: Token, lhs: Record<string, a
     return [result, context];
 }
 
-function createIfConditionIn(lhs: Record<string, any>, rhs: any, invert: boolean) {
+function createIfConditionIn(lhs: Record<string, any>, rhs: any, invert: boolean): Statement {
     return {
         type: 'in',
         range: {
@@ -1072,7 +1117,7 @@ ifConditionTermComparisonOrPresenceInArrayOfStrings ->
 
 @{%
 
-function createInclude(includeToken: Token, path: Record<string, any>) {
+function createInclude(includeToken: Token, path: Record<string, any>): Statement {
     return {
         type: 'include',
         range: {
@@ -1089,7 +1134,7 @@ directiveInclude -> %directiveInclude optionalWhitespaceOrNewline stringLiteral 
 
 @{%
 
-function createDirectiveOnce(onceToken: Token) {
+function createDirectiveOnce(onceToken: Token): Statement {
     return {
         type: 'once',
         range: createRangeFromToken(onceToken),
@@ -1107,7 +1152,7 @@ function createDirectiveIf(
   endToken: Token,
   condition: any[],
   ifStatements: Record<string, any>[],
-  elseStatements: Record<string, any>[])
+  elseStatements: Record<string, any>[]): Statement
 {
     return {
         type: 'directiveIf',
