@@ -2,6 +2,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+    CancellableMaybe,
     Maybe,
 } from './coreTypes';
 
@@ -84,6 +85,12 @@ export class Struct {
         }
     }
 }
+
+export class SourcePositionWithUri {
+    constructor(readonly uri: UriStr, readonly position: SourcePosition) {
+    }
+}
+
 
 export class SourceRange {
     readonly start: SourcePosition;
@@ -187,8 +194,8 @@ type ScopeLocation = 'current' | 'parent';
 
 interface ParsedString {
     type: 'string';
-    value: string;
     range: ParseSourceRange;
+    value: string;
 }
 
 function isParsedString(obj: Record<string, any>): obj is ParsedString {
@@ -224,6 +231,7 @@ interface ParsedSumSummand {
 
 interface ParsedSum {
     type: 'sum';
+    range: ParseSourceRange;
     first: any;
     // summands must be of length at least 1
     summands: ParsedSumSummand[];
@@ -235,9 +243,9 @@ function isParsedSum(obj: Record<string, any>): obj is ParsedSum {
 
 interface ParsedEvaluatedVariable {
     type: 'evaluatedVariable';
+    range: ParseSourceRange;
     name: ParsedString | ParsedStringExpression;
     scope: ScopeLocation;
-    range: ParseSourceRange;
 }
 
 function isParsedEvaluatedVariable(obj: Record<string, any>): obj is ParsedEvaluatedVariable {
@@ -246,8 +254,8 @@ function isParsedEvaluatedVariable(obj: Record<string, any>): obj is ParsedEvalu
 
 interface ParsedArray {
     type: 'array';
-    value: any[];
     range: ParseSourceRange;
+    value: any[];
 }
 
 function isParsedArray(obj: Record<string, any>): obj is ParsedArray {
@@ -282,6 +290,7 @@ interface ParsedVariableDefinitionLhs {
 
 interface ParsedStatementVariableDefinition {
     type: 'variableDefinition';
+    range: ParseSourceRange;
     lhs: ParsedVariableDefinitionLhs;
     rhs: any;
 }
@@ -292,6 +301,7 @@ function isParsedStatementVariableDefinition(obj: Record<string, any>): obj is P
 
 interface ParsedStatementBinaryOperator {
     type: 'binaryOperator';
+    range: ParseSourceRange;
     lhs: ParsedVariableDefinitionLhs;
     rhs: any;
     operator: OperatorPlusOrMinus;
@@ -303,9 +313,9 @@ function isParsedStatementBinaryOperator(obj: Record<string, any>): obj is Parse
 
 interface ParsedStatementBinaryOperatorOnUnnamed {
     type: 'binaryOperatorOnUnnamed';
+    range: ParseSourceRange;
     rhs: any;
     operator: OperatorPlusOrMinus;
-    rangeStart: SourcePosition;
 }
 
 function isParsedStatementBinaryOperatorOnUnnamed(obj: Record<string, any>): obj is ParsedStatementBinaryOperatorOnUnnamed {
@@ -315,6 +325,7 @@ function isParsedStatementBinaryOperatorOnUnnamed(obj: Record<string, any>): obj
 // {...}
 interface ParsedStatementScopedStatements {
     type: 'scopedStatements';
+    range: ParseSourceRange;
     statements: Statement[];
 }
 
@@ -343,6 +354,7 @@ interface ParsedForEachIterator {
 interface ParsedStatementForEach {
     type: 'forEach';
     range: ParseSourceRange;
+    rangeWithoutBody: ParseSourceRange;
     iterators: ParsedForEachIterator[];
     statements: Statement[];
 }
@@ -388,6 +400,7 @@ function isParsedStatementPrint(obj: Record<string, any>): obj is ParsedStatemen
 
 interface ParsedStatementSettings {
     type: 'settings';
+    range: ParseSourceRange;
     statements: Statement[];
 }
 
@@ -396,17 +409,19 @@ function isParsedStatementSettings(obj: Record<string, any>): obj is ParsedState
 }
 
 interface ParsedIfConditionBoolean {
-    type: 'boolean';
+    type: 'ifConditionBoolean';
+    range: ParseSourceRange;
     value: ParsedEvaluatedVariable;
     invert: boolean;
 }
 
 function isParsedIfConditionBoolean(obj: Record<string, any>): obj is ParsedIfConditionBoolean {
-    return (obj as ParsedIfConditionBoolean).type === 'boolean';
+    return (obj as ParsedIfConditionBoolean).type === 'ifConditionBoolean';
 }
 
 interface ParsedIfConditionComparison {
     type: 'comparison';
+    range: ParseSourceRange;
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
     operator: {
@@ -421,6 +436,7 @@ function isParsedIfConditionComparison(obj: Record<string, any>): obj is ParsedI
 
 interface ParsedIfConditionIn {
     type: 'in';
+    range: ParseSourceRange;
     lhs: ParsedEvaluatedVariable;
     rhs: ParsedEvaluatedVariable;
     invert: boolean;
@@ -432,6 +448,7 @@ function isParsedIfConditionIn(obj: Record<string, any>): obj is ParsedIfConditi
 
 interface ParsedIfConditionOperatorAnd {
     type: 'operator';
+    range: ParseSourceRange;
     operator: '&&';
     lhs: ParsedIfCondition;
     rhs: ParsedIfCondition;
@@ -444,6 +461,7 @@ function isParsedIfConditionOperatorAnd(obj: Record<string, any>): obj is Parsed
 
 interface ParsedIfConditionOperatorOr {
     type: 'operator';
+    range: ParseSourceRange;
     operator: '||';
     lhs: ParsedIfCondition;
     rhs: ParsedIfCondition;
@@ -469,8 +487,8 @@ function isParsedStatementIf(obj: Record<string, any>): obj is ParsedStatementIf
 
 interface ParsedStatementUserFunctionDeclarationParameter {
     type: 'userFunctionDeclarationParameter';
-    name: string;
     range: ParseSourceRange;
+    name: string;
     definition: VariableDefinition | undefined;
 }
 
@@ -480,6 +498,7 @@ function isParsedStatementUserFunctionDeclarationParameter(obj: Record<string, a
 
 interface ParsedStatementUserFunctionDeclaration {
     type: 'userFunctionDeclaration';
+    range: ParseSourceRange;
     name: string;
     nameRange: ParseSourceRange;
     parameters: ParsedStatementUserFunctionDeclarationParameter[];
@@ -498,8 +517,8 @@ function isParsedStatementUserFunctionDeclaration(obj: Record<string, any>): obj
 
 interface ParsedStatementUserFunctionCallParameter {
     type: 'userFunctionCallParameter';
-    value: Value;
     range: ParseSourceRange;
+    value: Value;
 }
 
 function isParsedStatementUserFunctionCallParameter(obj: Record<string, any>): obj is ParsedStatementUserFunctionCallParameter {
@@ -527,6 +546,7 @@ function isParsedStatementUserFunctionCall(obj: Record<string, any>): obj is Par
 // #include
 interface ParsedStatementInclude {
     type: 'include';
+    range: ParseSourceRange;
     path: ParsedString;
 }
 
@@ -537,6 +557,7 @@ function isParsedStatementInclude(obj: Record<string, any>): obj is ParsedStatem
 // #once
 interface ParsedStatementOnce {
     type: 'once';
+    range: ParseSourceRange;
 }
 
 function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatementOnce {
@@ -545,8 +566,8 @@ function isParsedStatementOnce(obj: Record<string, any>): obj is ParsedStatement
 
 interface ParsedDirectiveIfConditionTermIsSymbolDefined {
     type: 'isSymbolDefined';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermIsSymbolDefined {
@@ -555,8 +576,8 @@ function isParsedDirectiveIfConditionTermIsSymbolDefined(obj: Record<string, any
 
 interface ParsedDirectiveIfConditionTermEnvVarExists {
     type: 'envVarExists';
-    envVar: string;
     range: ParseSourceRange;
+    envVar: string;
 }
 
 function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermEnvVarExists {
@@ -565,8 +586,8 @@ function isParsedDirectiveIfConditionTermEnvVarExists(obj: Record<string, any>):
 
 interface ParsedDirectiveIfConditionTermFileExists {
     type: 'fileExists';
-    filePath: ParsedString;
     range: ParseSourceRange;
+    filePath: ParsedString;
 }
 
 function isParsedDirectiveIfConditionTermFileExists(obj: Record<string, any>): obj is ParsedDirectiveIfConditionTermFileExists {
@@ -586,7 +607,7 @@ interface DirectiveIfConditionTermOrNot {
 // #if
 interface ParsedStatementDirectiveIf {
     type: 'directiveIf';
-    rangeStart: SourcePosition;
+    range: ParseSourceRange;
     // An array of AND statements OR'd together
     condition: Array<Array<DirectiveIfConditionTermOrNot>>;
     ifStatements: Statement[];
@@ -600,8 +621,8 @@ function isParsedStatementDirectiveIf(obj: Record<string, any>): obj is ParsedSt
 // #define
 interface ParsedStatementDefine {
     type: 'define';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStatementDefine {
@@ -611,8 +632,8 @@ function isParsedStatementDefine(obj: Record<string, any>): obj is ParsedStateme
 // #undefine
 interface ParsedStatementUndefine {
     type: 'undefine';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedStatementUndefine {
@@ -622,8 +643,8 @@ function isParsedStatementUndefine(obj: Record<string, any>): obj is ParsedState
 // #import
 interface ParsedStatementImportEnvVar {
     type: 'importEnvVar';
-    symbol: string;
     range: ParseSourceRange;
+    symbol: string;
 }
 
 function isParsedStatementImportEnvVar(obj: Record<string, any>): obj is ParsedStatementImportEnvVar {
@@ -658,10 +679,15 @@ interface ScopeVariable {
     definitions: AtLeast1VariableDefinition;
 }
 
+enum ParentScopeAccess {
+    Yes,
+    No,
+}
+
 class Scope {
     variables = new Map<string, ScopeVariable>();
 
-    constructor(readonly canAccessParentScopes: boolean) {
+    constructor(readonly parentScopeAccess: ParentScopeAccess) {
     }
 }
 
@@ -670,30 +696,16 @@ class ScopeStack {
     private nextVariableDefinitionId = 0;
 
     constructor() {
-        this.push(true /*canAccessParentScopes*/);
+        this.push(ParentScopeAccess.Yes);
     }
 
-    private push(canAccessParentScopes: boolean) {
-        const scope = new Scope(canAccessParentScopes);
+    push(parentScopeAccess: ParentScopeAccess) {
+        const scope = new Scope(parentScopeAccess);
         this.stack.push(scope);
     }
 
-    private pop() {
+    pop() {
         this.stack.pop();
-    }
-
-    // Convenience method to `push`, run `body`, and then `pop`.
-    withScope(body: () => void) {
-        this.push(true /*canAccessParentScopes*/);
-        body();
-        this.pop();
-    }
-
-    // Like `withScope`, but cannot access variables in parent scopes.
-    withPrivateScope(body: () => void) {
-        this.push(false /*canAccessParentScopes*/);
-        body();
-        this.pop();
     }
 
     getDepth(): number {
@@ -709,7 +721,7 @@ class ScopeStack {
             if (maybeVariable !== undefined) {
                 return maybeVariable;
             }
-            if (!scope.canAccessParentScopes) {
+            if (scope.parentScopeAccess == ParentScopeAccess.No) {
                 return null;
             }
         }
@@ -735,7 +747,7 @@ class ScopeStack {
         }
 
         const currentScope = this.stack[this.stack.length - 1];
-        if (currentScope.canAccessParentScopes) {
+        if (currentScope.parentScopeAccess == ParentScopeAccess.Yes) {
             for (let scopeIndex = this.stack.length - 2; scopeIndex >= 0; --scopeIndex) {
                 const scope = this.stack[scopeIndex];
                 const maybeVariable = scope.variables.get(variableName);
@@ -745,6 +757,40 @@ class ScopeStack {
             }
         }
         return Maybe.error(new EvaluationError(variableRange, `Referencing variable "${variableName}" in a parent scope that is not defined in any parent scope.`, []));
+    }
+
+    // Get all variables, starting from the current scope.
+    getVariablesStartingFromCurrentScope(): Map<string, ScopeVariable> {
+        // First determine how down the stack we can go, then add all the variables in each scope from there upwards.
+        // Do it in this order so that the inner scopes override the outer scopes.
+        const result = new Map<string, ScopeVariable>();
+        for (let scopeIndex = this.getLowestAccessibleScopeIndex(); scopeIndex < this.stack.length; ++scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            scope.variables.forEach((value, key) => result.set(key, value));
+        }
+        return result;
+    }
+
+    // Get all variables, starting from the parent scope, if a parent scope exists.
+    getVariablesStartingFromParentScope(): Map<string, ScopeVariable> {
+        // First determine how down the stack we can go, then add all the variables in each scope from there upwards.
+        // Do it in this order so that the inner scopes override the outer scopes.
+        const result = new Map<string, ScopeVariable>();
+        for (let scopeIndex = this.getLowestAccessibleScopeIndex(); scopeIndex < this.stack.length - 1; ++scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            scope.variables.forEach((value, key) => result.set(key, value));
+        }
+        return result;
+    }
+
+    private getLowestAccessibleScopeIndex(): number {
+        for (let scopeIndex = this.stack.length - 1; scopeIndex >= 0; --scopeIndex) {
+            const scope = this.stack[scopeIndex];
+            if (scope.parentScopeAccess == ParentScopeAccess.No) {
+                return scopeIndex;
+            }
+        }
+        return 0;
     }
 
     // Return null if the variable is not defined.
@@ -836,7 +882,7 @@ interface VariableAndEvaluatedVariable {
     evaluatedVariable: EvaluatedVariable;
 }
 
-interface EvaluationContext {
+export interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
     defines: Map<string, DefineInfo>,
@@ -849,6 +895,14 @@ interface EvaluationContext {
     onceIncludeUrisAlreadyIncluded: string[];
     // Used for unnamed modifiers (e.g. adding to the LHS of the previous statement).
     previousStatementLhs: VariableAndEvaluatedVariable | null;
+    // If set, stops evaluating once this position is hit.
+    // Used to generate completion results.
+    untilPosition: SourcePositionWithUri | undefined;
+    // If true, will be okay with using stale parse data.
+    //
+    // This is useful to generate completion results when a partially-written statement causes a parse error.
+    // In that case, it's useful to use the stale parse data from the last successful parse.
+    includeStaleParseData: boolean;
 }
 
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
@@ -899,8 +953,27 @@ function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Ma
     defines.set(platformSpecificSymbol, info);
     return defines;
 }
+
+export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluationContext> {
+    return evaluateUntilPosition(
+        parseData,
+        thisFbuildUri,
+        fileSystem,
+        parseDataProvider,
+        undefined /*untilPosition*/,
+        false /*includeStaleParseData*/);
+}
+
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
-export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluatedData> {
+export function evaluateUntilPosition(
+    parseData: ParseData,
+    thisFbuildUri: string,
+    fileSystem: IFileSystem,
+    parseDataProvider: ParseDataProvider,
+    untilPosition: SourcePositionWithUri | undefined,
+    includeStaleParseData: boolean
+): DataAndMaybeError<EvaluationContext>
+{
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
     const scopeStack = createDefaultScopeStack(rootFbuildDirUri);
     const context: EvaluationContext = {
@@ -914,94 +987,117 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
         previousStatementLhs: null,
+        untilPosition,
+        includeStaleParseData,
     };
-    const error = evaluateStatements(parseData.statements, context);
-    return new DataAndMaybeError(context.evaluatedData, error);
+    const maybeCompletion = evaluateStatements(parseData.statements, context);
+    const error = maybeCompletion.hasError() ? maybeCompletion.getError() : null;
+    return new DataAndMaybeError(context, error);
+}
+
+function isPastPosition(context: EvaluationContext, position: SourcePosition): boolean {
+    if (context.untilPosition === undefined) {
+        return false;
+    }
+
+    if (context.thisFbuildUri != context.untilPosition.uri) {
+        return false;
+    }
+
+    return (position.line == context.untilPosition.position.line && position.character >= context.untilPosition.position.character)
+        || (position.line > context.untilPosition.position.line);
 }
 
 // The resulting evaluated data is stored in `context.evaluatedData`.
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatements(statements: Statement[], context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatements(statements: Statement[], context: EvaluationContext): CancellableMaybe<void> {
     try {
         for (const statement of statements) {
+            if (isPastPosition(context, statement.range.start)) {
+                return CancellableMaybe.cancelled();
+            }
+
             let statementLhs: VariableAndEvaluatedVariable | null = null;
 
             if (isParsedStatementVariableDefinition(statement)) {
                 const maybeStatementLhs = evaluateStatementVariableDefinition(statement, context);
-                if (maybeStatementLhs.hasError) {
-                    return maybeStatementLhs.getError();
+                if (!maybeStatementLhs.hasValue()) {
+                    return maybeStatementLhs as CancellableMaybe<void>;
                 }
                 statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementBinaryOperator(statement)) {
                 const maybeStatementLhs = evaluateStatementBinaryOperator(statement, context);
-                if (maybeStatementLhs.hasError) {
-                    return maybeStatementLhs.getError();
+                if (!maybeStatementLhs.hasValue()) {
+                    return maybeStatementLhs as CancellableMaybe<void>;
                 }
                 statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementBinaryOperatorOnUnnamed(statement)) {
                 const maybeStatementLhs = evaluateStatementBinaryOperatorOnUnnamed(statement, context);
-                if (maybeStatementLhs.hasError) {
-                    return maybeStatementLhs.getError();
+                if (!maybeStatementLhs.hasValue()) {
+                    return maybeStatementLhs as CancellableMaybe<void>;
                 }
                 statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementScopedStatements(statement)) {
-                const error = evaluateStatementScopedStatements(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementScopedStatements(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementUsing(statement)) {
-                const error = evaluateStatementUsing(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementUsing(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementForEach(statement)) {
-                const error = evaluateStatementForEach(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementForEach(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementGenericFunction(statement)) {
-                const error = evaluateStatementGenericFunction(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementGenericFunction(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementError(statement)) {
-                const error = evaluateStatementError(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementError(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementPrint(statement)) {
-                const error = evaluateStatementPrint(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementPrint(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementSettings(statement)) {
-                const error = evaluateStatementSettings(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementSettings(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementIf(statement)) {
-                const error = evaluateStatementIf(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementIf(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementUserFunctionDeclaration(statement)) {
-                evaluateStatementUserFunctionDeclaration(statement, context);
+                const result = evaluateStatementUserFunctionDeclaration(statement, context);
+                if (!result.hasValue()) {
+                    return result;
+                }
             } else if (isParsedStatementUserFunctionCall(statement)) {
-                const error = evaluateStatementUserFunctionCall(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementUserFunctionCall(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementInclude(statement)) {  // #include
-                const error = evaluateStatementInclude(statement, context);
-                if (error !== null) {
-                    return error;
+                const result = evaluateStatementInclude(statement, context);
+                if (!result.hasValue()) {
+                    return result;
                 }
             } else if (isParsedStatementOnce(statement)) {  // #once
                 context.onceIncludeUrisAlreadyIncluded.push(context.thisFbuildUri);
             } else if (isParsedStatementDirectiveIf(statement)) {  // #if
                 const maybeStatementLhs = evaluateStatementDirectiveIf(statement, context);
-                if (maybeStatementLhs.hasError) {
-                    return maybeStatementLhs.getError();
+                if (!maybeStatementLhs.hasValue()) {
+                    return maybeStatementLhs as CancellableMaybe<void>;
                 }
                 statementLhs = maybeStatementLhs.getValue();
             } else if (isParsedStatementDefine(statement)) {  // #define
@@ -1009,39 +1105,39 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
             } else if (isParsedStatementUndefine(statement)) {  // #undef
                 const error = evaluateStatementUndefine(statement, context);
                 if (error !== null) {
-                    return error;
+                    return CancellableMaybe.error(error);
                 }
             } else if (isParsedStatementImportEnvVar(statement)) {  // #import
                 const error = evaluateStatementImportEnvVar(statement, context);
                 if (error !== null) {
-                    return error;
+                    return CancellableMaybe.error(error);
                 }
             } else {
                 const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-                return new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`);
+                return CancellableMaybe.error(new InternalEvaluationError(dummyRange, `Unknown statement type '${statement.type}' from statement ${JSON.stringify(statement)}`));
             }
 
             context.previousStatementLhs = statementLhs;
         }
     } catch (error) {
         if (error instanceof Error) {
-            return error;
+            return CancellableMaybe.error(error);
         } else {
             // We should only throw `Error` instances, but handle other types as a fallback.
             // `error` could be anything. Try to get a useful message out of it.
             const typedError = new Error(String(error));
-            return typedError;
+            return CancellableMaybe.error(typedError);
         }
     }
 
-    return null;
+    return CancellableMaybe.completed();
 }
 
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
-function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefinition, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+function evaluateStatementVariableDefinition(statement: ParsedStatementVariableDefinition, context: EvaluationContext): CancellableMaybe<VariableAndEvaluatedVariable> {
     const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-    if (maybeEvaluatedRhs.hasError) {
-        return Maybe.error(maybeEvaluatedRhs.getError());
+    if (!maybeEvaluatedRhs.hasValue()) {
+        return maybeEvaluatedRhs as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
     }
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
@@ -1049,12 +1145,12 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
     const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
 
     const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
-    if (maybeEvaluatedLhsName.hasError) {
-        return Maybe.error(maybeEvaluatedLhsName.getError());
+    if (!maybeEvaluatedLhsName.hasValue()) {
+        return maybeEvaluatedLhsName as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
     }
     const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
     if (typeof evaluatedLhsName.value !== 'string') {
-        return Maybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
+        return CancellableMaybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
     }
 
     let variable: ScopeVariable | null = null;
@@ -1077,7 +1173,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
     } else {
         const maybeVariable = context.scopeStack.getVariableStartingFromParentScopeOrError(evaluatedLhsName.value, lhsRange);
         if (maybeVariable.hasError) {
-            return Maybe.error(maybeVariable.getError());
+            return CancellableMaybe.error(maybeVariable.getError());
         }
         variable = maybeVariable.getValue();
         existingValue = variable.value;
@@ -1090,7 +1186,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
             // Assignment to an empty Array: the RHS can be any valid Array.
             if (typeof value !== 'string' && !(value instanceof Struct)) {
                 const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []));
+                return CancellableMaybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array. Arrays can only contain Strings or Structs.`, []));
             }
         } else {
             // Assignment to a non-empty Array: the RHS items must be of the same type as the LHS.
@@ -1099,7 +1195,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
                 || (lhsFirstItem instanceof Struct && !(value instanceof Struct)))
             {
                 const errorRange = new SourceRange(context.thisFbuildUri, evaluatedRhs.range);
-                return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []));
+                return CancellableMaybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, errorRange), `Cannot assign ${getValueTypeNameA(value)} to an Array of ${getValueTypeName(lhsFirstItem)}s.`, []));
             }
         }
         variable.value = [value];
@@ -1123,21 +1219,21 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
         variable,
         evaluatedVariable,
     };
-    return Maybe.ok(statementLhs);
+    return CancellableMaybe.completed(statementLhs);
 }
 
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
-function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperator, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperator, context: EvaluationContext): CancellableMaybe<VariableAndEvaluatedVariable> {
     const lhs = statement.lhs;
     const lhsRange = new SourceRange(context.thisFbuildUri, lhs.range);
 
     const maybeEvaluatedLhsName = evaluateRValue(lhs.name, context);
-    if (maybeEvaluatedLhsName.hasError) {
-        return Maybe.error(maybeEvaluatedLhsName.getError());
+    if (!maybeEvaluatedLhsName.hasValue()) {
+        return maybeEvaluatedLhsName as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
     }
     const evaluatedLhsName = maybeEvaluatedLhsName.getValue();
     if (typeof evaluatedLhsName.value !== 'string') {
-        return Maybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
+        return CancellableMaybe.error(new EvaluationError(lhsRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLhsName.value)}`, []));
     }
 
     let lhsVariable: ScopeVariable;
@@ -1154,14 +1250,14 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
     } else {
         const maybeExistingVariable = context.scopeStack.getVariableInScopeOrError(lhs.scope, evaluatedLhsName.value, lhsRange);
         if (maybeExistingVariable.hasError) {
-            return Maybe.error(maybeExistingVariable.getError());
+            return CancellableMaybe.error(maybeExistingVariable.getError());
         }
         lhsVariable = maybeExistingVariable.getValue();
     }
 
     const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-    if (maybeEvaluatedRhs.hasError) {
-        return Maybe.error(maybeEvaluatedRhs.getError());
+    if (!maybeEvaluatedRhs.hasValue()) {
+        return maybeEvaluatedRhs as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
     }
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
@@ -1177,7 +1273,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
     }
     const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
     if (maybeOperatorResult.hasError) {
-        return Maybe.error(maybeOperatorResult.getError());
+        return CancellableMaybe.error(maybeOperatorResult.getError());
     }
     lhsVariable.value = maybeOperatorResult.getValue();
 
@@ -1199,24 +1295,24 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
         variable: lhsVariable,
         evaluatedVariable,
     };
-    return Maybe.ok(statementLhs);
+    return CancellableMaybe.completed(statementLhs);
 }
 
 // Returns an `Error` on fatal error, or the statement's LHS otherwise.
-function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBinaryOperatorOnUnnamed, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable> {
+function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBinaryOperatorOnUnnamed, context: EvaluationContext): CancellableMaybe<VariableAndEvaluatedVariable> {
     if (context.previousStatementLhs === null) {
-        const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, statement.rangeStart);
-        return Maybe.error(new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []));
+        const range = SourceRange.createFromPosition(context.thisFbuildUri, statement.range.start, statement.range.end);
+        return CancellableMaybe.error(new EvaluationError(range, 'Unnamed modification must follow a variable assignment in the same scope.', []));
     }
     const lhsVariable = context.previousStatementLhs.variable;
 
     const maybeEvaluatedRhs = evaluateRValue(statement.rhs, context);
-    if (maybeEvaluatedRhs.hasError) {
-        return Maybe.error(maybeEvaluatedRhs.getError());
+    if (!maybeEvaluatedRhs.hasValue()) {
+        return maybeEvaluatedRhs as unknown as CancellableMaybe<VariableAndEvaluatedVariable>;
     }
     const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
-    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.rangeStart, evaluatedRhs.range.end);
+    const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, statement.range.start, evaluatedRhs.range.end);
     let inPlaceBinaryOperatorFunc: (existingValue: Value, summand: Value, range: SourceRange) => Maybe<Value>;
     switch (statement.operator) {
         case '+':
@@ -1228,7 +1324,7 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
     }
     const maybeOperatorResult = inPlaceBinaryOperatorFunc(lhsVariable.value, evaluatedRhs.value, binaryOperatorRange);
     if (maybeOperatorResult.hasError) {
-        return Maybe.error(maybeOperatorResult.getError());
+        return CancellableMaybe.error(maybeOperatorResult.getError());
     }
     lhsVariable.value = maybeOperatorResult.getValue();
 
@@ -1237,36 +1333,44 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
     context.previousStatementLhs.evaluatedVariable.value = lhsVariable.value;
 
     // Allow chaining of unnamed operators.
-    return Maybe.ok(context.previousStatementLhs);
+    return CancellableMaybe.completed(context.previousStatementLhs);
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementScopedStatements(statement: ParsedStatementScopedStatements, context: EvaluationContext): Error | null {
-    let error: Error | null = null;
-    context.scopeStack.withScope(() => {
-        error = evaluateStatements(statement.statements, context);
-    });
-    return error;
+// Returns `Error` on fatal error.
+function evaluateStatementScopedStatements(statement: ParsedStatementScopedStatements, context: EvaluationContext): CancellableMaybe<void> {
+    context.scopeStack.push(ParentScopeAccess.Yes);
+
+    const result = evaluateStatements(statement.statements, context);
+    if (!result.hasValue()) {
+        return result;
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementUsing(statement: ParsedStatementUsing, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementUsing(statement: ParsedStatementUsing, context: EvaluationContext): CancellableMaybe<void> {
     const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
     const structRange = new SourceRange(context.thisFbuildUri, statement.struct.range);
 
     if (statement.struct.type !== 'evaluatedVariable') {
-        return new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`, []);
+        return CancellableMaybe.error(new EvaluationError(structRange, `'Using' parameter must be an evaluated variable, but instead is '${statement.struct.type}'`, []));
     }
     const maybeEvaluated = evaluateEvaluatedVariable(statement.struct, context);
-    if (maybeEvaluated.hasError) {
-        return maybeEvaluated.getError();
+    if (!maybeEvaluated.hasValue()) {
+        return maybeEvaluated as CancellableMaybe<void>;
     }
     const evaluated = maybeEvaluated.getValue();
 
     const structVariable = evaluated.valueScopeVariable;
     const struct = structVariable.value;
     if (!(struct instanceof Struct)) {
-        return new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []);
+        return CancellableMaybe.error(new EvaluationError(structRange, `'Using' parameter must be a Struct, but instead is ${getValueTypeNameA(struct)}`, []));
     }
 
     //
@@ -1313,11 +1417,11 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
         }
     }
 
-    return null;
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementForEach(statement: ParsedStatementForEach, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementForEach(statement: ParsedStatementForEach, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the iterators (array to loop over plus the loop-variable)
     interface ForEachIterator {
         loopVariableName: string;
@@ -1328,22 +1432,22 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
     for (const iterator of statement.iterators) {
         // Evaluate the array to loop over.
         if (iterator.arrayToLoopOver.type !== 'evaluatedVariable') {
-            const range = new SourceRange(context.thisFbuildUri, statement.range);
-            return new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`);
+            const range = new SourceRange(context.thisFbuildUri, statement.rangeWithoutBody);
+            return CancellableMaybe.error(new InternalEvaluationError(range, `'ForEach' array to loop over must be an evaluated variable, but instead is '${iterator.arrayToLoopOver.type}'`));
         }
         const arrayToLoopOverRange = new SourceRange(context.thisFbuildUri, iterator.arrayToLoopOver.range);
         const maybeEvaluatedArrayToLoopOver = evaluateEvaluatedVariable(iterator.arrayToLoopOver, context);
-        if (maybeEvaluatedArrayToLoopOver.hasError) {
-            return maybeEvaluatedArrayToLoopOver.getError();
+        if (!maybeEvaluatedArrayToLoopOver.hasValue()) {
+            return maybeEvaluatedArrayToLoopOver as CancellableMaybe<void>;
         }
         const evaluatedArrayToLoopOver = maybeEvaluatedArrayToLoopOver.getValue();
         const arrayItems = evaluatedArrayToLoopOver.valueScopeVariable.value;
         if (!(arrayItems instanceof Array)) {
-            return new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`, []);
+            return CancellableMaybe.error(new EvaluationError(arrayToLoopOverRange, `'ForEach' variable to loop over must be an Array, but instead is ${getValueTypeNameA(arrayItems)}`, []));
         }
 
         if ((iterators.length > 0) && (arrayItems.length != iterators[0].arrayItems.length)) {
-            return new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`, []);
+            return CancellableMaybe.error(new EvaluationError(arrayToLoopOverRange, `'ForEach' Array variable to loop over contains ${arrayItems.length} elements, but the loop is for ${iterators[0].arrayItems.length} elements.`, []));
         }
 
         const loopVar = iterator.loopVar;
@@ -1351,12 +1455,12 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
 
         // Evaluate the loop-variable name.
         const maybeEvaluatedLoopVarName = evaluateRValue(loopVar.name, context);
-        if (maybeEvaluatedLoopVarName.hasError) {
-            return maybeEvaluatedLoopVarName.getError();
+        if (!maybeEvaluatedLoopVarName.hasValue) {
+            return maybeEvaluatedLoopVarName as CancellableMaybe<void>;
         }
         const evaluatedLoopVarName = maybeEvaluatedLoopVarName.getValue();
         if (typeof evaluatedLoopVarName.value !== 'string') {
-            return new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`);
+            return CancellableMaybe.error(new InternalEvaluationError(loopVarRange, `Variable name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedLoopVarName.value)}`));
         }
         iterators.push({
             loopVariableName: evaluatedLoopVarName.value,
@@ -1367,51 +1471,57 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
 
     // Evaluate the ForEach body.
 
-    let error: Error | null = null;
     const arrayItemsLength = iterators[0].arrayItems.length;
     for (let arrayItemIndex = 0; arrayItemIndex < arrayItemsLength; arrayItemIndex++) {
-        context.scopeStack.withScope(() => {
-            // Update the loop variables' values and add evaluated-variables for them.
-            for (const iterator of iterators) {
-                const loopVarDefinition = context.scopeStack.createVariableDefinition(iterator.loopVariableRange, iterator.loopVariableName);
+        context.scopeStack.push(ParentScopeAccess.Yes);
 
-                // The loop variable is a definition and a reference.
-                context.evaluatedData.variableDefinitions.push(loopVarDefinition);
-                context.evaluatedData.variableReferences.push({
-                    definitions: [loopVarDefinition],
-                    range: iterator.loopVariableRange,
-                });
+        // Update the loop variables' values and add evaluated-variables for them.
+        for (const iterator of iterators) {
+            const loopVarDefinition = context.scopeStack.createVariableDefinition(iterator.loopVariableRange, iterator.loopVariableName);
 
-                // Set a variable in the current scope for each iterator's loop variable.
-                const arrayItem = iterator.arrayItems[arrayItemIndex];
-                context.scopeStack.setVariableInCurrentScope(iterator.loopVariableName, arrayItem, [loopVarDefinition]);
+            // The loop variable is a definition and a reference.
+            context.evaluatedData.variableDefinitions.push(loopVarDefinition);
+            context.evaluatedData.variableReferences.push({
+                definitions: [loopVarDefinition],
+                range: iterator.loopVariableRange,
+            });
 
-                context.evaluatedData.evaluatedVariables.push({
-                    value: arrayItem,
-                    range: iterator.loopVariableRange,
-                });
-            }
+            // Set a variable in the current scope for each iterator's loop variable.
+            const arrayItem = iterator.arrayItems[arrayItemIndex];
+            context.scopeStack.setVariableInCurrentScope(iterator.loopVariableName, arrayItem, [loopVarDefinition]);
 
-            error = evaluateStatements(statement.statements, context);
-            if (error !== null) {
-                return;
-            }
-        });
+            context.evaluatedData.evaluatedVariables.push({
+                value: arrayItem,
+                range: iterator.loopVariableRange,
+            });
+        }
+
+        const result = evaluateStatements(statement.statements, context);
+        if (!result.hasValue()) {
+            return result;
+        }
+
+        if (isPastPosition(context, statement.range.end)) {
+            return CancellableMaybe.cancelled();
+        }
+
+        context.scopeStack.pop();
     }
-    return error;
+
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunction, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the target name.
     const maybeEvaluatedTargetNameName = evaluateRValue(statement.targetName, context);
-    if (maybeEvaluatedTargetNameName.hasError) {
-        return maybeEvaluatedTargetNameName.getError();
+    if (!maybeEvaluatedTargetNameName.hasValue()) {
+        return maybeEvaluatedTargetNameName as CancellableMaybe<void>;
     }
     const evaluatedTargetName = maybeEvaluatedTargetNameName.getValue();
     const evaluatedTargetNameRange = new SourceRange(context.thisFbuildUri, evaluatedTargetName.range);
     if (typeof evaluatedTargetName.value !== 'string') {
-        return new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []);
+        return CancellableMaybe.error(new EvaluationError(evaluatedTargetNameRange, `Target name must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedTargetName.value)}`, []));
     }
 
     // Ensure that this doesn't reuse an existing target name.
@@ -1425,9 +1535,8 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
             evaluatedTargetNameRange,
             `Target name "${evaluatedTargetName.value}" already exists`,
             [existingTargetDefinitionInfo]
-        )
-        );
-        return null;
+        ));
+        return CancellableMaybe.completed();
     }
 
     // Create a definition and reference for the target name.
@@ -1462,17 +1571,28 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
     }
     functionsInFile.push(functionData);
 
+    //
     // Evaluate the function body.
-    let error: Error | null = null;
-    context.scopeStack.withScope(() => {
-        error = evaluateStatements(statement.statements, context);
-        if (error !== null) {
-            return;
-        }
+    //
 
-        error = evaluateGenericFunctionProperties(statement, context);
-    });
-    return error;
+    context.scopeStack.push(ParentScopeAccess.Yes);
+
+    const result = evaluateStatements(statement.statements, context);
+    if (!result.hasValue()) {
+        return result;
+    }
+
+    const error = evaluateGenericFunctionProperties(statement, context);
+    if (error !== null) {
+        return CancellableMaybe.error(error);
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
@@ -1513,73 +1633,94 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementError(statement: ParsedStatementError, context: EvaluationContext): Error | null {
+function evaluateStatementError(statement: ParsedStatementError, context: EvaluationContext): CancellableMaybe<void> {
     const maybeEvaluatedValue = evaluateRValue(statement.value, context);
-    if (maybeEvaluatedValue.hasError) {
-        return maybeEvaluatedValue.getError();
+    if (!maybeEvaluatedValue.hasValue()) {
+        return maybeEvaluatedValue as CancellableMaybe<void>;
     }
     const evaluatedValue = maybeEvaluatedValue.getValue();
     if (typeof evaluatedValue.value !== 'string') {
         const range = new SourceRange(context.thisFbuildUri, statement.range);
-        return new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`);
+        return CancellableMaybe.error(new InternalEvaluationError(range, `'Error' argument must evaluate to a String, but instead evaluates to ${getValueTypeNameA(evaluatedValue.value)}`));
     }
-    return null;
+    return CancellableMaybe.completed();
 }
 
 // Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementPrint(statement: ParsedStatementPrint, context: EvaluationContext): Error | null {
+function evaluateStatementPrint(statement: ParsedStatementPrint, context: EvaluationContext): CancellableMaybe<void> {
     const value = statement.value;
     const maybeEvaluatedValue = evaluateRValue(value, context);
-    if (maybeEvaluatedValue.hasError) {
-        return maybeEvaluatedValue.getError();
+    if (!maybeEvaluatedValue.hasValue()) {
+        return maybeEvaluatedValue as CancellableMaybe<void>;
     }
     const evaluatedValue = maybeEvaluatedValue.getValue();
     if (!isParsedEvaluatedVariable(value) && typeof evaluatedValue.value !== 'string') {
         const range = new SourceRange(context.thisFbuildUri, statement.range);
-        return new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`);
+        return CancellableMaybe.error(new InternalEvaluationError(range, `'Print' argument must either be a variable or evaluate to a String, but instead is ${getValueTypeNameA(evaluatedValue.value)}`));
     }
-    return null;
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementSettings(statement: ParsedStatementSettings, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementSettings(statement: ParsedStatementSettings, context: EvaluationContext): CancellableMaybe<void> {
+    //
     // Evaluate the function body.
-    let error: Error | null = null;
-    context.scopeStack.withScope(() => {
-        error = evaluateStatements(statement.statements, context);
-    });
-    return error;
+    //
+
+    context.scopeStack.push(ParentScopeAccess.Yes);
+
+    const result = evaluateStatements(statement.statements, context);
+    if (!result.hasValue()) {
+        return result;
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the condition.
     const condition = statement.condition;
     const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
     const maybeEvaluatedCondition = evaluateIfCondition(condition, context, statementRange);
-    if (maybeEvaluatedCondition.hasError) {
-        return maybeEvaluatedCondition.getError();
+    if (!maybeEvaluatedCondition.hasValue()) {
+        return maybeEvaluatedCondition as CancellableMaybe<void>;
     }
     const evaluatedCondition = maybeEvaluatedCondition.getValue();
 
     // Skip evaluating the function body if the condition was false.
     if (evaluatedCondition.condition === false) {
-        return null;
+        return CancellableMaybe.completed();
     }
 
+    //
     // Evaluate the function body.
-    let error: Error | null = null;
-    context.scopeStack.withScope(() => {
-        error = evaluateStatements(statement.statements, context);
-    });
-    return error;
+    //
+
+    context.scopeStack.push(ParentScopeAccess.Yes);
+
+    const result = evaluateStatements(statement.statements, context);
+    if (!result.hasValue()) {
+        return result;
+    }
+
+    if (isPastPosition(context, statement.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
-// Returns an `Error` on fatal error, or `null` otherwise.
 function evaluateStatementUserFunctionDeclaration(
     userFunction: ParsedStatementUserFunctionDeclaration,
     context: EvaluationContext
-): void {
+): CancellableMaybe<void> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
     const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
     const functionNameReference: VariableReference = {
@@ -1597,7 +1738,7 @@ function evaluateStatementUserFunctionDeclaration(
             `Cannot use function name "${userFunction.name}" because it is reserved.`,
             []
         ));
-        return;
+        return CancellableMaybe.completed();
     }
 
     const existingFunction = context.userFunctions.get(userFunction.name);
@@ -1612,8 +1753,14 @@ function evaluateStatementUserFunctionDeclaration(
             `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`,
             [existingFunctionInfo]
         ));
-        return;
+        return CancellableMaybe.completed();
     }
+
+    // Add the parameters as variables to the scope stack to support the completion provider.
+    // The variables won't actually be read.
+    //
+    // User functions can only use passed-in arguments and not variables in scope where they are defined.
+    context.scopeStack.push(ParentScopeAccess.No);
 
     // Define and reference each parameter.
     //
@@ -1629,7 +1776,7 @@ function evaluateStatementUserFunctionDeclaration(
                 `User-function argument names must be unique.`,
                 []
             ));
-            return;
+            return CancellableMaybe.completed();
         }
         usedParameterNames.push(parameter.name);
 
@@ -1641,6 +1788,11 @@ function evaluateStatementUserFunctionDeclaration(
             definitions: [definition],
             range: paramSourceRange,
         });
+
+        // Add the parameters as variables to the scope stack to support the completion provider.
+        // Set the variable's value to 0 since we don't know the actual value from the future call.
+        // We don't care about the actual value here, we just care about the variable being in the scope.
+        context.scopeStack.setVariableInCurrentScope(parameter.name, 0, [definition]);
     }
 
     context.userFunctions.set(userFunction.name, {
@@ -1648,18 +1800,25 @@ function evaluateStatementUserFunctionDeclaration(
         parameters: userFunction.parameters,
         statements: userFunction.statements,
     });
+
+    if (isPastPosition(context, userFunction.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
 function evaluateStatementUserFunctionCall(
     call: ParsedStatementUserFunctionCall,
     context: EvaluationContext
-): Error | null {
+): CancellableMaybe<void> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, call.nameRange);
 
     // Lookup the function.
     const userFunction = context.userFunctions.get(call.name);
     if (userFunction === undefined) {
-        return new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`, []);
+        return CancellableMaybe.error(new EvaluationError(nameSourceRange, `No function exists with the name "${call.name}".`, []));
     }
 
     // Reference the function.
@@ -1671,12 +1830,12 @@ function evaluateStatementUserFunctionCall(
     if (call.parameters.length !== userFunction.parameters.length) {
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
         const numExpectedArgumentsStr = `${userFunction.parameters.length} argument${userFunction.parameters.length === 1 ? '' : 's'}`;
-        return new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`, []);
+        return CancellableMaybe.error(new EvaluationError(callSourceRange, `User function "${call.name}" takes ${numExpectedArgumentsStr} but passing ${call.parameters.length}.`, []));
     }
 
     if (context.scopeStack.getDepth() > MAX_SCOPE_STACK_DEPTH) {
         const callSourceRange = new SourceRange(context.thisFbuildUri, call.range);
-        return new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.', []);
+        return CancellableMaybe.error(new EvaluationError(callSourceRange, 'Excessive scope depth. Possible infinite recursion from user function calls.', []));
     }
 
     // Evaluate the call-parameters' values.
@@ -1684,8 +1843,8 @@ function evaluateStatementUserFunctionCall(
     const paramValues: Value[] = new Array(call.parameters.length);
     for (const [i, callParam] of call.parameters.entries()) {
         const maybeEvaluatedValue = evaluateRValue(callParam.value, context);
-        if (maybeEvaluatedValue.hasError) {
-            return maybeEvaluatedValue.getError();
+        if (!maybeEvaluatedValue.hasValue()) {
+            return maybeEvaluatedValue as CancellableMaybe<void>;
         }
         const evaluatedValue = maybeEvaluatedValue.getValue();
         paramValues[i] = evaluatedValue.value;
@@ -1696,44 +1855,54 @@ function evaluateStatementUserFunctionCall(
     //
     // Note that the call uses the current `EvaluationContext`, but the body of the call uses a new context.
     //
-    let error: Error | null = null;
+
     // User functions can only use passed-in arguments and not variables in scope where they are defined.
-    context.scopeStack.withPrivateScope(() => {
-        const functionCallContext: EvaluationContext = {
-            evaluatedData: context.evaluatedData,
-            scopeStack: context.scopeStack,
-            // User functions do not share defines.
-            defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
-            // User functions can call other user functions.
-            userFunctions: context.userFunctions,
-            rootFbuildDirUri: context.rootFbuildDirUri,
-            thisFbuildUri: context.thisFbuildUri,
-            fileSystem: context.fileSystem,
-            parseDataProvider: context.parseDataProvider,
-            onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
-            previousStatementLhs: null,
-        };
+    context.scopeStack.push(ParentScopeAccess.No);
 
-        // Set a variable for each parameter.
-        for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
-            if (funcDeclarationParam.definition === undefined) {
-                const callParam = call.parameters[i];
-                const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
-                error = new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`);
-                return;
-            }
+    const functionCallContext: EvaluationContext = {
+        evaluatedData: context.evaluatedData,
+        scopeStack: context.scopeStack,
+        // User functions do not share defines.
+        defines: createDefaultDefines(context.rootFbuildDirUri.toString(), context.scopeStack),
+        // User functions can call other user functions.
+        userFunctions: context.userFunctions,
+        rootFbuildDirUri: context.rootFbuildDirUri,
+        thisFbuildUri: context.thisFbuildUri,
+        fileSystem: context.fileSystem,
+        parseDataProvider: context.parseDataProvider,
+        onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
+        previousStatementLhs: null,
+        untilPosition: context.untilPosition,
+        includeStaleParseData: context.includeStaleParseData,
+    };
 
-            // Note that we set the variable in the function call context, not the current context.
-            functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], [funcDeclarationParam.definition]);
+    // Set a variable for each parameter.
+    for (const [i, funcDeclarationParam] of userFunction.parameters.entries()) {
+        if (funcDeclarationParam.definition === undefined) {
+            const callParam = call.parameters[i];
+            const callParamSourceRange = new SourceRange(context.thisFbuildUri, callParam.range);
+            return CancellableMaybe.error(new InternalEvaluationError(callParamSourceRange, `Bug: user-function "${call.name}"'s "${funcDeclarationParam.name}" parameter has no definition`));
         }
 
-        error = evaluateStatements(userFunction.statements, functionCallContext);
-    });
-    return error;
+        // Note that we set the variable in the function call context, not the current context.
+        functionCallContext.scopeStack.setVariableInCurrentScope(funcDeclarationParam.name, paramValues[i], [funcDeclarationParam.definition]);
+    }
+
+    const result = evaluateStatements(userFunction.statements, functionCallContext);
+    if (!result.hasValue()) {
+        return result;
+    }
+
+    if (isPastPosition(context, call.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementInclude(statement: ParsedStatementInclude, context: EvaluationContext): Error | null {
+// Returns `Error` on fatal error.
+function evaluateStatementInclude(statement: ParsedStatementInclude, context: EvaluationContext): CancellableMaybe<void> {
     const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
     const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
     const includeUriStr = includeUri.toString();
@@ -1748,19 +1917,17 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
 
     // Skip the include if it's marked to only be included once and it has already been included.
     if (context.onceIncludeUrisAlreadyIncluded.includes(includeUriStr)) {
-        return null;
+        return CancellableMaybe.completed();
     }
 
-    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri);
+    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, context.includeStaleParseData);
     if (maybeIncludeParseData.hasError) {
         const includeError = maybeIncludeParseData.getError();
-        let error: Error;
         if (includeError instanceof ParseError) {
-            error = includeError;
+            return CancellableMaybe.error(includeError);
         } else {
-            error = new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`, []);
+            return CancellableMaybe.error(new EvaluationError(includeRange, `Unable to open include: ${includeError.message}`, []));
         }
-        return error;
     }
     const includeParseData = maybeIncludeParseData.getValue();
 
@@ -1768,7 +1935,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
     const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
     const maybeCurrentBffDirVariable = context.scopeStack.getVariableStartingFromCurrentScopeOrError('_CURRENT_BFF_DIR_', dummyRange);
     if (maybeCurrentBffDirVariable.hasError) {
-        return maybeCurrentBffDirVariable.getError();
+        return CancellableMaybe.error(maybeCurrentBffDirVariable.getError());
     }
     const currentBffDirVariable = maybeCurrentBffDirVariable.getValue();
     const currentBffDirBeforeInclude = currentBffDirVariable.value;
@@ -1788,37 +1955,43 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         parseDataProvider: context.parseDataProvider,
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: context.previousStatementLhs,
+        untilPosition: context.untilPosition,
+        includeStaleParseData: context.includeStaleParseData,
     };
 
-    const error = evaluateStatements(includeParseData.statements, includeContext);
-    if (error !== null) {
-        return error;
+    const result = evaluateStatements(includeParseData.statements, includeContext);
+    if (!result.hasValue()) {
+        return result;
     }
 
     // Restore the `_CURRENT_BFF_DIR_` value.
     currentBffDirVariable.value = currentBffDirBeforeInclude;
 
-    return null;
+    return CancellableMaybe.completed();
 }
 
-// Returns `Error` on fatal error, or `null` otherwise.
-function evaluateStatementDirectiveIf(statement: ParsedStatementDirectiveIf, context: EvaluationContext): Maybe<VariableAndEvaluatedVariable | null> {
+// Returns `Error` on fatal error.
+function evaluateStatementDirectiveIf(
+    statement: ParsedStatementDirectiveIf,
+    context: EvaluationContext
+): CancellableMaybe<VariableAndEvaluatedVariable | null> {
 
     const maybeEvaluatedCondition = evaluateDirectiveIfCondition(statement, context);
     if (maybeEvaluatedCondition.hasError) {
-        return Maybe.error(maybeEvaluatedCondition.getError());
+        return CancellableMaybe.error(maybeEvaluatedCondition.getError());
     }
 
     // Evaluate the '#if' body statements if the condition was true.
     // Otherwise, evaluate the '#else' body statements.
     const statements = maybeEvaluatedCondition.getValue() ? statement.ifStatements : statement.elseStatements;
-    const error = evaluateStatements(statements, context);
-    if (error !== null) {
-        return Maybe.error(error);
+
+    const result = evaluateStatements(statements, context);
+    if (!result.hasValue()) {
+        return result as CancellableMaybe<VariableAndEvaluatedVariable | null>;
     }
 
     // Preserve the previous LHS variable in order to support embedding #if in a variable assignment expression.
-    return Maybe.ok(context.previousStatementLhs);
+    return CancellableMaybe.completed(context.previousStatementLhs);
 }
 
 function evaluateStatementDefine(statement: ParsedStatementDefine, context: EvaluationContext): void {
@@ -1886,19 +2059,19 @@ function evaluateStatementImportEnvVar(statement: ParsedStatementImportEnvVar, c
     return null;
 }
 
-function evaluateRValue(rValue: any, context: EvaluationContext): Maybe<EvaluatedRValue> {
+function evaluateRValue(rValue: any, context: EvaluationContext): CancellableMaybe<EvaluatedRValue> {
     if (isParsedString(rValue)) {
-        return Maybe.ok({
+        return CancellableMaybe.completed({
             value: rValue.value,
             range: rValue.range,
         });
     } else if (isParsedStringExpression(rValue)) {
         const maybeEvaluated = evaluateStringExpression(rValue.parts, context);
-        if (maybeEvaluated.hasError) {
-            return Maybe.error(maybeEvaluated.getError());
+        if (!maybeEvaluated.hasValue()) {
+            return maybeEvaluated as unknown as CancellableMaybe<EvaluatedRValue>;
         }
         const evaluated = maybeEvaluated.getValue();
-        return Maybe.ok({
+        return CancellableMaybe.completed({
             value: evaluated.evaluatedString,
             range: rValue.range,
         });
@@ -1908,32 +2081,32 @@ function evaluateRValue(rValue: any, context: EvaluationContext): Maybe<Evaluate
         return evaluateSum(rValue, context);
     } else if (isParsedEvaluatedVariable(rValue)) {
         const maybeEvaluated = evaluateEvaluatedVariable(rValue, context);
-        if (maybeEvaluated.hasError) {
-            return Maybe.error(maybeEvaluated.getError());
+        if (!maybeEvaluated.hasValue()) {
+            return maybeEvaluated as unknown as CancellableMaybe<EvaluatedRValue>;
         }
         const evaluated = maybeEvaluated.getValue();
-        return Maybe.ok({
+        return CancellableMaybe.completed({
             value: evaluated.valueScopeVariable.value,
             range: rValue.range,
         });
     } else if (isParsedArray(rValue)) {
         const maybeEvaluated = evaluateRValueArray(rValue.value, rValue.range, context);
-        if (maybeEvaluated.hasError) {
-            return Maybe.error(maybeEvaluated.getError());
+        if (!maybeEvaluated.hasValue()) {
+            return maybeEvaluated;
         }
         const evaluated = maybeEvaluated.getValue();
-        return Maybe.ok({
+        return CancellableMaybe.completed({
             value: evaluated.value,
             range: rValue.range,
         });
     } else if (isParsedBoolean(rValue) || isParsedInteger(rValue)) {
-        return Maybe.ok({
+        return CancellableMaybe.completed({
             value: rValue.value,
             range: rValue.range,
         });
     } else {
         const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-        return Maybe.error(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
+        return CancellableMaybe.error(new InternalEvaluationError(dummyRange, `Unsupported rValue ${JSON.stringify(rValue)}`));
     }
 }
 
@@ -1941,7 +2114,7 @@ function evaluateRValueArray(
     rValue: any[],
     range: ParseSourceRange,
     context: EvaluationContext
-): Maybe<EvaluatedRValue>
+): CancellableMaybe<EvaluatedRValue>
 {
     const result: EvaluatedRValue = {
         value: [],
@@ -1956,7 +2129,7 @@ function evaluateRValueArray(
             const directiveIfStatement = item;
             const maybeEvaluatedCondition = evaluateDirectiveIfCondition(directiveIfStatement, context);
             if (maybeEvaluatedCondition.hasError) {
-                return Maybe.error(maybeEvaluatedCondition.getError());
+                return CancellableMaybe.error(maybeEvaluatedCondition.getError());
             }
 
             // Evaluate the '#if' body statements if the condition was true.
@@ -1964,19 +2137,19 @@ function evaluateRValueArray(
             const contents = maybeEvaluatedCondition.getValue() ? directiveIfStatement.ifStatements : directiveIfStatement.elseStatements;
             const maybeEvaluated = evaluateRValueArray(contents, range, context);
             const evaluated = maybeEvaluated.getValue();
-            if (maybeEvaluated.hasError) {
-                return Maybe.error(maybeEvaluated.getError());
+            if (!maybeEvaluated.hasValue()) {
+                return maybeEvaluated;
             }
 
             if (!(evaluated.value instanceof Array)) {
-                return Maybe.error(new InternalEvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), 'Bug: directive if ("#if") body must evaluate to an Array.'));
+                return CancellableMaybe.error(new InternalEvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), 'Bug: directive if ("#if") body must evaluate to an Array.'));
             }
 
             pushToFirstArray(result.value, evaluated.value);
         } else {
             const maybeEvaluated = evaluateRValue(item, context);
-            if (maybeEvaluated.hasError) {
-                return Maybe.error(maybeEvaluated.getError());
+            if (!maybeEvaluated.hasValue()) {
+                return maybeEvaluated;
             }
             const evaluated = maybeEvaluated.getValue();
 
@@ -1989,14 +2162,14 @@ function evaluateRValueArray(
                     if (typeof evaluated.value === 'boolean'
                         || typeof evaluated.value === 'number')
                     {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`, []));
+                        return CancellableMaybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of ${getValueTypeName(evaluated.value)}s. Only Arrays of Strings and Arrays of Structs are allowed.`, []));
                     } else if (evaluated.value instanceof Struct && !isParsedEvaluatedVariable(item)) {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`, []));
+                        return CancellableMaybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `Cannot have an Array of literal Structs. Use an Array of evaluated variables instead.`, []));
                     }
                 } else {
                     const itemTypeNameA = getValueTypeNameA(evaluated.value);
                     if (itemTypeNameA !== firstItemTypeNameA) {
-                        return Maybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `All values in an Array must have the same type, but the first item is ${firstItemTypeNameA} and this item is ${itemTypeNameA}`, []));
+                        return CancellableMaybe.error(new EvaluationError(new SourceRange(context.thisFbuildUri, evaluated.range), `All values in an Array must have the same type, but the first item is ${firstItemTypeNameA} and this item is ${itemTypeNameA}`, []));
                     }
                 }
 
@@ -2004,25 +2177,25 @@ function evaluateRValueArray(
             }
         }
     }
-    return Maybe.ok(result);
+    return CancellableMaybe.completed(result);
 }
 
-function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): Maybe<EvaluatedEvaluatedVariable> {
+function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVariable, context: EvaluationContext): CancellableMaybe<EvaluatedEvaluatedVariable> {
     const maybeEvaluatedVariableName = evaluateRValue(parsedEvaluatedVariable.name, context);
-    if (maybeEvaluatedVariableName.hasError) {
-        return Maybe.error(maybeEvaluatedVariableName.getError());
+    if (!maybeEvaluatedVariableName.hasValue()) {
+        return maybeEvaluatedVariableName as unknown as CancellableMaybe<EvaluatedEvaluatedVariable>;
     }
     const evaluatedVariableName = maybeEvaluatedVariableName.getValue();
     const evaluatedVariableRange = new SourceRange(context.thisFbuildUri, parsedEvaluatedVariable.range);
     if (typeof evaluatedVariableName.value !== 'string') {
-        return Maybe.error(new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a String, but instead is ${getValueTypeNameA(evaluatedVariableName.value)}`));
+        return CancellableMaybe.error(new InternalEvaluationError(evaluatedVariableRange, `Variable name must evaluate to a String, but instead is ${getValueTypeNameA(evaluatedVariableName.value)}`));
     }
 
     const maybeValueScopeVariable = (parsedEvaluatedVariable.scope === 'current')
         ? context.scopeStack.getVariableStartingFromCurrentScopeOrError(evaluatedVariableName.value, evaluatedVariableRange)
         : context.scopeStack.getVariableStartingFromParentScopeOrError(evaluatedVariableName.value, evaluatedVariableRange);
     if (maybeValueScopeVariable.hasError) {
-        return Maybe.error(maybeValueScopeVariable.getError());
+        return CancellableMaybe.error(maybeValueScopeVariable.getError());
     }
     const valueScopeVariable = maybeValueScopeVariable.getValue();
 
@@ -2041,17 +2214,17 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     const result: EvaluatedEvaluatedVariable = {
         valueScopeVariable,
     };
-    return Maybe.ok(result);
+    return CancellableMaybe.completed(result);
 }
 
 // `parts` is an array of either strings or `evaluatedVariable` parse-data.
-function evaluateStringExpression(parts: (string | any)[], context: EvaluationContext): Maybe<EvaluatedStringExpression> {
+function evaluateStringExpression(parts: (string | any)[], context: EvaluationContext): CancellableMaybe<EvaluatedStringExpression> {
     let evaluatedString = '';
     for (const part of parts) {
         if (isParsedEvaluatedVariable(part)) {
             const maybeEvaluated = evaluateEvaluatedVariable(part, context);
-            if (maybeEvaluated.hasError) {
-                return Maybe.error(maybeEvaluated.getError());
+            if (!maybeEvaluated.hasValue()) {
+                return maybeEvaluated as unknown as CancellableMaybe<EvaluatedStringExpression>;
             }
             const evaluated = maybeEvaluated.getValue();
             evaluatedString += String(evaluated.valueScopeVariable.value);
@@ -2064,19 +2237,23 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
     const result: EvaluatedStringExpression = {
         evaluatedString,
     };
-    return Maybe.ok(result);
+    return CancellableMaybe.completed(result);
 }
 
-function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Maybe<EvaluatedRValue> {
-    let error: Error | null = null;
-    let structScope = new Scope(true /*canAccessParentScopes*/);
-    context.scopeStack.withScope(() => {
-        error = evaluateStatements(struct.statements, context);
-        structScope = context.scopeStack.getCurrentScope();
-    });
-    if (error !== null) {
-        return Maybe.error(error);
+function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): CancellableMaybe<EvaluatedRValue> {
+    context.scopeStack.push(ParentScopeAccess.Yes);
+
+    const statements = evaluateStatements(struct.statements, context);
+    if (!statements.hasValue()) {
+        return statements as CancellableMaybe<EvaluatedRValue>;
     }
+
+    if (isPastPosition(context, struct.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    const structScope = context.scopeStack.getCurrentScope();
+    context.scopeStack.pop();
 
     const structMembers = new Map<VariableName, StructMember>();
     for (const [name, variable] of structScope.variables) {
@@ -2088,17 +2265,17 @@ function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): Maybe
         value: evaluatedValue,
         range: struct.range,
     };
-    return Maybe.ok(result);
+    return CancellableMaybe.completed(result);
 }
 
-function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<EvaluatedRValue> {
+function evaluateSum(sum: ParsedSum, context: EvaluationContext): CancellableMaybe<EvaluatedRValue> {
     if (sum.summands.length == 0) {
         const dummyRange = SourceRange.create(context.thisFbuildUri, 0, 0, 0, 0);
-        return Maybe.error(new InternalEvaluationError(dummyRange, `A sum must have at least 2 values to add`));
+        return CancellableMaybe.error(new InternalEvaluationError(dummyRange, `A sum must have at least 2 values to add`));
     }
 
     const maybeResult = evaluateRValue(sum.first, context);
-    if (maybeResult.hasError) {
+    if (!maybeResult.hasValue()) {
         return maybeResult;
     }
     const result = maybeResult.getValue();
@@ -2109,8 +2286,8 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<Evaluate
     let previousSummandValue = result;
     for (const summand of sum.summands) {
         const maybeEvaluatedSummand = evaluateRValue(summand.value, context);
-        if (maybeEvaluatedSummand.hasError) {
-            return Maybe.error(maybeEvaluatedSummand.getError());
+        if (!maybeEvaluatedSummand.hasValue()) {
+            return maybeEvaluatedSummand;
         }
         const evaluatedSummand = maybeEvaluatedSummand.getValue();
         const binaryOperatorRange = SourceRange.createFromPosition(context.thisFbuildUri, previousSummandValue.range.start, evaluatedSummand.range.end);
@@ -2125,13 +2302,13 @@ function evaluateSum(sum: ParsedSum, context: EvaluationContext): Maybe<Evaluate
         }
         const maybeSum = inPlaceBinaryOperatorFunc(result.value, evaluatedSummand.value, binaryOperatorRange);
         if (maybeSum.hasError) {
-            return Maybe.error(maybeSum.getError());
+            return CancellableMaybe.error(maybeSum.getError());
         }
         result.value = maybeSum.getValue();
         previousSummandValue = summand.value;
     }
 
-    return Maybe.ok(result);
+    return maybeResult;
 }
 
 // In-place add summand to existingValue, and return it.
@@ -2216,37 +2393,37 @@ function evaluateIfCondition(
     condition: ParsedIfCondition,
     context: EvaluationContext,
     statementRange: SourceRange
-): Maybe<EvaluatedCondition>
+): CancellableMaybe<EvaluatedCondition>
 {
     if (isParsedIfConditionBoolean(condition)) {
         const maybeEvaluatedCondition = evaluateRValue(condition.value, context);
-        if (maybeEvaluatedCondition.hasError) {
-            return Maybe.error(maybeEvaluatedCondition.getError());
+        if (!maybeEvaluatedCondition.hasValue()) {
+            return maybeEvaluatedCondition as unknown as CancellableMaybe<EvaluatedCondition>;
         }
         const evaluatedCondition = maybeEvaluatedCondition.getValue();
         const evaluatedConditionValue = evaluatedCondition.value;
         if (typeof evaluatedConditionValue !== 'boolean') {
             const conditionValueRange = new SourceRange(context.thisFbuildUri, evaluatedCondition.range);
-            return Maybe.error(new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`, []));
+            return CancellableMaybe.error(new EvaluationError(conditionValueRange, `Condition must evaluate to a Boolean, but instead evaluates to ${getValueTypeNameA(evaluatedConditionValue)}`, []));
         }
         const result: EvaluatedCondition = {
             condition: condition.invert ? !evaluatedConditionValue : evaluatedConditionValue,
         };
-        return Maybe.ok(result);
+        return CancellableMaybe.completed(result);
     } else if (isParsedIfConditionComparison(condition)) {
         // Evaluate LHS.
         const lhs = condition.lhs;
         const maybeEvaluatedLhs = evaluateRValue(lhs, context);
-        if (maybeEvaluatedLhs.hasError) {
-            return Maybe.error(maybeEvaluatedLhs.getError());
+        if (!maybeEvaluatedLhs.hasValue()) {
+            return maybeEvaluatedLhs as unknown as CancellableMaybe<EvaluatedCondition>;
         }
         const evaluatedLhsValue = maybeEvaluatedLhs.getValue().value;
 
         // Evaluate RHS.
         const rhs = condition.rhs;
         const maybeEvaluatedRhs = evaluateRValue(rhs, context);
-        if (maybeEvaluatedRhs.hasError) {
-            return Maybe.error(maybeEvaluatedRhs.getError());
+        if (!maybeEvaluatedRhs.hasValue) {
+            return maybeEvaluatedRhs as unknown as CancellableMaybe<EvaluatedCondition>;
         }
         const evaluatedRhsValue = maybeEvaluatedRhs.getValue().value;
 
@@ -2257,18 +2434,18 @@ function evaluateIfCondition(
         if (operator.value === '==' || operator.value === '!=') {
             if (!['boolean', 'string', 'number'].includes(typeof evaluatedLhsValue)) {
                 const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Booleans, Strings, and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
+                return CancellableMaybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Booleans, Strings, and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
             }
         } else {
             if (!['string', 'number'].includes(typeof evaluatedLhsValue)) {
                 const operatorRange = new SourceRange(context.thisFbuildUri, operator.range);
-                return Maybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Strings and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
+                return CancellableMaybe.error(new EvaluationError(operatorRange, `'If' comparison using '${operator.value}' only supports comparing Strings and Integers, but ${getValueTypeNameA(evaluatedLhsValue)} is used`, []));
             }
         }
 
         if (typeof evaluatedLhsValue !== typeof evaluatedRhsValue) {
             const range = new SourceRange(context.thisFbuildUri, { start: lhs.range.start, end: rhs.range.end });
-            return Maybe.error(new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
+            return CancellableMaybe.error(new EvaluationError(range, `'If' condition comparison must compare variables of the same type, but LHS is ${getValueTypeNameA(evaluatedLhsValue)} and RHS is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
         }
 
         let comparisonResult = false;
@@ -2292,28 +2469,28 @@ function evaluateIfCondition(
                 comparisonResult = evaluatedLhsValue >= evaluatedRhsValue;
                 break;
             default: {
-                return Maybe.error(new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`));
+                return CancellableMaybe.error(new InternalEvaluationError(statementRange, `Unknown 'If' comparison operator '${operator.value}'`));
             }
         }
 
         const result: EvaluatedCondition = {
             condition: comparisonResult,
         };
-        return Maybe.ok(result);
+        return CancellableMaybe.completed(result);
     } else if (isParsedIfConditionIn(condition)) {
         // Evaluate LHS.
         const lhs = condition.lhs;
         const maybeEvaluatedLhs = evaluateRValue(lhs, context);
-        if (maybeEvaluatedLhs.hasError) {
-            return Maybe.error(maybeEvaluatedLhs.getError());
+        if (!maybeEvaluatedLhs.hasValue()) {
+            return maybeEvaluatedLhs as unknown as CancellableMaybe<EvaluatedCondition>;
         }
         const evaluatedLhsValue = maybeEvaluatedLhs.getValue().value;
 
         // Evaluate RHS.
         const rhs = condition.rhs;
         const maybeEvaluatedRhs = evaluateRValue(rhs, context);
-        if (maybeEvaluatedRhs.hasError) {
-            return Maybe.error(maybeEvaluatedRhs.getError());
+        if (!maybeEvaluatedRhs.hasValue()) {
+            return maybeEvaluatedRhs as unknown as CancellableMaybe<EvaluatedCondition>;
         }
         const evaluatedRhsValue = maybeEvaluatedRhs.getValue().value;
         const rhsRange = new SourceRange(context.thisFbuildUri, rhs.range);
@@ -2325,11 +2502,11 @@ function evaluateIfCondition(
         let isPresent = true;
 
         if (!(evaluatedRhsValue instanceof Array)) {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
+            return CancellableMaybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is ${getValueTypeNameA(evaluatedRhsValue)}`, []));
         }
 
         if (!isParsedEvaluatedVariable(rhs)) {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
+            return CancellableMaybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
         }
 
         if (evaluatedRhsValue.length === 0) {
@@ -2340,7 +2517,7 @@ function evaluateIfCondition(
                 isPresent = evaluatedRhsValue.includes(evaluatedLhsValue);
             } else if (evaluatedLhsValue instanceof Array) {
                 if (!isParsedEvaluatedVariable(lhs)) {
-                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
+                    return CancellableMaybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value cannot be a literal Array Of Strings. Instead use an evaluated variable.`, []));
                 }
 
                 if (evaluatedLhsValue.length === 0) {
@@ -2348,59 +2525,59 @@ function evaluateIfCondition(
                 } else if (typeof evaluatedLhsValue[0] === 'string') {
                     isPresent = evaluatedLhsValue.some(searchString => evaluatedRhsValue.includes(searchString));
                 } else {
-                    return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`, []));
+                    return CancellableMaybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedLhsValue[0])}s`, []));
                 }
             } else {
-                return Maybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`, []));
+                return CancellableMaybe.error(new EvaluationError(lhsRange, `'If' 'in' condition left-hand-side value must be either a String or an Array of Strings, but instead is ${getValueTypeNameA(evaluatedLhsValue)}`, []));
             }
         } else {
-            return Maybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`, []));
+            return CancellableMaybe.error(new EvaluationError(rhsRange, `'If' 'in' condition right-hand-side value must be an Array of Strings, but instead is an Array of ${getValueTypeName(evaluatedRhsValue[0])}s`, []));
         }
 
         const result: EvaluatedCondition = {
             condition: condition.invert ? !isPresent : isPresent,
         };
-        return Maybe.ok(result);
+        return CancellableMaybe.completed(result);
     } else if (isParsedIfConditionOperatorAnd(condition)) {
         // Evaluate LHS
         const maybeEvaluatedLhs = evaluateIfCondition(condition.lhs, context, statementRange);
-        if (maybeEvaluatedLhs.hasError) {
-            return Maybe.error(maybeEvaluatedLhs.getError());
+        if (!maybeEvaluatedLhs.hasValue()) {
+            return maybeEvaluatedLhs;
         }
         const evaluatedLhs = maybeEvaluatedLhs.getValue();
 
         // Evaluate RHS
         const maybeEvaluatedRhs = evaluateIfCondition(condition.rhs, context, statementRange);
-        if (maybeEvaluatedRhs.hasError) {
-            return Maybe.error(maybeEvaluatedRhs.getError());
+        if (!maybeEvaluatedRhs.hasValue()) {
+            return maybeEvaluatedRhs;
         }
         const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
         const result: EvaluatedCondition = {
             condition: evaluatedLhs.condition && evaluatedRhs.condition,
         };
-        return Maybe.ok(result);
+        return CancellableMaybe.completed(result);
     } else if (isParsedIfConditionOperatorOr(condition)) {
         // Evaluate LHS
         const maybeEvaluatedLhs = evaluateIfCondition(condition.lhs, context, statementRange);
-        if (maybeEvaluatedLhs.hasError) {
-            return Maybe.error(maybeEvaluatedLhs.getError());
+        if (!maybeEvaluatedLhs.hasValue()) {
+            return maybeEvaluatedLhs;
         }
         const evaluatedLhs = maybeEvaluatedLhs.getValue();
 
         // Evaluate RHS
         const maybeEvaluatedRhs = evaluateIfCondition(condition.rhs, context, statementRange);
-        if (maybeEvaluatedRhs.hasError) {
-            return Maybe.error(maybeEvaluatedRhs.getError());
+        if (!maybeEvaluatedRhs.hasValue()) {
+            return maybeEvaluatedRhs;
         }
         const evaluatedRhs = maybeEvaluatedRhs.getValue();
 
         const result: EvaluatedCondition = {
             condition: evaluatedLhs.condition || evaluatedRhs.condition,
         };
-        return Maybe.ok(result);
+        return CancellableMaybe.completed(result);
     } else {
-        return Maybe.error(new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`));
+        return CancellableMaybe.error(new InternalEvaluationError(statementRange, `Unknown condition type from condition '${JSON.stringify(condition)}'`));
     }
 }
 

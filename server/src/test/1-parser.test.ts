@@ -158,6 +158,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -181,6 +182,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 10),
                 lhs: {
                     name: {
                         type: 'string',
@@ -210,6 +212,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 5, 19),
                 lhs: {
                     name: {
                         type: 'string',
@@ -235,6 +238,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 1, 4),
                 lhs: {
                     name: {
                         type: 'string',
@@ -322,6 +326,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -345,6 +350,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -368,6 +374,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 11),
                 lhs: {
                     name: {
                         type: 'string',
@@ -391,6 +398,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -414,6 +422,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -437,6 +446,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -460,6 +470,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -483,6 +494,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -506,6 +518,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -529,6 +542,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -552,6 +566,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -575,6 +590,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -598,6 +614,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -621,6 +638,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -644,6 +662,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -667,6 +686,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -690,6 +710,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -713,6 +734,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -736,6 +758,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 15),
                 lhs: {
                     name: {
                         type: 'string',
@@ -759,6 +782,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 14),
                 lhs: {
                     name: {
                         type: 'string',
@@ -782,6 +806,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 30),
                 lhs: {
                     name: {
                         type: 'string',
@@ -818,6 +843,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 30),
                 lhs: {
                     name: {
                         type: 'string',
@@ -854,6 +880,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 43),
                 lhs: {
                     name: {
                         type: 'string',
@@ -901,6 +928,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 11),
                 lhs: {
                     name: {
                         type: 'string',
@@ -928,6 +956,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 3, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -955,6 +984,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 3, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -969,6 +999,7 @@ describe('parser', () => {
                     statements: [
                         {
                             type: 'variableDefinition',
+                            range: createRange(2, 16, 2, 30),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1002,6 +1033,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 5, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1016,6 +1048,7 @@ describe('parser', () => {
                     statements: [
                         {
                             type: 'variableDefinition',
+                            range: createRange(2, 16, 2, 30),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1033,6 +1066,7 @@ describe('parser', () => {
                         },
                         {
                             type: 'variableDefinition',
+                            range: createRange(3, 16, 3, 28),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1050,6 +1084,7 @@ describe('parser', () => {
                         },
                         {
                             type: 'variableDefinition',
+                            range: createRange(4, 16, 4, 39),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1079,6 +1114,7 @@ describe('parser', () => {
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 52),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1093,6 +1129,7 @@ describe('parser', () => {
                     statements: [
                         {
                             type: 'variableDefinition',
+                            range: createRange(1, 23, 1, 37),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1110,6 +1147,7 @@ describe('parser', () => {
                         },
                         {
                             type: 'variableDefinition',
+                            range: createRange(1, 38, 1, 50),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1180,6 +1218,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 3, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1194,6 +1233,7 @@ Expecting to see one of the following:
                     statements: [
                         {
                             type: 'variableDefinition',
+                            range: createRange(2, 16, 2, 23),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1231,6 +1271,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 4, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1245,6 +1286,7 @@ Expecting to see one of the following:
                     statements: [
                         {
                             type: 'variableDefinition',
+                            range: createRange(2, 16, 2, 23),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1267,6 +1309,7 @@ Expecting to see one of the following:
                         },
                         {
                             type: 'variableDefinition',
+                            range: createRange(3, 16, 3, 23),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -1299,6 +1342,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 18),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1333,6 +1377,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 5, 25),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1361,6 +1406,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1386,6 +1432,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 24),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1413,6 +1460,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(2, 12, 2, 24),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1436,6 +1484,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1459,6 +1508,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1488,6 +1538,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 23),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1505,6 +1556,7 @@ Expecting to see one of the following:
             },
             {
                 type: 'variableDefinition',
+                range: createRange(5, 12, 5, 23),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1529,6 +1581,7 @@ Expecting to see one of the following:
             {
                 type: 'scopedStatements',
                 statements: [],
+                range: createRange(0, 0, 0, 2),
             }
         ]);
     });
@@ -1542,6 +1595,7 @@ Expecting to see one of the following:
             {
                 type: 'scopedStatements',
                 statements: [],
+                range: createRange(1, 12, 2, 13),
             }
         ]);
     });
@@ -1558,6 +1612,7 @@ Expecting to see one of the following:
                 statements: [
                     {
                         type: 'variableDefinition',
+                        range: createRange(2, 16, 2, 28),
                         lhs: {
                             name: {
                                 type: 'string',
@@ -1574,6 +1629,7 @@ Expecting to see one of the following:
                         }
                     }
                 ],
+                range: createRange(1, 12, 3, 13),
             }
         ]);
     });
@@ -1588,6 +1644,7 @@ Expecting to see one of the following:
                 statements: [
                     {
                         type: 'variableDefinition',
+                        range: createRange(1, 14, 1, 26),
                         lhs: {
                             name: {
                                 type: 'string',
@@ -1604,6 +1661,7 @@ Expecting to see one of the following:
                         }
                     }
                 ],
+                range: createRange(1, 12, 1, 28),
             }
         ]);
     });
@@ -1616,6 +1674,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 32),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1633,6 +1692,7 @@ Expecting to see one of the following:
             },
             {
                 type: 'binaryOperator',
+                range: createRange(2, 12, 2, 33),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1690,6 +1750,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 32),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1710,6 +1771,7 @@ Expecting to see one of the following:
                 statements: [
                     {
                         type: 'binaryOperator',
+                        range: createRange(3, 16, 3, 37),
                         lhs: {
                             name: {
                                 type: 'string',
@@ -1727,6 +1789,7 @@ Expecting to see one of the following:
                         operator: '+',
                     }
                 ],
+                range: createRange(2, 12, 4, 13),
             },
         ]);
     });
@@ -1740,6 +1803,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 28),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1757,6 +1821,7 @@ Expecting to see one of the following:
             },
             {
                 type: 'variableDefinition',
+                range: createRange(2, 12, 2, 32),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1774,6 +1839,7 @@ Expecting to see one of the following:
             },
             {
                 type: 'binaryOperator',
+                range: createRange(3, 12, 3, 36),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1813,6 +1879,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 32),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1830,13 +1897,13 @@ Expecting to see one of the following:
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(2, 23, 2, 33),
                 operator: '+',
                 rhs: {
                     type: 'string',
                     value: ' world',
                     range: createRange(2, 25, 2, 33)
                 },
-                rangeStart: createPosition(2, 23)
             }
         ]);
     });
@@ -1846,6 +1913,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 31),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1857,6 +1925,7 @@ Expecting to see one of the following:
                 },
                 rhs: {
                     type: 'sum',
+                    range: createRange(0, 13, 0, 31),
                     first: {
                         type: 'string',
                         value: 'hello',
@@ -1886,6 +1955,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 32),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1903,23 +1973,23 @@ Expecting to see one of the following:
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(2, 23, 2, 33),
                 operator: '+',
                 rhs: {
                     type: 'string',
                     value: ' world',
                     range: createRange(2, 25, 2, 33)
                 },
-                rangeStart: createPosition(2, 23)
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(3, 23, 3, 28),
                 operator: '+',
                 rhs: {
                     type: 'string',
                     value: '!',
                     range: createRange(3, 25, 3, 28)
                 },
-                rangeStart: createPosition(3, 23)
             },
         ]);
     });
@@ -1930,6 +2000,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 31),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1941,6 +2012,7 @@ Expecting to see one of the following:
                 },
                 rhs: {
                     type: 'sum',
+                    range: createRange(0, 9, 0, 31),
                     first: {
                         type: 'string',
                         value: 'hello',
@@ -1979,6 +2051,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 39),
                 lhs: {
                     name: {
                         type: 'string',
@@ -1996,33 +2069,33 @@ Expecting to see one of the following:
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(2, 23, 2, 33),
                 operator: '-',
                 rhs: {
                     type: 'string',
                     value: ' world',
                     range: createRange(2, 25, 2, 33)
                 },
-                rangeStart: createPosition(2, 23)
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(3, 23, 3, 28),
                 operator: '-',
                 rhs: {
                     type: 'string',
                     value: '!',
                     range: createRange(3, 25, 3, 28)
                 },
-                rangeStart: createPosition(3, 23)
             },
             {
                 type: 'binaryOperatorOnUnnamed',
+                range: createRange(4, 23, 4, 28),
                 operator: '+',
                 rhs: {
                     type: 'string',
                     value: '?',
                     range: createRange(4, 25, 4, 28)
                 },
-                rangeStart: createPosition(4, 23)
             },
         ]);
     });
@@ -2032,6 +2105,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 30),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2043,6 +2117,7 @@ Expecting to see one of the following:
                 },
                 rhs: {
                     type: 'sum',
+                    range: createRange(0, 13, 0, 30),
                     first: {
                         type: 'string',
                         value: 'hello ',
@@ -2073,6 +2148,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 41),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2084,6 +2160,7 @@ Expecting to see one of the following:
                 },
                 rhs: {
                     type: 'sum',
+                    range: createRange(0, 13, 0, 41),
                     first: {
                         type: 'string',
                         value: 'hello ',
@@ -2149,6 +2226,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 11),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2172,6 +2250,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2195,6 +2274,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 12),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2227,6 +2307,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 2, 27),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2260,6 +2341,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 4, 13),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2294,6 +2376,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 16),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2336,6 +2419,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 2, 26),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2375,6 +2459,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 25),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2409,6 +2494,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 22),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2443,6 +2529,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(0, 0, 0, 17),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2527,6 +2614,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'binaryOperator',
+                range: createRange(1, 12, 1, 28),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2559,6 +2647,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'binaryOperator',
+                range: createRange(1, 12, 1, 30),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2601,6 +2690,7 @@ Expecting to see one of the following:
         assertParseResultsEqual(input, [
             {
                 type: 'variableDefinition',
+                range: createRange(1, 12, 1, 40),
                 lhs: {
                     name: {
                         type: 'string',
@@ -2612,6 +2702,7 @@ Expecting to see one of the following:
                 },
                 rhs: {
                     type: 'sum',
+                    range: createRange(1, 21, 1, 40),
                     first: {
                         type: 'array',
                         value: [
@@ -2665,6 +2756,7 @@ Expecting to see one of the following:
             assertParseResultsEqual(input, [
                 {
                     type: 'variableDefinition',
+                    range: createRange(1, 16, 3, 17),
                     lhs: {
                         name: {
                             type: 'string',
@@ -2679,6 +2771,7 @@ Expecting to see one of the following:
                         statements: [
                             {
                                 type: 'variableDefinition',
+                                range: createRange(2, 20, 2, 34),
                                 lhs: {
                                     name: {
                                         type: 'string',
@@ -2725,6 +2818,7 @@ Expecting to see one of the following:
             assertParseResultsEqual(input, [
                 {
                     type: 'variableDefinition',
+                    range: createRange(1, 16, 3, 17),
                     lhs: {
                         name: {
                             type: 'string',
@@ -2739,6 +2833,7 @@ Expecting to see one of the following:
                         statements: [
                             {
                                 type: 'variableDefinition',
+                                range: createRange(2, 20, 2, 34),
                                 lhs: {
                                     name: {
                                         type: 'string',
@@ -2787,6 +2882,7 @@ Expecting to see one of the following:
             assertParseResultsEqual(input, [
                 {
                     type: 'variableDefinition',
+                    range: createRange(1, 16, 3, 17),
                     lhs: {
                         name: {
                             type: 'string',
@@ -2801,6 +2897,7 @@ Expecting to see one of the following:
                         statements: [
                             {
                                 type: 'variableDefinition',
+                                range: createRange(2, 20, 2, 34),
                                 lhs: {
                                     name: {
                                         type: 'string',
@@ -2822,6 +2919,7 @@ Expecting to see one of the following:
                 },
                 {
                     type: 'variableDefinition',
+                    range: createRange(4, 16, 6, 17),
                     lhs: {
                         name: {
                             type: 'string',
@@ -3027,6 +3125,7 @@ Expecting to see one of the following:
             assertParseResultsEqual(input, [
                 {
                     type: 'userFunctionDeclaration',
+                    range: createRange(1, 16, 2, 17),
                     name: 'Func',
                     nameRange: createRange(1, 25, 1, 29),
                     parameters: [
@@ -3082,13 +3181,13 @@ Expecting to see one of the following:
                     assertParseResultsEqual(input, [
                         {
                             type: 'binaryOperatorOnUnnamed',
+                            range: createRange(1, 24, 1, 27),
                             operator,
                             rhs: {
                                 type: 'integer',
                                 value: 1,
                                 range: createRange(1, 26, 1, 27)
                             },
-                            rangeStart: createPosition(1, 24)
                         }
                     ]);
                 });
@@ -3111,13 +3210,13 @@ Expecting to see one of the following:
                         },
                         {
                             type: 'binaryOperatorOnUnnamed',
+                            range: createRange(2, 24, 2, 27),
                             operator,
                             rhs: {
                                 type: 'integer',
                                 value: 1,
                                 range: createRange(2, 26, 2, 27)
                             },
-                            rangeStart: createPosition(2, 24)
                         }
                     ]);
                 });
@@ -3135,6 +3234,7 @@ Expecting to see one of the following:
                     assertParseResultsEqual(input, [
                         {
                             type: 'variableDefinition',
+                            range: createRange(1, 24, 2, 33),
                             lhs: {
                                 name: {
                                     type: 'string',
@@ -3152,6 +3252,7 @@ Expecting to see one of the following:
                         },
                         {
                             type: 'directiveIf',
+                            range: createRange(3, 24, 7, 30),
                             condition: [
                                 [
                                     {
@@ -3167,28 +3268,27 @@ Expecting to see one of the following:
                             ifStatements: [
                                 {
                                     type: 'binaryOperatorOnUnnamed',
+                                    range: createRange(4, 28, 4, 34),
                                     operator,
                                     rhs: {
                                         type: 'string',
                                         value: ' 2',
                                         range: createRange(4, 30, 4, 34)
                                     },
-                                    rangeStart: createPosition(4, 28)
                                 }
                             ],
                             elseStatements: [
                                 {
                                     type: 'binaryOperatorOnUnnamed',
+                                    range: createRange(6, 28, 6, 34),
                                     operator,
                                     rhs: {
                                         type: 'string',
                                         value: ' 3',
                                         range: createRange(6, 30, 6, 34)
                                     },
-                                    rangeStart: createPosition(6, 28)
                                 }
                             ],
-                            rangeStart: createPosition(3, 24)
                         }
                     ]);
                 });

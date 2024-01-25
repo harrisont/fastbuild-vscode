@@ -9,6 +9,7 @@ Contains a language server and Visual Studio Code client for the [FASTBuild](htt
   * [Go to symbol in editor or workspace](#go-to-symbol-in-editor-or-workspace)
   * [Syntax highlighting](#syntax-highlighting)
   * [Function property auto-completion and documentation](#function-property-auto-completion-and-documentation)
+  * [Variable auto-completion](#variable-auto-completion)
 * [Limitations](#limitations)
 * [Compatibility](#compatibility)
 * [Installing](#installing)
@@ -51,9 +52,14 @@ FASTBuild files are easier to read with syntax highlighting.
 Example:
 ![Demo - function property auto-completion and documentation](https://github.com/harrisont/fastbuild-vscode/assets/144260/fb0ccd56-5b12-41f5-9b29-4ca7f34027ee)
 
+### Variable auto-completion
+
+Example: ![Demo - variable auto-completion](https://github.com/harrisont/fastbuild-vscode/assets/144260/971aa929-34d0-4de3-a635-f777e86cc33d)
+
 ## Limitations
 
-* Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.
+* Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a [user function](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions) if that user function is never called.
+* Variable auto-completion inside of [user functions](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions) only works for the function parameters, and not other variables defined inside the function.
 
 ## Compatibility
 

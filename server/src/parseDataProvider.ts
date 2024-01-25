@@ -16,6 +16,10 @@ import {
 export type UriStr = string;
 
 interface CachedParseData {
+    // If true, the info is for an older version of the content.
+    // This is likely due to an in-progress text edit.
+    isStale: boolean;
+
     data: ParseData;
 
     // The file content used to generate the cached parse data.
@@ -53,12 +57,18 @@ export class ParseDataProvider {
         try {
             const parseData = parse(content, uri.toString(), this.parseOptions);
             this.data.set(uri.toString(), {
+                isStale: false,
                 data: parseData,
                 fileContent: content,
             });
             return Maybe.ok(parseData);
         } catch (error) {
-            this.data.delete(uri.toString());
+            const existingData = this.data.get(uri.toString());
+            if (existingData !== undefined) {
+                // Mark the existing data as stale instead of deleting it, so that we can still do
+                // useful things like auto-completion while in the middle of editing text.
+                existingData.isStale = true;
+            }
             if (error instanceof Error) {
                 return Maybe.error(error);
             } else {
@@ -76,19 +86,19 @@ export class ParseDataProvider {
     //
     // Returns |Error| on failing to read the file contents.
     // Returns |ParseError| on failing to parse the file contents.
-    getParseData(uri: vscodeUri.URI): Maybe<ParseData> {
+    getParseData(uri: vscodeUri.URI, includeStale: boolean): Maybe<ParseData> {
         const cachedData = this.data.get(uri.toString());
-        if (cachedData === undefined) {
+        if (cachedData === undefined || (!includeStale && cachedData.isStale)) {
             return this.updateParseData(uri);
         } else {
             return Maybe.ok(cachedData.data);
         }
     }
 
-    // Returns the cached content for a URI if it exists, or `null` otherwise.
+    // Returns the non-stale cached content for a URI if it exists, or `null` otherwise.
     getCachedDocumentContent(uri: vscodeUri.URI): string | null {
         const cachedData = this.data.get(uri.toString());
-        if (cachedData === undefined) {
+        if (cachedData === undefined || cachedData.isStale) {
             return null;
         } else {
             return cachedData.fileContent;

@@ -24,12 +24,20 @@ import {
 // Used to manipulate URIs.
 import * as vscodeUri from 'vscode-uri';
 
+import {
+    Maybe,
+} from './coreTypes';
+
 import { ParseError } from './parser';
 
 import {
+    DataAndMaybeError,
     evaluate,
     EvaluatedData,
+    evaluateUntilPosition,
+    EvaluationContext,
     EvaluationError,
+    SourcePositionWithUri,
     SourceRange,
 } from './evaluator';
 
@@ -173,7 +181,7 @@ state.connection.onInitialize((params: InitializeParams) => {
             workspaceSymbolProvider: true,
             // TODO: add `workspace: { workspaceFolders: { supported: true } }` to add support for workspace folders.
             completionProvider: {
-                triggerCharacters: [ '.' ],
+                triggerCharacters: [ '.', '^' ],
             },
         }
     };
@@ -247,12 +255,47 @@ state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
     // Wait for any queued updates, so that we don't return stale data.
     flushQueuedDocumentUpdates();
 
-    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
-    if (evaluatedData === null) {
+    //
+    // Calculate the evaluated data only up to the specified position, to avoid making suggestions for symbols defined after the position.
+    //
+    const untilPosition = new SourcePositionWithUri(params.textDocument.uri, params.position);
+    const maybeEvaluationContextAndMaybeError = evaluateUntilPositionWrapper(untilPosition);
+    if (maybeEvaluationContextAndMaybeError.hasError) {
+        // There was an error doing any evaluation, so return no completions.
         return [];
     }
-    return completionProvider.getCompletions(params, evaluatedData);
+    const evaluatedDataAndMaybeError = maybeEvaluationContextAndMaybeError.getValue();
+    if (evaluatedDataAndMaybeError.error !== null) {
+        // The evaluation partially completed, so continue to use what completions we can.
+    }
+
+    return completionProvider.getCompletions(params, evaluatedDataAndMaybeError.data, true /*isTriggerCharacterInContent*/);
 });
+
+function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri): Maybe<DataAndMaybeError<EvaluationContext>> {
+    const positionUri = vscodeUri.URI.parse(untilPosition.uri);
+    const rootFbuildUri = state.getRootFbuildFile(positionUri);
+    if (rootFbuildUri === null) {
+        return Maybe.error(new Error(`Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${positionUri.fsPath}'`));
+    }
+    const rootFbuildUriStr = rootFbuildUri.toString();
+
+    const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri, true /*includeStale*/);
+    if (maybeRootFbuildParseData.hasError) {
+        return Maybe.error(maybeRootFbuildParseData.getError());
+    }
+    const rootFbuildParseData = maybeRootFbuildParseData.getValue();
+
+    const evaluationContextAndMaybeError =
+        evaluateUntilPosition(
+            rootFbuildParseData,
+            rootFbuildUriStr,
+            state.fileSystem,
+            state.parseDataProvider,
+            untilPosition,
+            true /*includeStaleParseData*/);
+    return Maybe.ok(evaluationContextAndMaybeError);
+}
 
 // The content of a file has changed. This event is emitted when the file first opened or when its content has changed.
 //
@@ -346,7 +389,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
             throw maybeChangedDocumentParseData.getError();
         }
 
-        const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri);
+        const maybeRootFbuildParseData = state.parseDataProvider.getParseData(rootFbuildUri, false /*includeStale*/);
         if (settings.logPerformanceMetrics) {
             console.timeEnd(parseDurationLabel);
         }
@@ -360,7 +403,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
             console.time(evaluationDurationLabel);
         }
         const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
-        evaluatedData = evaluatedDataAndMaybeError.data;
+        evaluatedData = evaluatedDataAndMaybeError.data.evaluatedData;
         state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
         if (settings.logPerformanceMetrics) {
             console.timeEnd(evaluationDurationLabel);
