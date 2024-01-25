@@ -1078,7 +1078,10 @@ function evaluateStatements(statements: Statement[], context: EvaluationContext)
                     return result;
                 }
             } else if (isParsedStatementUserFunctionDeclaration(statement)) {
-                evaluateStatementUserFunctionDeclaration(statement, context);
+                const result = evaluateStatementUserFunctionDeclaration(statement, context);
+                if (!result.hasValue()) {
+                    return result;
+                }
             } else if (isParsedStatementUserFunctionCall(statement)) {
                 const result = evaluateStatementUserFunctionCall(statement, context);
                 if (!result.hasValue()) {
@@ -1717,7 +1720,7 @@ function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationCo
 function evaluateStatementUserFunctionDeclaration(
     userFunction: ParsedStatementUserFunctionDeclaration,
     context: EvaluationContext
-): void {
+): CancellableMaybe<void> {
     const nameSourceRange = new SourceRange(context.thisFbuildUri, userFunction.nameRange);
     const functionNameDefinition = context.scopeStack.createVariableDefinition(nameSourceRange, userFunction.name);
     const functionNameReference: VariableReference = {
@@ -1735,7 +1738,7 @@ function evaluateStatementUserFunctionDeclaration(
             `Cannot use function name "${userFunction.name}" because it is reserved.`,
             []
         ));
-        return;
+        return CancellableMaybe.completed();
     }
 
     const existingFunction = context.userFunctions.get(userFunction.name);
@@ -1750,8 +1753,14 @@ function evaluateStatementUserFunctionDeclaration(
             `Cannot use function name "${userFunction.name}" because it is already used by another user function. Functions must be uniquely named.`,
             [existingFunctionInfo]
         ));
-        return;
+        return CancellableMaybe.completed();
     }
+
+    // Add the parameters as variables to the scope stack to support the completion provider.
+    // The variables won't actually be read.
+    //
+    // User functions can only use passed-in arguments and not variables in scope where they are defined.
+    context.scopeStack.push(ParentScopeAccess.No);
 
     // Define and reference each parameter.
     //
@@ -1767,7 +1776,7 @@ function evaluateStatementUserFunctionDeclaration(
                 `User-function argument names must be unique.`,
                 []
             ));
-            return;
+            return CancellableMaybe.completed();
         }
         usedParameterNames.push(parameter.name);
 
@@ -1779,6 +1788,11 @@ function evaluateStatementUserFunctionDeclaration(
             definitions: [definition],
             range: paramSourceRange,
         });
+
+        // Add the parameters as variables to the scope stack to support the completion provider.
+        // Set the variable's value to 0 since we don't know the actual value from the future call.
+        // We don't care about the actual value here, we just care about the variable being in the scope.
+        context.scopeStack.setVariableInCurrentScope(parameter.name, 0, [definition]);
     }
 
     context.userFunctions.set(userFunction.name, {
@@ -1786,6 +1800,13 @@ function evaluateStatementUserFunctionDeclaration(
         parameters: userFunction.parameters,
         statements: userFunction.statements,
     });
+
+    if (isPastPosition(context, userFunction.range.end)) {
+        return CancellableMaybe.cancelled();
+    }
+
+    context.scopeStack.pop();
+    return CancellableMaybe.completed();
 }
 
 function evaluateStatementUserFunctionCall(

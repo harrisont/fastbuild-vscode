@@ -58,7 +58,8 @@ Example: ![Demo - variable auto-completion](https://github.com/harrisont/fastbui
 
 ## Limitations
 
-* Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a user function if that user function is never called.
+* Only evaluates code if it is called at least once. This means, for example, that you cannot jump to the definition of a variable defined inside a [user function](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions) if that user function is never called.
+* Variable auto-completion inside of [user functions](https://www.fastbuild.org/docs/syntaxguide.html#userfunctions) only works for the function parameters, and not other variables defined inside the function.
 
 ## Compatibility
 

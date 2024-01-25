@@ -555,26 +555,21 @@ ForEach(.Item in .Items)
                 });
             });
 
-            describe.skip('User function', () => {
-                it('uncalled function - current scope - can access parameters and variables inside but not outside', () => {
+            describe('User function', () => {
+                it('uncalled function - current scope - can access parameters but not variables inside or outside the body', () => {
                     const input = `
 .OuterVar = 'hi'
 
 function Func( .Arg ){
     .InnerVar1 = 1
 
-    .InnerVar2 = 2
 }
                     `;
 
+                    // Note that there are no built in variables in the completions because user functions don't have access to them.
                     const expectedCompletions: CompletionItem[] = [
-                        ...getBuiltinCompletions('.'),
                         {
                             label: '.Arg',
-                            kind: CompletionItemKind.Variable,
-                        },
-                        {
-                            label: '.InnerVar',
                             kind: CompletionItemKind.Variable,
                         },
                     ];
@@ -592,7 +587,6 @@ function Func( .Arg ){
 function Func( .Arg ){
     .InnerVar1 = 1
 
-    .InnerVar2 = 2
 }
                     `;
 
@@ -602,27 +596,22 @@ function Func( .Arg ){
                     assert.deepStrictEqual(actualCompletions, []);
                 });
 
-                it('called function - current scope - can access parameters and variables inside but not outside', () => {
+                it('called function - current scope - can access parameters but not variables inside or outside the body', () => {
                     const input = `
 .OuterVar = 'hi'
 
 function Func( .Arg ){
     .InnerVar1 = 1
 
-    .InnerVar2 = 2
 }
 
 Func(3)
                     `;
 
+                    // Note that there are no built in variables in the completions because user functions don't have access to them.
                     const expectedCompletions: CompletionItem[] = [
-                        ...getBuiltinCompletions('.'),
                         {
                             label: '.Arg',
-                            kind: CompletionItemKind.Variable,
-                        },
-                        {
-                            label: '.InnerVar',
                             kind: CompletionItemKind.Variable,
                         },
                     ];
@@ -640,7 +629,6 @@ Func(3)
 function Func( .Arg ){
     .InnerVar1 = 1
 
-    .InnerVar2 = 2
 }
 
 Func(3)
