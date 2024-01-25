@@ -91,9 +91,10 @@ export function getCompletions(params: CompletionParams, evaluationContext: Eval
         const completion: CompletionItem = {
             label: `${scopeCharacter}${variableName}`,
             kind: CompletionItemKind.Variable,
+            // Future opportunity: make the auto-completion show the evaluated values, similar to the hover values.
             // documentation: {
             //     kind: MarkupKind.Markdown,
-            //     value: `TODO: ${variable.value}`,
+            //     value: `...`,
             // },
         };
         completions.push(completion);
