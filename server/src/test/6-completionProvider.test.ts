@@ -556,6 +556,7 @@ ForEach(.Item in .Items)
             });
 
             describe('User function', () => {
+                // Ideally we'd be able to also access variable inside - it's a limitation of the implementation that we cannot.
                 it('uncalled function - current scope - can access parameters but not variables inside or outside the body', () => {
                     const input = `
 .OuterVar = 'hi'
@@ -596,6 +597,7 @@ function Func( .Arg ){
                     assert.deepStrictEqual(actualCompletions, []);
                 });
 
+                // Ideally we'd be able to also access variable inside - it's a limitation of the implementation that we cannot.
                 it('called function - current scope - can access parameters but not variables inside or outside the body', () => {
                     const input = `
 .OuterVar = 'hi'
