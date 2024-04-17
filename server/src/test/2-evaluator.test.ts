@@ -193,7 +193,7 @@ function assertNonFatalError(
     assert.deepStrictEqual(actualError.relatedInformation, expectedRelatedInformation);
 }
 
-describe('evaluator', () => {
+describe('evaluator', () => {    
     describe('evaluatedVariables value', () => {
         it('should be detected in a string with a variable', () => {
             const input = `
@@ -1146,6 +1146,21 @@ describe('evaluator', () => {
                 'a', 'a', 'Base-a',
                 'b', 'b', 'Base-b',
                 'c', 'c', 'Base-c',
+            ]);
+        });
+
+        it('should work on inline adding for a struct member RHS', () => {
+            const input = `
+                .MyVar = [
+                    .A = 1 + 1
+                ]
+            `;
+            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(2, 20, 22), name: 'A' };
+            assertEvaluatedVariablesValueEqual(input, [
+                2,
+                Struct.from(Object.entries({
+                    A: new StructMember(2, [myVarADefinition]),
+                }))
             ]);
         });
 
