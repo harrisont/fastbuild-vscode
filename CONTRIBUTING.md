@@ -7,6 +7,7 @@
   * [Terminology](#terminology)
   * [Architecture diagram](#architecture-diagram)
 * [VS Code language server extension resources](#vs-code-language-server-extension-resources)
+* [Visual Studio Code Marketplace extension administration](#visual-studio-code-marketplace-extension-administration)
 
 ## Steps to make a change
 
