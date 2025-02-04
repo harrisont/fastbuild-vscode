@@ -1,3 +1,17 @@
+# v0.16.0
+
+## New Features
+
+* ([#82](https://github.com/harrisont/fastbuild-vscode/issues/82)) Add a new optional `Root File` setting to control the FASTBuild root `fbuild.bff` file. The root file normally does not need to be specified in the settings because it is detected automatically when it is in a parent directory. But it is necessary to set when invoking FASTBuild with the `-config <path>` command line option, which overrides the root file.
+
+    For example, if you have the following files and run FASTBuild with `fbuild -config <workspace_root>/Projects/fbuild.bff`:
+    ```
+    <workspace_root>/Projects/fbuild.bff
+    <workspace_root>/Projects/HelloWorld/HelloWorld.bff
+    <workspace_root>/External/MSVC/MSVC.bff
+    ```
+    In this example, `MSVC.bff` by default cannot find the root `fbuild.bff`. So it is necessary to use the `Root File` setting to manually specify the root.
+
 # v0.15.0
 
 ## New Features

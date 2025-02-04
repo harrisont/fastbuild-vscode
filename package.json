@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.15.0",
+	"version": "0.16.0",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -52,7 +52,23 @@
 			"type": "object",
 			"title": "FASTBuild",
 			"properties": {
+				"fastbuild.inputDebounceDelay": {
+					"order": 0,
+					"scope": "window",
+					"type": "number",
+					"minimum": 0,
+					"default": 500,
+					"description": "Delay, in milliseconds, after changing a document before re-evaluating it. A lower value can result in faster feedback, but too low of a value will result in high resource usage when typing quickly."
+				},
+				"fastbuild.rootFile": {
+					"order": 1,
+					"scope": "window",
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Optional absolute path to the root `fbuild.bff` file. Set when running FASTBuild with the `-config <path>` command line option. The root is automatically found when it is in a parent directory, so it is not necessary to specify in that case."
+				},
 				"fastbuild.trace.server": {
+					"order": 2,
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -69,17 +85,11 @@
 					"description": "[Extension debugging] Traces the communication between the extension and the language server."
 				},
 				"fastbuild.logPerformanceMetrics": {
+					"order": 3,
 					"scope": "window",
 					"type": "boolean",
 					"default": false,
 					"description": "[Extension debugging] Log performance metrics."
-				},
-				"fastbuild.inputDebounceDelay": {
-					"scope": "window",
-					"type": "number",
-					"minimum": 0,
-					"default": 500,
-					"description": "Delay, in milliseconds, after changing a document before re-evaluating it. A lower value can result in faster feedback, but too low of a value will result in high resource usage when typing quickly."
 				}
 			}
 		}
