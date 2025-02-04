@@ -41,6 +41,12 @@ import {
     SourceRange,
 } from './evaluator';
 
+import {
+    Settings,
+    SettingsError,
+    getRootFileSettingError,
+} from './settings';
+
 import * as hoverProvider from './features/hoversProvider';
 import * as definitionProvider from './features/definitionProvider';
 import { DiagnosticProvider } from './features/diagnosticProvider';
@@ -53,6 +59,7 @@ import { ParseDataProvider } from './parseDataProvider';
 import * as fs from 'fs';
 
 const ROOT_FBUILD_FILE = 'fbuild.bff';
+const CONFIGURATION_SECTION = 'fastbuild';
 
 type UriStr = string;
 
@@ -75,11 +82,6 @@ function getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
     return null;
 }
 
-interface Settings {
-    logPerformanceMetrics: boolean;
-    inputDebounceDelay: number;
-}
-
 interface QueuedDocumentUpdate {
     timer: NodeJS.Timer;
     updateFunction: () => void;
@@ -93,7 +95,9 @@ class State {
     readonly documents = new TextDocuments(TextDocument);
 
     // Settings cache
-    settings: Thenable<Settings> | null = null;
+    settings: Settings | null = null;
+    // Errors in the cached settings.
+    settingsErrors: SettingsError[] = [];
 
     fileSystem = new DiskFileSystem(this.documents);
 
@@ -120,12 +124,18 @@ class State {
     readonly queuedDocumentUpdates = new Map<UriStr, QueuedDocumentUpdate>();
 
     // Same API as the non-member getRootFbuildFile.
-    getRootFbuildFile(uri: vscodeUri.URI): vscodeUri.URI | null {
+    async getRootFbuildFile(uri: vscodeUri.URI): Promise<vscodeUri.URI | null> {
         const cachedRootUri = this.fileToRootFbuildFileCache.get(uri.toString());
         if (cachedRootUri === undefined) {
-            const rootUri = getRootFbuildFile(uri);
-            if (rootUri === null) {
-                return null;
+            let rootUri: vscodeUri.URI | null = null;
+            const settings = await this.getSettings();
+            if (settings.rootFile) {
+                rootUri = vscodeUri.URI.file(settings.rootFile);
+            } else {
+                rootUri = getRootFbuildFile(uri);
+                if (rootUri === null) {
+                    return null;
+                }
             }
             this.fileToRootFbuildFileCache.set(uri.toString(), rootUri);
             return rootUri;
@@ -134,9 +144,9 @@ class State {
         }
     }
 
-    getRootFbuildEvaluatedData(uriStr: UriStr): EvaluatedData | null {
+    async getRootFbuildEvaluatedData(uriStr: UriStr): Promise<EvaluatedData | null> {
         const uri = vscodeUri.URI.parse(uriStr);
-        const rootFbuildUri = state.getRootFbuildFile(uri);
+        const rootFbuildUri = await state.getRootFbuildFile(uri);
         if (rootFbuildUri === null) {
             return null;
         }
@@ -148,13 +158,46 @@ class State {
         return evaluatedData;
     }
 
-    getSettings(): Thenable<Settings> {
+    async getSettings(): Promise<Settings> {
         if (this.settings === null) {
-            this.settings = this.connection.workspace.getConfiguration({
-                section: 'fastbuild',
+            // Get the initial configuration.
+            const settings = await state.connection.workspace.getConfiguration({
+                section: CONFIGURATION_SECTION,
             });
+            if (settings === null) {
+                throw new Error("Failed to get settings");
+            }
+            return state.processChangedSettings(settings);
+        } else {
+            return this.settings;
         }
-        return this.settings;
+    }
+
+    // Return the sanitized settings.
+    processChangedSettings(newSettings: Settings): Settings {
+        const sanitizedSettings = newSettings;
+
+        // Validate the settings and sanitize them.
+        this.settingsErrors = [];
+        const rootFileSettingError = getRootFileSettingError(newSettings.rootFile);
+        if (rootFileSettingError) {
+            this.settingsErrors.push(rootFileSettingError);
+            sanitizedSettings.rootFile = "";
+        }
+
+        this.settings = sanitizedSettings;
+
+        // Clear all the diagnostics, to avoid showing outdated non-setting diagnostics.
+        this.diagnosticProvider.clearDiagnostics(this.connection);
+        // Set the settings diagnostics.
+        if (this.settingsErrors.length) {
+            this.diagnosticProvider.setSettingsErrorDiagnostic(this.settingsErrors, this.connection);
+        }
+
+        // The changed settings could impact the cached results, so clear them.
+        state.rootToEvaluatedDataMap.clear();
+
+        return sanitizedSettings;
     }
 }
 
@@ -191,75 +234,86 @@ state.connection.onInitialize((params: InitializeParams) => {
 
 state.connection.onInitialized(() => {
     // Register for configuration changes.
-    state.connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    state.connection.client.register(DidChangeConfigurationNotification.type, {
+        section: CONFIGURATION_SECTION,
+    });
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-state.connection.onDidChangeConfiguration((_params: DidChangeConfigurationParams) => {
-    // Reset all cached settings
-    state.settings = null;
+state.connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
+    try {
+        const settings = params.settings[CONFIGURATION_SECTION];
+        state.processChangedSettings(settings);
+    } catch(error) {
+        let message = '';
+        if (error instanceof Error) {
+            message = `${error.stack}`;
+        } else {
+            message = `${error}`;
+        }
+        console.log(`onDidChangeConfiguration error: ${message}`);
+    }
 });
 
-state.connection.onHover((params: HoverParams) => {
+state.connection.onHover(async (params: HoverParams) => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
-    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    const evaluatedData = await state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
     }
     return hoverProvider.getHover(params, evaluatedData);
 });
 
-state.connection.onDefinition((params: DefinitionParams) => {
+state.connection.onDefinition(async (params: DefinitionParams) => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
-    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    const evaluatedData = await state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
     }
     return definitionProvider.getDefinition(params, evaluatedData);
 });
 
-state.connection.onReferences((params: ReferenceParams) => {
+state.connection.onReferences(async (params: ReferenceParams) => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
-    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    const evaluatedData = await state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
     }
     return referenceProvider.getReferences(params, evaluatedData);
 });
 
-state.connection.onDocumentSymbol((params: DocumentSymbolParams) => {
+state.connection.onDocumentSymbol(async (params: DocumentSymbolParams) => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
-    const evaluatedData = state.getRootFbuildEvaluatedData(params.textDocument.uri);
+    const evaluatedData = await state.getRootFbuildEvaluatedData(params.textDocument.uri);
     if (evaluatedData === null) {
         return null;
     }
     return symbolProvider.getDocumentSymbols(params, evaluatedData);
 });
 
-state.connection.onWorkspaceSymbol((params: WorkspaceSymbolParams) => {
+state.connection.onWorkspaceSymbol(async (params: WorkspaceSymbolParams) => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
     return symbolProvider.getWorkspaceSymbols(params, state.rootToEvaluatedDataMap.values());
 });
 
-state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+state.connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
     // Wait for any queued updates, so that we don't return stale data.
-    flushQueuedDocumentUpdates();
+    await flushQueuedDocumentUpdates();
 
     //
     // Calculate the evaluated data only up to the specified position, to avoid making suggestions for symbols defined after the position.
     //
     const untilPosition = new SourcePositionWithUri(params.textDocument.uri, params.position);
-    const maybeEvaluationContextAndMaybeError = evaluateUntilPositionWrapper(untilPosition);
+    const maybeEvaluationContextAndMaybeError = await evaluateUntilPositionWrapper(untilPosition);
     if (maybeEvaluationContextAndMaybeError.hasError) {
         // There was an error doing any evaluation, so return no completions.
         return [];
@@ -272,9 +326,9 @@ state.connection.onCompletion((params: CompletionParams): CompletionItem[] => {
     return completionProvider.getCompletions(params, evaluatedDataAndMaybeError.data, true /*isTriggerCharacterInContent*/);
 });
 
-function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri): Maybe<DataAndMaybeError<EvaluationContext>> {
+async function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri): Promise<Maybe<DataAndMaybeError<EvaluationContext>>> {
     const positionUri = vscodeUri.URI.parse(untilPosition.uri);
-    const rootFbuildUri = state.getRootFbuildFile(positionUri);
+    const rootFbuildUri = await state.getRootFbuildFile(positionUri);
     if (rootFbuildUri === null) {
         return Maybe.error(new Error(`Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${positionUri.fsPath}'`));
     }
@@ -322,19 +376,19 @@ async function queueDocumentUpdate(change: TextDocumentChangeEvent<TextDocument>
         state.queuedDocumentUpdates.delete(documentUriStr);
     }
 
-    const updateFunction = () => updateDocument(change, settings);
+    const updateFunction = async () => await updateDocument(change, settings);
 
     // Skip the delay and immediately update if the document has no evaluated data.
     // This is necessary in order to do initially populate the data.
-    const evaluatedData = state.getRootFbuildEvaluatedData(documentUriStr);
+    const evaluatedData = await state.getRootFbuildEvaluatedData(documentUriStr);
     if (evaluatedData === null) {
-        updateFunction();
+        await updateFunction();
     } else {
         // Queue the new update.
 
-        const timer = setTimeout(() => {
+        const timer = setTimeout(async () => {
             state.queuedDocumentUpdates.delete(documentUriStr);
-            updateFunction();
+            await updateFunction();
         }, settings.inputDebounceDelay);
 
         const queuedUpdate: QueuedDocumentUpdate = {
@@ -345,15 +399,19 @@ async function queueDocumentUpdate(change: TextDocumentChangeEvent<TextDocument>
     }
 }
 
-function flushQueuedDocumentUpdates() {
+async function flushQueuedDocumentUpdates() {
     for (const queuedUpdate of state.queuedDocumentUpdates.values()) {
-        queuedUpdate.updateFunction();
+        await queuedUpdate.updateFunction();
         clearTimeout(queuedUpdate.timer);
     }
     state.queuedDocumentUpdates.clear();
 }
 
-function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings: Settings): void {
+async function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings: Settings): Promise<void> {
+    if (state.settingsErrors.length) {
+        return;
+    }
+
     const changedDocumentUriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
 
@@ -363,7 +421,7 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
         // We need to start evaluating from the root FASTBuild file, not from the changed one.
         // This is because changes to a file can affect other files.
         // A future optimization would be to support incremental evaluation.
-        const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
+        const rootFbuildUri = await state.getRootFbuildFile(changedDocumentUri);
         if (rootFbuildUri === null) {
             const errorRange = SourceRange.create(changedDocumentUriStr, 0, 0, Number.MAX_VALUE, Number.MAX_VALUE);
             throw new EvaluationError(errorRange, `Could not find a root FASTBuild file ('${ROOT_FBUILD_FILE}') for document '${changedDocumentUri.fsPath}'`, []);
@@ -439,10 +497,10 @@ function updateDocument(change: TextDocumentChangeEvent<TextDocument>, settings:
 }
 
 // Track the open files by root FASTBuild file.
-state.documents.onDidOpen(change => {
+state.documents.onDidOpen(async change => {
     const changedDocumentUriStr: UriStr = change.document.uri;
     const changedDocumentUri = vscodeUri.URI.parse(changedDocumentUriStr);
-    const rootFbuildUri = state.getRootFbuildFile(changedDocumentUri);
+    const rootFbuildUri = await state.getRootFbuildFile(changedDocumentUri);
     // If a document has no root, use itself as its root.
     const rootFbuildUriStr = rootFbuildUri ? rootFbuildUri.toString() : changedDocumentUriStr;
     state.openDocumentToRootMap.set(changedDocumentUriStr, rootFbuildUriStr);

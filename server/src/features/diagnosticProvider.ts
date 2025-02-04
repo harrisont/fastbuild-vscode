@@ -20,6 +20,10 @@ import {
     InternalEvaluationError,
 } from '../evaluator';
 
+import {
+    SettingsError
+} from '../settings';
+
 const SOURCE_NAME = 'FASTBuild';
 
 type UriStr = string;
@@ -52,14 +56,24 @@ function convertErrorRelatedInformation(info: ErrorRelatedInformation): Diagnost
     };
 }
 
+// The settings are not a URI that we know, so just use a made-up URI.
+const SETTINGS_URI = "Settings";
+
 export class DiagnosticProvider {
     hasDiagnosticRelatedInformationCapability = false;
     readonly _documentRootToDocumentsWithDiagnosticsMap = new Map<UriStr, Set<UriStr>>();
 
+    setSettingsErrorDiagnostic(errors: SettingsError[], connection: Connection): void {
+        const range: Range = Range.create(0, 0, 0, 0);
+        const relatedInformation: DiagnosticRelatedInformation[] = [];
+        const diagnostics = errors.map(error => createDiagnosticError(error.message, range, relatedInformation));
+        connection.sendDiagnostics({ uri: SETTINGS_URI, diagnostics });
+    }
+
     setParseErrorDiagnostic(rootUri: UriStr, error: ParseError, connection: Connection): void {
         const relatedInformation: DiagnosticRelatedInformation[] = [];
         const diagnostic = createDiagnosticError(error.message, error.range, relatedInformation);
-        this._setDiagnostic(rootUri, error.fileUri, [diagnostic], connection);
+        this._setFileDiagnostic(rootUri, error.fileUri, [diagnostic], connection);
     }
 
     setEvaluationErrorDiagnostic(rootUri: UriStr, errors: EvaluationError[], connection: Connection): void {
@@ -82,7 +96,7 @@ export class DiagnosticProvider {
         }
 
         for (const [uri, diagnostics] of uriToDiagnostics) {
-            this._setDiagnostic(rootUri, uri, diagnostics, connection);
+            this._setFileDiagnostic(rootUri, uri, diagnostics, connection);
         }
     }
 
@@ -92,10 +106,10 @@ export class DiagnosticProvider {
         const message = `Internal error: ${error.stack ?? error.message}`;
         const relatedInformation: DiagnosticRelatedInformation[] = [];
         const diagnostic = createDiagnosticError(message, Range.create(0, 0, 0, 0), relatedInformation);
-        this._setDiagnostic(rootUri, uri, [diagnostic], connection);
+        this._setFileDiagnostic(rootUri, uri, [diagnostic], connection);
     }
 
-    private _setDiagnostic(rootUri: UriStr, uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
+    private _setFileDiagnostic(rootUri: UriStr, uri: UriStr, diagnostics: Diagnostic[], connection: Connection): void {
         const publishDiagnosticsParams: PublishDiagnosticsParams = { uri, diagnostics };
         connection.sendDiagnostics(publishDiagnosticsParams);
         const documentsForRoot = this._documentRootToDocumentsWithDiagnosticsMap.get(rootUri);
@@ -107,11 +121,17 @@ export class DiagnosticProvider {
     }
 
     clearDiagnostics(connection: Connection): void {
+        this.clearSettingsDiagnostics(connection);
+
         for (const documentsForRoot of this._documentRootToDocumentsWithDiagnosticsMap.values()) {
             for (const uri of documentsForRoot) {
                 connection.sendDiagnostics({ uri, diagnostics: [] });
             }
         }
+    }
+
+    clearSettingsDiagnostics(connection: Connection): void {
+        connection.sendDiagnostics({ uri: SETTINGS_URI, diagnostics: [] });
     }
 
     clearDiagnosticsForRoot(rootUri: UriStr, connection: Connection): void {
