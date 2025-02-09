@@ -15,11 +15,35 @@
 2. Make your change, including:
     1. The change itself.
     2. A [test](server/src/test), if appropriate.
-    3. Update the `version` in [package.json](package.json).
-    4. Update [CHANGELOG.md](CHANGELOG.md) with the release notes for the new version.
+    3. Update the `version` in [package.json](package.json). Bump the minor version for new features and bump the patch version for bug fixes.
+    4. Update [CHANGELOG.md](CHANGELOG.md) with the release notes for the new version. Use following format, replacing `${VERSION_NUMBER}` with the version number and `${ISSUE_NUMBER}` with the issue number for each issue:
+        ```markdown
+        # v${VERSION_NUMBER}
+
+        ## New Features
+
+        * ([#${ISSUE_NUMBER}](https://github.com/harrisont/fastbuild-vscode/issues/${ISSUE_NUMBER})) Explanation of new feature.
+        * ...
+
+        ## Bug Fixes
+
+        * ([#${ISSUE_NUMBER}](https://github.com/harrisont/fastbuild-vscode/issues/${ISSUE_NUMBER})) Explanation of the problem and the fix.
+        * ...
+
+        ```
+        If there are only new features and no bug fixes or vice versa, omit the empty section.
 3. [Run/debug tests](#rundebug-tests).
 4. Submit a [pull request](https://github.com/harrisont/fastbuild-vscode/pulls) with the change for review.
-5. Once the PR is accepted, create a new release, using a new release tag for the new version. Include the release notes from [CHANGELOG.md](CHANGELOG.md). This will automatically publish the extension to the VS Code Marketplace via the GitHub Action.
+5. Once the PR is accepted, create a new release:
+    1. Use a new release tag for the new version, prefixed by `v`. For example, `v0.99.1`.
+    2. Use the same tag value from the previous step for the release title.
+    3. Write the release notes. This should be the same as the release notes from [CHANGELOG.md](CHANGELOG.md), with the exceptions of removing the version header and adding the following section at the bottom, replacing `${PREVIOUS_VERSION_NUMBER}` with the previous version number and `${CURRENT_VERSION_NUMBER}` with the new version number:
+        ```markdown
+        ## Full Changelog
+        
+        https://github.com/harrisont/fastbuild-vscode/compare/v${PREVIOUS_VERSION_NUMBER}...v${CURRENT_VERSION_NUMBER}
+        ```
+    4. Publish the release. This will automatically publish the extension to the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=HarrisonT.fastbuild-support) via the GitHub Action. It will take a few minutes for the new version to appear in the VS Code Marketplace.
 
 ## Build and run/debug the extension
 
