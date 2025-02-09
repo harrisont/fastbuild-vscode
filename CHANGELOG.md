@@ -3,6 +3,7 @@
 ## Bug Fixes
 
 * ([#85](https://github.com/harrisont/fastbuild-vscode/issues/85)) Fix the `not` in `not in` missing syntax highlighting. The `in` was colored properly but the `not` was not. Thanks to [@xoorath](https://github.com/xoorath) for pointing out this bug.
+* Explain in the "Root File" setting description that you need to either modify or re-open the files for this setting to be picked up.
 
 # v0.16.0
 
