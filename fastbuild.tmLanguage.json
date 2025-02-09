@@ -69,6 +69,10 @@
 				{
 					"name": "keyword.operator.expression.fastbuild",
 					"match": "\\bin\\b"
+				},
+				{
+					"name": "keyword.operator.expression.fastbuild",
+					"match": "\\bnot in\\b"
 				}
 			]
 		},
