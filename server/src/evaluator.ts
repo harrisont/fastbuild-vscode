@@ -965,6 +965,8 @@ export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem
 }
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
+// Returns `Error` on fatal error.
+// Non-fatal errors are added to the returned context's `evaluatedData.nonFatalErrors`.
 export function evaluateUntilPosition(
     parseData: ParseData,
     thisFbuildUri: string,
@@ -1010,6 +1012,7 @@ function isPastPosition(context: EvaluationContext, position: SourcePosition): b
 
 // The resulting evaluated data is stored in `context.evaluatedData`.
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatements(statements: Statement[], context: EvaluationContext): CancellableMaybe<void> {
     try {
         for (const statement of statements) {
@@ -1337,6 +1340,7 @@ function evaluateStatementBinaryOperatorOnUnnamed(statement: ParsedStatementBina
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementScopedStatements(statement: ParsedStatementScopedStatements, context: EvaluationContext): CancellableMaybe<void> {
     context.scopeStack.push(ParentScopeAccess.Yes);
 
@@ -1421,6 +1425,7 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementForEach(statement: ParsedStatementForEach, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the iterators (array to loop over plus the loop-variable)
     interface ForEachIterator {
@@ -1512,6 +1517,7 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunction, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the target name.
     const maybeEvaluatedTargetNameName = evaluateRValue(statement.targetName, context);
@@ -1662,6 +1668,7 @@ function evaluateStatementPrint(statement: ParsedStatementPrint, context: Evalua
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementSettings(statement: ParsedStatementSettings, context: EvaluationContext): CancellableMaybe<void> {
     //
     // Evaluate the function body.
@@ -1683,6 +1690,7 @@ function evaluateStatementSettings(statement: ParsedStatementSettings, context: 
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementIf(statement: ParsedStatementIf, context: EvaluationContext): CancellableMaybe<void> {
     // Evaluate the condition.
     const condition = statement.condition;
@@ -1809,6 +1817,8 @@ function evaluateStatementUserFunctionDeclaration(
     return CancellableMaybe.completed();
 }
 
+// Returns `Error` on fatal error.
+// Non-fatal errors are added `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementUserFunctionCall(
     call: ParsedStatementUserFunctionCall,
     context: EvaluationContext
@@ -1902,6 +1912,7 @@ function evaluateStatementUserFunctionCall(
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementInclude(statement: ParsedStatementInclude, context: EvaluationContext): CancellableMaybe<void> {
     const thisFbuildUriDir = vscodeUri.Utils.dirname(vscodeUri.URI.parse(context.thisFbuildUri));
     const includeUri = vscodeUri.Utils.resolvePath(thisFbuildUriDir, statement.path.value);
@@ -1971,6 +1982,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
 }
 
 // Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStatementDirectiveIf(
     statement: ParsedStatementDirectiveIf,
     context: EvaluationContext
@@ -2240,6 +2252,8 @@ function evaluateStringExpression(parts: (string | any)[], context: EvaluationCo
     return CancellableMaybe.completed(result);
 }
 
+// Returns `Error` on fatal error.
+// Non-fatal errors are added to `context.evaluatedData.nonFatalErrors`.
 function evaluateStruct(struct: ParsedStruct, context: EvaluationContext): CancellableMaybe<EvaluatedRValue> {
     context.scopeStack.push(ParentScopeAccess.Yes);
 
