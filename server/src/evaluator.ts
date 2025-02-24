@@ -144,7 +144,7 @@ type AtLeast1VariableDefinition = [VariableDefinition, ...VariableDefinition[]];
 export interface VariableReference {
     definitions: AtLeast1VariableDefinition;
     range: SourceRange;
-    referenceType: 'read' | 'write';
+    referenceType: 'read' | 'write' | 'readWrite';
 }
 
 export interface TargetDefinition {

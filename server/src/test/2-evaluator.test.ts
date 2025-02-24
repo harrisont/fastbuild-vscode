@@ -2029,6 +2029,7 @@ describe('evaluator', () => {
                         name: 'MyVar',
                     }],
                     range: createRange(1, 16, 22),
+                    referenceType: 'write',
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2050,6 +2051,7 @@ describe('evaluator', () => {
                         name: 'MyVar',
                     }],
                     range: createRange(1, 16, 22),
+                    referenceType: 'write',
                 },
                 {
                     definitions: [{
@@ -2058,6 +2060,7 @@ describe('evaluator', () => {
                         name: 'MyVar',
                     }],
                     range: createRange(2, 16, 22),
+                    referenceType: 'readWrite',
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2079,6 +2082,7 @@ describe('evaluator', () => {
                         name: 'MyVar1',
                     }],
                     range: createRange(1, 16, 23),
+                    referenceType: 'write',
                 },
                 {
                     definitions: [{
@@ -2087,6 +2091,7 @@ describe('evaluator', () => {
                         name: 'MyVar1',
                     }],
                     range: createRange(2, 26, 33),
+                    referenceType: 'read',
                 },
                 {
                     definitions: [{
@@ -2095,6 +2100,7 @@ describe('evaluator', () => {
                         name: 'MyVar2',
                     }],
                     range: createRange(2, 16, 23),
+                    referenceType: 'write',
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2116,6 +2122,7 @@ describe('evaluator', () => {
                         name: 'MyVar1',
                     }],
                     range: createRange(1, 16, 23),
+                    referenceType: 'write',
                 },
                 {
                     definitions: [{
@@ -2124,6 +2131,7 @@ describe('evaluator', () => {
                         name: 'MyVar1',
                     }],
                     range: createRange(2, 27, 35),
+                    referenceType: 'read',
                 },
                 {
                     definitions: [{
@@ -2132,6 +2140,7 @@ describe('evaluator', () => {
                         name: 'MyVar2',
                     }],
                     range: createRange(2, 16, 23),
+                    referenceType: 'write',
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -2268,21 +2277,21 @@ describe('evaluator', () => {
 
             const expectedReferences: VariableReference[] = [
                 // .MyVar1 = 0
-                { definitions: [definitionMyVar1], range: rangeMyVar1 },
+                { definitions: [definitionMyVar1], range: rangeMyVar1, referenceType: 'write' },
                 // MyStruct's .MyVar1 = 1
-                { definitions: [definitionMyStructMyVar1], range: rangeMyStructMyVar1 },
+                { definitions: [definitionMyStructMyVar1], range: rangeMyStructMyVar1, referenceType: 'write' },
                 // MyStruct's .MyVar2 = 1
-                { definitions: [definitionMyStructMyVar2], range: rangeMyStructMyVar2 },
+                { definitions: [definitionMyStructMyVar2], range: rangeMyStructMyVar2, referenceType: 'write' },
                 // .MyStruct = ...
-                { definitions: [definitionMyStruct], range: rangeMyStruct },
+                { definitions: [definitionMyStruct], range: rangeMyStruct, referenceType: 'write' },
                 // Using( .MyStruct )
-                { definitions: [definitionMyStruct], range: rangeUsingStructVar },
-                { definitions: [definitionMyVar1], range: rangeUsingStatement },
-                { definitions: [definitionMyStructMyVar1], range: rangeUsingStatement },
-                { definitions: [definitionMyVar1], range: rangeMyStructMyVar1 },
-                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeUsingStatement },
-                { definitions: [definitionMyStructMyVar2], range: rangeUsingStatement },
-                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeMyStructMyVar2 },
+                { definitions: [definitionMyStruct], range: rangeUsingStructVar, referenceType: 'read' },
+                { definitions: [definitionMyVar1], range: rangeUsingStatement, referenceType: 'read' },
+                { definitions: [definitionMyStructMyVar1], range: rangeUsingStatement, referenceType: 'read' },
+                { definitions: [definitionMyVar1], range: rangeMyStructMyVar1, referenceType: 'read' },
+                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeUsingStatement, referenceType: 'read' },
+                { definitions: [definitionMyStructMyVar2], range: rangeUsingStatement, referenceType: 'read' },
+                { definitions: [definitionMyStructMyVar2, definitionMyVar2], range: rangeMyStructMyVar2, referenceType: 'read' },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
         });
@@ -2628,31 +2637,37 @@ describe('evaluator', () => {
                 {
                     definitions: [expectedDefinitionMyArray],
                     range: expectedDefinitionMyArray.range,
+                    referenceType: 'write',
                 },
                 // `...in .MyArray`
                 {
                     definitions: [expectedDefinitionMyArray],
                     range: createRange(2, 34, 42),
+                    referenceType: 'read',
                 },
                 // `ForEach( .Item...` for the 1st loop iteration
                 {
                     definitions: [expectedDefinitionItem1],
                     range: expectedDefinitionItem1.range,
+                    referenceType: 'write',
                 },
                 // `Print( .Item )` for the 1st loop iteration
                 {
                     definitions: [expectedDefinitionItem1],
                     range: createRange(4, 27, 32),
+                    referenceType: 'read',
                 },
                 // `ForEach( .Item...` for the 2nd loop iteration
                 {
                     definitions: [expectedDefinitionItem2],
                     range: expectedDefinitionItem2.range,
+                    referenceType: 'write',
                 },
                 // `Print( .Item )` for the 2nd loop iteration
                 {
                     definitions: [expectedDefinitionItem2],
                     range: createRange(4, 27, 32),
+                    referenceType: 'read',
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -5206,11 +5221,13 @@ Expecting to see the following:
                 {
                     definitions: [definitionFromHelper],
                     range: createFileRange('file:///helper.bff', 1, 24, 1, 35),
+                    referenceType: 'write',
                 },
                 // fbuild.bff "Print( .FromHelper )"
                 {
                     definitions: [definitionFromHelper],
                     range: createFileRange('file:///fbuild.bff', 2, 31, 2, 42),
+                    referenceType: 'read',
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedVariableReferences);
@@ -5889,16 +5906,19 @@ Expecting to see the following:
                 {
                     definitions: [expectedDefinitionMyDefine],
                     range: expectedDefinitionMyDefine.range,
+                    referenceType: 'write',
                 },
                 // #if MY_DEFINE
                 {
                     definitions: [expectedDefinitionMyDefine],
                     range: createRange(2, 20, 29),
+                    referenceType: 'read',
                 },
                 // .Result = true
                 {
                     definitions: [expectedDefinitionResult],
                     range: expectedDefinitionResult.range,
+                    referenceType: 'write',
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -5959,6 +5979,7 @@ Expecting to see the following:
                 {
                     definitions: [expectedDefinitionMyDefine],
                     range: createRange(1, 16, 33),
+                    referenceType: 'write',
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
@@ -6005,11 +6026,13 @@ Expecting to see the following:
                 {
                     definitions: [expectedDefinition],
                     range: createRange(1, 16, 24 + builtInEnvVar.length),
+                    referenceType: 'write',
                 },
                 // Print( .${builtInEnvVar} )
                 {
                     definitions: [expectedDefinition],
                     range: createRange(2, 23, 24 + builtInEnvVar.length),
+                    referenceType: 'read',
                 },
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
