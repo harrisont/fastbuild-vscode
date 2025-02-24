@@ -144,6 +144,7 @@ type AtLeast1VariableDefinition = [VariableDefinition, ...VariableDefinition[]];
 export interface VariableReference {
     definitions: AtLeast1VariableDefinition;
     range: SourceRange;
+    referenceType: 'read' | 'write';
 }
 
 export interface TargetDefinition {
@@ -885,7 +886,9 @@ interface VariableAndEvaluatedVariable {
 export interface EvaluationContext {
     evaluatedData: EvaluatedData,
     scopeStack: ScopeStack,
+    // Map of define name to info.
     defines: Map<string, DefineInfo>,
+    // Map of function name to info.
     userFunctions: Map<string, UserFunction>,
     rootFbuildDirUri: vscodeUri.URI,
     thisFbuildUri: UriStr,
@@ -994,6 +997,24 @@ export function evaluateUntilPosition(
     };
     const maybeCompletion = evaluateStatements(parseData.statements, context);
     const error = maybeCompletion.hasError() ? maybeCompletion.getError() : null;
+    if (!error) {
+        //
+        // Add errors for unread variables.
+        //
+        const unreadDefinitions = new Set(context.evaluatedData.variableDefinitions);
+        for (const reference of context.evaluatedData.variableReferences) {
+            if (reference.referenceType === 'read') {
+                for (const referenceDefinition of reference.definitions) {
+                    unreadDefinitions.delete(referenceDefinition);
+                }
+            }
+        }
+        for (const unreadDefinition of unreadDefinitions) {
+            context.evaluatedData.nonFatalErrors.push(
+                new EvaluationError(unreadDefinition.range, `Variable "${unreadDefinition.name}" is never read.`, [])
+            );
+        }
+    }
     return new DataAndMaybeError(context, error);
 }
 
@@ -1208,6 +1229,7 @@ function evaluateStatementVariableDefinition(statement: ParsedStatementVariableD
     context.evaluatedData.variableReferences.push({
         definitions: variable.definitions,
         range: lhsRange,
+        referenceType: 'write',
     });
 
     // The definition's LHS is an evaluation.
@@ -1284,6 +1306,7 @@ function evaluateStatementBinaryOperator(statement: ParsedStatementBinaryOperato
     context.evaluatedData.variableReferences.push({
         definitions: lhsVariable.definitions,
         range: lhsRange,
+        referenceType: 'write',
     });
 
     // The LHS is an evaluated variable.
@@ -1404,11 +1427,13 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
             {
                 definitions: variableDefinitions,
                 range: statementRange,
+                referenceType: 'read',
             },
             // // The `Using` statement references the struct's member's definition.
             {
                 definitions: structMember.definitions,
                 range: statementRange,
+                referenceType: 'read',
             },
         );
         // The struct's member's definition references the variable definition being set to the new value,
@@ -1417,6 +1442,7 @@ function evaluateStatementUsing(statement: ParsedStatementUsing, context: Evalua
             context.evaluatedData.variableReferences.push({
                 definitions: variableDefinitions,
                 range: structMemberDefinition.range,
+                referenceType: 'read',
             });
         }
     }
@@ -1489,6 +1515,7 @@ function evaluateStatementForEach(statement: ParsedStatementForEach, context: Ev
             context.evaluatedData.variableReferences.push({
                 definitions: [loopVarDefinition],
                 range: iterator.loopVariableRange,
+                referenceType: 'write',
             });
 
             // Set a variable in the current scope for each iterator's loop variable.
@@ -1734,6 +1761,7 @@ function evaluateStatementUserFunctionDeclaration(
     const functionNameReference: VariableReference = {
         definitions: [functionNameDefinition],
         range: nameSourceRange,
+        referenceType: 'write',
     };
 
     context.evaluatedData.variableReferences.push(functionNameReference);
@@ -1795,6 +1823,7 @@ function evaluateStatementUserFunctionDeclaration(
         context.evaluatedData.variableReferences.push({
             definitions: [definition],
             range: paramSourceRange,
+            referenceType: 'write',
         });
 
         // Add the parameters as variables to the scope stack to support the completion provider.
@@ -1835,6 +1864,7 @@ function evaluateStatementUserFunctionCall(
     context.evaluatedData.variableReferences.push({
         definitions: [userFunction.definition],
         range: nameSourceRange,
+        referenceType: 'read',
     });
 
     if (call.parameters.length !== userFunction.parameters.length) {
@@ -2031,6 +2061,7 @@ function evaluateStatementDefine(statement: ParsedStatementDefine, context: Eval
     const reference: VariableReference = {
         definitions: [definition],
         range: statementRange,
+        referenceType: 'write',
     };
     context.evaluatedData.variableReferences.push(reference);
     context.evaluatedData.variableDefinitions.push(definition);
@@ -2065,6 +2096,7 @@ function evaluateStatementImportEnvVar(statement: ParsedStatementImportEnvVar, c
     const reference: VariableReference = {
         definitions: [definition],
         range: statementRange,
+        referenceType: 'write',
     };
     context.evaluatedData.variableReferences.push(reference);
     context.evaluatedData.variableDefinitions.push(definition);
@@ -2221,6 +2253,7 @@ function evaluateEvaluatedVariable(parsedEvaluatedVariable: ParsedEvaluatedVaria
     context.evaluatedData.variableReferences.push({
         definitions: valueScopeVariable.definitions,
         range: parsedEvaluatedVariableRange,
+        referenceType: 'read',
     });
 
     const result: EvaluatedEvaluatedVariable = {
@@ -2618,6 +2651,7 @@ function evaluateDirectiveIfCondition(
                     const reference: VariableReference = {
                         definitions: [info.definition],
                         range: termRange,
+                        referenceType: 'read',
                     };
                     context.evaluatedData.variableReferences.push(reference);
                 }
