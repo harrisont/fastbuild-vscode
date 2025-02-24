@@ -37,6 +37,7 @@ import {
     evaluateUntilPosition,
     EvaluationContext,
     EvaluationError,
+    EvaluationOptions,
     SourcePositionWithUri,
     SourceRange,
 } from './evaluator';
@@ -340,14 +341,20 @@ async function evaluateUntilPositionWrapper(untilPosition: SourcePositionWithUri
     }
     const rootFbuildParseData = maybeRootFbuildParseData.getValue();
 
+    const settings = await state.getSettings();
+
     const evaluationContextAndMaybeError =
         evaluateUntilPosition(
             rootFbuildParseData,
             rootFbuildUriStr,
             state.fileSystem,
             state.parseDataProvider,
-            untilPosition,
-            true /*includeStaleParseData*/);
+            {
+                untilPosition,
+                includeStaleParseData: true,
+                warnOnUnusedVariables: settings.warnOnUnusedVariables,
+            }
+        );
     return Maybe.ok(evaluationContextAndMaybeError);
 }
 
@@ -460,7 +467,12 @@ async function updateDocument(change: TextDocumentChangeEvent<TextDocument>, set
         if (settings.logPerformanceMetrics) {
             console.time(evaluationDurationLabel);
         }
-        const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider);
+        const evaluationOptions: EvaluationOptions = {
+            untilPosition: undefined,
+            includeStaleParseData: false,
+            warnOnUnusedVariables: settings.warnOnUnusedVariables,
+        };
+        const evaluatedDataAndMaybeError = evaluate(rootFbuildParseData, rootFbuildUriStr, state.fileSystem, state.parseDataProvider, evaluationOptions);
         evaluatedData = evaluatedDataAndMaybeError.data.evaluatedData;
         state.rootToEvaluatedDataMap.set(rootFbuildUriStr, evaluatedData);
         if (settings.logPerformanceMetrics) {

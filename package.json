@@ -2,7 +2,7 @@
 	"name": "fastbuild-support",
 	"displayName": "FASTBuild Support",
 	"description": "FASTBuild language support. Includes go-to definition, find references, variable evaluation, syntax errors, etc.",
-	"version": "0.16.1",
+	"version": "0.17.0",
 	"preview": true,
 	"publisher": "HarrisonT",
 	"author": {
@@ -57,15 +57,22 @@
 					"default": 500,
 					"description": "Delay, in milliseconds, after changing a document before re-evaluating it. A lower value can result in faster feedback, but too low of a value will result in high resource usage when typing quickly."
 				},
-				"fastbuild.rootFile": {
+				"fastbuild.warnOnUnusedVariables": {
 					"order": 1,
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "Warn on unused variables. Note that a variable is considered unused if it is never read, even if it is written."
+				},
+				"fastbuild.rootFile": {
+					"order": 2,
 					"scope": "window",
 					"type": "string",
 					"default": "",
 					"markdownDescription": "Optional absolute path to the root `fbuild.bff` file. Set when running FASTBuild with the `-config <path>` command line option. The root is automatically found when it is in a parent directory, so it is not necessary to specify in that case. Note that you need to either modify or re-open the files for this setting to be picked up."
 				},
 				"fastbuild.trace.server": {
-					"order": 2,
+					"order": 3,
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -82,7 +89,7 @@
 					"description": "[Extension debugging] Traces the communication between the extension and the language server."
 				},
 				"fastbuild.logPerformanceMetrics": {
-					"order": 3,
+					"order": 4,
 					"scope": "window",
 					"type": "boolean",
 					"default": false,

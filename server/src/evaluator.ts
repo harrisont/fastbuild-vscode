@@ -144,7 +144,7 @@ type AtLeast1VariableDefinition = [VariableDefinition, ...VariableDefinition[]];
 export interface VariableReference {
     definitions: AtLeast1VariableDefinition;
     range: SourceRange;
-    referenceType: 'read' | 'write' | 'readWrite';
+    referenceType: 'read' | 'write';
 }
 
 export interface TargetDefinition {
@@ -898,14 +898,8 @@ export interface EvaluationContext {
     onceIncludeUrisAlreadyIncluded: string[];
     // Used for unnamed modifiers (e.g. adding to the LHS of the previous statement).
     previousStatementLhs: VariableAndEvaluatedVariable | null;
-    // If set, stops evaluating once this position is hit.
-    // Used to generate completion results.
-    untilPosition: SourcePositionWithUri | undefined;
-    // If true, will be okay with using stale parse data.
-    //
-    // This is useful to generate completion results when a partially-written statement causes a parse error.
-    // In that case, it's useful to use the stale parse data from the last successful parse.
-    includeStaleParseData: boolean;
+    // Options
+    options: EvaluationOptions;
 }
 
 function createDefaultScopeStack(rootFbuildDirUri: vscodeUri.URI): ScopeStack {
@@ -957,14 +951,34 @@ function createDefaultDefines(rootFbuildUri: string, scopeStack: ScopeStack): Ma
     return defines;
 }
 
-export function evaluate(parseData: ParseData, thisFbuildUri: string, fileSystem: IFileSystem, parseDataProvider: ParseDataProvider): DataAndMaybeError<EvaluationContext> {
+export interface EvaluationOptions {
+    // If set, stops evaluating once this position is hit.
+    // Used to generate completion results.
+    untilPosition: SourcePositionWithUri | undefined;
+
+    // If true, will be okay with using stale parse data.
+    //
+    // This is useful to generate completion results when a partially-written statement causes a parse error.
+    // In that case, it's useful to use the stale parse data from the last successful parse.
+    includeStaleParseData: boolean;
+
+    warnOnUnusedVariables: boolean;
+}
+
+export function evaluate(
+    parseData: ParseData,
+    thisFbuildUri: string,
+    fileSystem: IFileSystem,
+    parseDataProvider: ParseDataProvider,
+    options: EvaluationOptions,
+): DataAndMaybeError<EvaluationContext> {
     return evaluateUntilPosition(
         parseData,
         thisFbuildUri,
         fileSystem,
         parseDataProvider,
-        undefined /*untilPosition*/,
-        false /*includeStaleParseData*/);
+        options,
+    );
 }
 
 // thisFbuildUri is used to calculate relative paths (e.g. from #include)
@@ -975,8 +989,7 @@ export function evaluateUntilPosition(
     thisFbuildUri: string,
     fileSystem: IFileSystem,
     parseDataProvider: ParseDataProvider,
-    untilPosition: SourcePositionWithUri | undefined,
-    includeStaleParseData: boolean
+    options: EvaluationOptions,
 ): DataAndMaybeError<EvaluationContext>
 {
     const rootFbuildDirUri = vscodeUri.Utils.dirname(vscodeUri.URI.parse(thisFbuildUri));
@@ -992,12 +1005,11 @@ export function evaluateUntilPosition(
         parseDataProvider,
         onceIncludeUrisAlreadyIncluded: [],
         previousStatementLhs: null,
-        untilPosition,
-        includeStaleParseData,
+        options: options,
     };
     const maybeCompletion = evaluateStatements(parseData.statements, context);
     const error = maybeCompletion.hasError() ? maybeCompletion.getError() : null;
-    if (!error) {
+    if (!error && options.warnOnUnusedVariables) {
         //
         // Add errors for unread variables.
         //
@@ -1019,16 +1031,17 @@ export function evaluateUntilPosition(
 }
 
 function isPastPosition(context: EvaluationContext, position: SourcePosition): boolean {
-    if (context.untilPosition === undefined) {
+    const untilPosition = context.options.untilPosition;
+    if (untilPosition === undefined) {
         return false;
     }
 
-    if (context.thisFbuildUri != context.untilPosition.uri) {
+    if (context.thisFbuildUri != untilPosition.uri) {
         return false;
     }
 
-    return (position.line == context.untilPosition.position.line && position.character >= context.untilPosition.position.character)
-        || (position.line > context.untilPosition.position.line);
+    return (position.line == untilPosition.position.line && position.character >= untilPosition.position.character)
+        || (position.line > untilPosition.position.line);
 }
 
 // The resulting evaluated data is stored in `context.evaluatedData`.
@@ -1912,8 +1925,7 @@ function evaluateStatementUserFunctionCall(
         parseDataProvider: context.parseDataProvider,
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: null,
-        untilPosition: context.untilPosition,
-        includeStaleParseData: context.includeStaleParseData,
+        options: context.options,
     };
 
     // Set a variable for each parameter.
@@ -1961,7 +1973,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         return CancellableMaybe.completed();
     }
 
-    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, context.includeStaleParseData);
+    const maybeIncludeParseData = context.parseDataProvider.getParseData(includeUri, context.options.includeStaleParseData);
     if (maybeIncludeParseData.hasError) {
         const includeError = maybeIncludeParseData.getError();
         if (includeError instanceof ParseError) {
@@ -1996,8 +2008,7 @@ function evaluateStatementInclude(statement: ParsedStatementInclude, context: Ev
         parseDataProvider: context.parseDataProvider,
         onceIncludeUrisAlreadyIncluded: context.onceIncludeUrisAlreadyIncluded,
         previousStatementLhs: context.previousStatementLhs,
-        untilPosition: context.untilPosition,
-        includeStaleParseData: context.includeStaleParseData,
+        options: context.options,
     };
 
     const result = evaluateStatements(includeParseData.statements, includeContext);

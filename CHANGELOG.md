@@ -1,3 +1,9 @@
+# v0.17.0
+
+## New Features
+
+* ([#84](https://github.com/harrisont/fastbuild-vscode/issues/84)) Warn on unused variables. Note that a variable is considered unused if it is never read, even if it is written. There is a new setting to disable this feature.
+
 # v0.16.1
 
 ## Bug Fixes

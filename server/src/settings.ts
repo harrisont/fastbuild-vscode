@@ -6,6 +6,7 @@ export interface Settings {
     logPerformanceMetrics: boolean;
     inputDebounceDelay: number;
     rootFile: string;
+    warnOnUnusedVariables: boolean;
 }
 
 // This indicates that the user set a setting to an invalid value.

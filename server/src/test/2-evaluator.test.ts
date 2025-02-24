@@ -97,8 +97,12 @@ export function evaluateInputsFullUntilPosition(thisFbuildUriStr: UriStr, inputs
             thisFbuildUriStr,
             fileSystem,
             parseDataProvider,
-            untilPosition,
-            true /*includeStaleParseData*/);
+            {
+                untilPosition,
+                includeStaleParseData: true,
+                warnOnUnusedVariables: false,
+            }
+        );
     if (evaluatedStatementsAndMaybeError.error !== null) {
         throw evaluatedStatementsAndMaybeError.error;
     }
@@ -2060,7 +2064,7 @@ describe('evaluator', () => {
                         name: 'MyVar',
                     }],
                     range: createRange(2, 16, 22),
-                    referenceType: 'readWrite',
+                    referenceType: 'write',
                 }
             ];
             assert.deepStrictEqual(result.variableReferences, expectedReferences);
