@@ -54,21 +54,16 @@ export class ParseDataProvider {
     //
     // Returns |ParseError| on failing to parse the file contents.
     updateParseDataWithContent(uri: vscodeUri.URI, content: string): Maybe<ParseData>  {
-        try {
-            const parseData = parse(content, uri.toString(), this.parseOptions);
-            this.data.set(uri.toString(), {
-                isStale: false,
-                data: parseData,
-                fileContent: content,
-            });
-            return Maybe.ok(parseData);
-        } catch (error) {
+        const maybeParseData = parse(content, uri.toString(), this.parseOptions);
+        if (maybeParseData.hasError) {
             const existingData = this.data.get(uri.toString());
             if (existingData !== undefined) {
                 // Mark the existing data as stale instead of deleting it, so that we can still do
                 // useful things like auto-completion while in the middle of editing text.
                 existingData.isStale = true;
             }
+            
+            const error = maybeParseData.getError();
             if (error instanceof Error) {
                 return Maybe.error(error);
             } else {
@@ -77,6 +72,14 @@ export class ParseDataProvider {
                 const typedError = new Error(String(error));
                 return Maybe.error(typedError);
             }
+        } else {
+            const parseData = maybeParseData.getValue();
+            this.data.set(uri.toString(), {
+                isStale: false,
+                data: parseData,
+                fileContent: content,
+            });
+            return Maybe.ok(parseData);
         }
     }
 

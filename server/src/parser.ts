@@ -1,4 +1,5 @@
 import * as nearley from 'nearley';
+import { Maybe } from './coreTypes';
 import fbuildGrammar from './fbuild-grammar';
 import { UriStr } from './parseDataProvider';
 
@@ -304,8 +305,8 @@ function createParseErrorFromNearlyParseError(
 
 // Parse the input and return the statements.
 //
-// Throws |ParseError| on a parse error, or |Error| on unknown errors.
-export function parse(input: string, fileUri: UriStr, options: ParseOptions): ParseData {
+// Returns |ParseError| on a parse error, or |Error| on unknown errors.
+export function parse(input: string, fileUri: UriStr, options: ParseOptions): Maybe<ParseData> {
     // Pre-process the input:
     //  * Remove comments.
     //  * Add a newline in order to make parsing easier.
@@ -330,11 +331,16 @@ export function parse(input: string, fileUri: UriStr, options: ParseOptions): Pa
         }
 
         if (nearlyParseError instanceof Error) {
-            throw createParseErrorFromNearlyParseError(nearlyParseError, modifiedInput, fileUri, options.includeCodeLocationInError);
+            const parseError = createParseErrorFromNearlyParseError(
+                nearlyParseError,
+                modifiedInput,
+                fileUri,
+                options.includeCodeLocationInError);
+            return Maybe.error(parseError);
         } else {
             // We should only throw `Error` instances, but handle other types as a fallback.
             // `error` could be anything. Try to get a useful message out of it.
-            throw new Error(String(nearlyParseError));
+            return Maybe.error(new Error(String(nearlyParseError)));
         }
     }
 
@@ -343,12 +349,13 @@ export function parse(input: string, fileUri: UriStr, options: ParseOptions): Pa
         if (options.enableDiagnostics) {
             console.log(getParseTable(parser));
         }
-        throw new ParseNumParsesError(`Should parse to exactly 1 result, but parsed to ${numResults}`, fileUri);
+        return Maybe.error(new ParseNumParsesError(`Should parse to exactly 1 result, but parsed to ${numResults}`, fileUri));
     }
     const statements = parser.results[0];
-    return {
+    const result: ParseData = {
         statements
     };
+    return Maybe.ok(result);
 }
 
 // TODO: make this more efficient by moving it into the grammar.

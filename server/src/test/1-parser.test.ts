@@ -5,17 +5,36 @@ import {
     createRange,
     isPositionInRange,
     parse,
+    ParseError,
     ParseSourceRange,
 } from '../parser';
 
 function assertParseResultsEqual(input: string, expectedResult: any[]): void {
-    const result = parse(input, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    const maybeResult = parse(input, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    if (maybeResult.hasError) {
+        const error = maybeResult.getError();
+        throw error;
+    }
+    const result = maybeResult.getValue();
     assert.deepStrictEqual(result.statements, expectedResult);
 }
 
 function assertInputsGenerateSameParseResult(input1: string, input2: string): void {
-    const result1 = parse(input1, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
-    const result2 = parse(input2, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    const maybeResult1 = parse(input1, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    const maybeResult2 = parse(input2, 'file:///dummy.bff', { enableDiagnostics: true, includeCodeLocationInError: true} );
+    
+    if (maybeResult1.hasError) {
+        const error = maybeResult1.getError();
+        throw error;
+    }
+    const result1 = maybeResult1.getValue();
+
+    if (maybeResult2.hasError) {
+        const error = maybeResult2.getError();
+        throw error;
+    }
+    const result2 = maybeResult2.getValue();
+
     assert.deepStrictEqual(result1.statements, result2.statements);
 }
 
@@ -24,15 +43,13 @@ function getParseSourceRangeString(range: ParseSourceRange): string {
 }
 
 function assertParseSyntaxError(input: string, expectedErrorMessage: string, expectedRange: ParseSourceRange): void {
-    assert.throws(
-        () => parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } ),
-        actualError => {
-            assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
-            assert(actualError.message === expectedErrorMessage, `Got error message <${actualError.message}> but expected <${expectedErrorMessage}>`);
-            assert.deepStrictEqual(actualError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualError.range)}`);
-            return true;
-        }
-    );
+    const maybeResult = parse(input, 'file:///dummy.bff', { enableDiagnostics: false, includeCodeLocationInError: true } );
+    assert.strictEqual(maybeResult.hasError, true);
+    const actualError = maybeResult.getError();
+    assert.strictEqual(actualError.name, 'ParseSyntaxError', `Expected a ParseSyntaxError exception but got ${actualError}:\n\n${actualError.stack}`);
+    const actualParseError = actualError as ParseError;
+    assert(actualParseError.message === expectedErrorMessage, `Got error message <${actualParseError.message}> but expected <${expectedErrorMessage}>`);
+    assert.deepStrictEqual(actualParseError.range, expectedRange, `Expected the error range to be ${getParseSourceRangeString(expectedRange)} but it is ${getParseSourceRangeString(actualParseError.range)}`);
 }
 
 describe('parser', () => {
