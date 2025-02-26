@@ -1013,17 +1013,39 @@ export function evaluateUntilPosition(
         //
         // Add errors for unread variables.
         //
-        const unreadDefinitions = new Set(context.evaluatedData.variableDefinitions);
+        
+        // Key on the range, to deduplicate variables with the same range.
+        // For example, variables defined in a loop.
+        const unreadDefinitions = new Map<string, VariableDefinition>(
+            context.evaluatedData.variableDefinitions.map(definition => [JSON.stringify(definition.range), definition])
+        );
         for (const reference of context.evaluatedData.variableReferences) {
             if (reference.referenceType === 'read') {
                 for (const referenceDefinition of reference.definitions) {
-                    unreadDefinitions.delete(referenceDefinition);
+                    unreadDefinitions.delete(JSON.stringify(referenceDefinition.range));
                 }
             }
         }
-        for (const unreadDefinition of unreadDefinitions) {
+        for (const unreadDefinition of unreadDefinitions.values()) {
+            // Find writes to the unread variable.
+            const errorRelatedInfo: ErrorRelatedInformation[] = [];
+            for (const reference of context.evaluatedData.variableReferences) {
+                if (reference.referenceType === 'write') {
+                    for (const referenceDefinition of reference.definitions) {
+                        if (referenceDefinition === unreadDefinition
+                            && reference.range !== unreadDefinition.range
+                        ) {
+                            errorRelatedInfo.push({
+                                range: reference.range,
+                                message: 'Write reference'
+                            });
+                        }
+                    }
+                }
+            }
+
             context.evaluatedData.nonFatalErrors.push(
-                new EvaluationError(unreadDefinition.range, `Variable "${unreadDefinition.name}" is never read.`, [])
+                new EvaluationError(unreadDefinition.range, `Variable "${unreadDefinition.name}" is never read.`, errorRelatedInfo)
             );
         }
     }
@@ -1641,6 +1663,9 @@ function evaluateStatementGenericFunction(statement: ParsedStatementGenericFunct
     return CancellableMaybe.completed();
 }
 
+// Ensures that all required properties are set.
+// Also adds read-references for the properties.
+//
 // Returns `Error` on fatal error, or `null` otherwise.
 function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunction, context: EvaluationContext): Error | null {
     const functionName = statement.functionName;
@@ -1657,7 +1682,7 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
 
     const missingPropertyNames = [];
     for (const [propertyName, property] of functionMetadata.properties) {
-            const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
+        const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
         if (propertyVariable !== null) {
             const variableReference: VariableReference = {
                 definitions: propertyVariable.definitions,
@@ -1666,7 +1691,7 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
             };
             context.evaluatedData.variableReferences.push(variableReference);
         } else if (property.isRequired) {
-                missingPropertyNames.push(propertyName);
+            missingPropertyNames.push(propertyName);
         }
     }
 
@@ -1675,7 +1700,7 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
         const pluralizedPropertyWord = (missingPropertyNames.length === 1) ? 'property' : 'properties';
         const missingPropertyNamesString = missingPropertyNames.map(name => `"${name}"`).join(', ');
         context.evaluatedData.nonFatalErrors.push(new EvaluationError(
-            new SourceRange(context.thisFbuildUri, statement.range),
+            statementRange,
             `Call to function "${functionName}" is missing required ${pluralizedPropertyWord} ${missingPropertyNamesString}.`,
             []
         ));
