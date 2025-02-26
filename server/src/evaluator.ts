@@ -1653,14 +1653,20 @@ function evaluateGenericFunctionProperties(statement: ParsedStatementGenericFunc
         );
     }
 
+    const statementRange = new SourceRange(context.thisFbuildUri, statement.range);
+
     const missingPropertyNames = [];
     for (const [propertyName, property] of functionMetadata.properties) {
-        if (property.isRequired) {
             const propertyVariable = context.scopeStack.getVariableStartingFromCurrentScope(propertyName);
-            if (propertyVariable === null) {
+        if (propertyVariable !== null) {
+            const variableReference: VariableReference = {
+                definitions: propertyVariable.definitions,
+                range: statementRange,
+                referenceType: 'read',
+            };
+            context.evaluatedData.variableReferences.push(variableReference);
+        } else if (property.isRequired) {
                 missingPropertyNames.push(propertyName);
-                continue;
-            }
         }
     }
 
