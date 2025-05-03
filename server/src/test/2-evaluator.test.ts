@@ -1149,6 +1149,17 @@ describe('evaluator', () => {
             ]);
         });
 
+        it.only('should work on inline adding for a struct member RHS', () => {
+            const input = `.MyVar=[.A=1 +1]`;
+            const myVarADefinition: VariableDefinition = { id: 1, range: createRange(0, 8, 10), name: 'A' };
+            assertEvaluatedVariablesValueEqual(input, [
+                2,
+                Struct.from(Object.entries({
+                    A: new StructMember(2, [myVarADefinition]),
+                }))
+            ]);
+        });
+
         it('adding to a current-scope non-existent, parent-scope existent, current-scope struct variable defines it in the current scope to be the sum', () => {
             const input = `
                 .MyMessage = 'hello'
